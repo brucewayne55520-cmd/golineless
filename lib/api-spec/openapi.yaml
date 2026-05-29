@@ -3,20 +3,38 @@ info:
   # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: QBuddy API specification
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: auth
+    description: Authentication operations
+  - name: users
+    description: User operations
+  - name: tasks
+    description: Task operations
+  - name: runners
+    description: Runner operations
+  - name: subscriptions
+    description: Subscription operations
+  - name: notifications
+    description: Notification operations
+  - name: admin
+    description: Admin operations
+  - name: reviews
+    description: Review operations
+  - name: locations
+    description: Runner location operations
+
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -24,6 +42,798 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  # ─── AUTH ───────────────────────────────────────────────────────────────────
+  /auth/send-otp:
+    post:
+      operationId: sendOtp
+      tags: [auth]
+      summary: Send OTP to phone
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SendOtpInput"
+      responses:
+        "200":
+          description: OTP sent
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OtpResponse"
+
+  /auth/verify-otp:
+    post:
+      operationId: verifyOtp
+      tags: [auth]
+      summary: Verify OTP and login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VerifyOtpInput"
+      responses:
+        "200":
+          description: Authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+
+  /auth/logout:
+    post:
+      operationId: logout
+      tags: [auth]
+      summary: Logout user
+      responses:
+        "200":
+          description: Logged out
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+
+  # ─── USERS ──────────────────────────────────────────────────────────────────
+  /users/me:
+    get:
+      operationId: getMe
+      tags: [users]
+      summary: Get current user profile
+      responses:
+        "200":
+          description: User profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+    patch:
+      operationId: updateMe
+      tags: [users]
+      summary: Update current user profile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UserUpdate"
+      responses:
+        "200":
+          description: Updated user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+
+  /users/me/stats:
+    get:
+      operationId: getUserStats
+      tags: [users]
+      summary: Get user stats (total tasks, hours saved, value saved)
+      responses:
+        "200":
+          description: User statistics
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserStats"
+
+  # ─── TASKS ──────────────────────────────────────────────────────────────────
+  /tasks:
+    get:
+      operationId: listTasks
+      tags: [tasks]
+      summary: List tasks for current user or runner
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+        - name: role
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+        - name: offset
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: List of tasks
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Task"
+    post:
+      operationId: createTask
+      tags: [tasks]
+      summary: Create a new task
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TaskInput"
+      responses:
+        "201":
+          description: Task created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Task"
+
+  /tasks/available:
+    get:
+      operationId: listAvailableTasks
+      tags: [tasks]
+      summary: List available tasks for runners to accept
+      responses:
+        "200":
+          description: Available tasks
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Task"
+
+  /tasks/{id}:
+    get:
+      operationId: getTask
+      tags: [tasks]
+      summary: Get task by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Task
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Task"
+
+  /tasks/{id}/status:
+    patch:
+      operationId: updateTaskStatus
+      tags: [tasks]
+      summary: Update task status
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TaskStatusUpdate"
+      responses:
+        "200":
+          description: Updated task
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Task"
+
+  /tasks/{id}/accept:
+    post:
+      operationId: acceptTask
+      tags: [tasks]
+      summary: Runner accepts a task
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Task accepted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Task"
+
+  /tasks/{id}/verify-otp:
+    post:
+      operationId: verifyTaskOtp
+      tags: [tasks]
+      summary: Runner verifies task OTP to mark complete
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TaskOtpVerify"
+      responses:
+        "200":
+          description: Task completed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Task"
+
+  /tasks/{id}/cancel:
+    post:
+      operationId: cancelTask
+      tags: [tasks]
+      summary: Cancel a task
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Task cancelled
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Task"
+
+  /tasks/{id}/review:
+    post:
+      operationId: submitReview
+      tags: [reviews]
+      summary: Submit a review for a completed task
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReviewInput"
+      responses:
+        "201":
+          description: Review submitted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Review"
+
+  # ─── RUNNERS ────────────────────────────────────────────────────────────────
+  /runners/me:
+    get:
+      operationId: getRunnerMe
+      tags: [runners]
+      summary: Get current runner profile
+      responses:
+        "200":
+          description: Runner profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Runner"
+    patch:
+      operationId: updateRunnerMe
+      tags: [runners]
+      summary: Update current runner profile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RunnerUpdate"
+      responses:
+        "200":
+          description: Updated runner
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Runner"
+
+  /runners/me/earnings:
+    get:
+      operationId: getRunnerEarnings
+      tags: [runners]
+      summary: Get runner earnings summary
+      responses:
+        "200":
+          description: Earnings summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RunnerEarnings"
+
+  /runners/me/earnings/daily:
+    get:
+      operationId: getRunnerDailyEarnings
+      tags: [runners]
+      summary: Get daily earnings for last 7 days (chart data)
+      responses:
+        "200":
+          description: Daily earnings
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/DailyEarning"
+
+  /runners/kyc:
+    post:
+      operationId: submitKyc
+      tags: [runners]
+      summary: Submit or update KYC documents
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/KycInput"
+      responses:
+        "200":
+          description: KYC submitted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Runner"
+
+  /runners/toggle-online:
+    post:
+      operationId: toggleOnlineStatus
+      tags: [runners]
+      summary: Toggle runner online/offline status
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OnlineStatusInput"
+      responses:
+        "200":
+          description: Status updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Runner"
+
+  /runners/{id}:
+    get:
+      operationId: getRunner
+      tags: [runners]
+      summary: Get runner by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Runner
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Runner"
+
+  /runners/{id}/location/{taskId}:
+    get:
+      operationId: getRunnerLocation
+      tags: [locations]
+      summary: Get latest runner location for a task
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: taskId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Runner location
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RunnerLocation"
+
+  # ─── SUBSCRIPTIONS ──────────────────────────────────────────────────────────
+  /subscriptions/plans:
+    get:
+      operationId: listSubscriptionPlans
+      tags: [subscriptions]
+      summary: List available subscription plans
+      responses:
+        "200":
+          description: Plans
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/SubscriptionPlan"
+
+  /subscriptions/me:
+    get:
+      operationId: getMySubscription
+      tags: [subscriptions]
+      summary: Get current user's active subscription
+      responses:
+        "200":
+          description: Active subscription
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Subscription"
+
+  /subscriptions:
+    post:
+      operationId: createSubscription
+      tags: [subscriptions]
+      summary: Subscribe to a plan
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SubscriptionInput"
+      responses:
+        "201":
+          description: Subscription created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Subscription"
+
+  # ─── NOTIFICATIONS ──────────────────────────────────────────────────────────
+  /notifications:
+    get:
+      operationId: listNotifications
+      tags: [notifications]
+      summary: List notifications for current user
+      responses:
+        "200":
+          description: Notifications
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Notification"
+
+  /notifications/{id}/read:
+    patch:
+      operationId: markNotificationRead
+      tags: [notifications]
+      summary: Mark notification as read
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Updated notification
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Notification"
+
+  /notifications/read-all:
+    post:
+      operationId: markAllNotificationsRead
+      tags: [notifications]
+      summary: Mark all notifications as read
+      responses:
+        "200":
+          description: Done
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+
+  # ─── ADMIN ──────────────────────────────────────────────────────────────────
+  /admin/stats:
+    get:
+      operationId: getAdminStats
+      tags: [admin]
+      summary: Get admin dashboard stats
+      responses:
+        "200":
+          description: Dashboard stats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminStats"
+
+  /admin/activity:
+    get:
+      operationId: getAdminActivity
+      tags: [admin]
+      summary: Get recent activity feed
+      responses:
+        "200":
+          description: Activity feed
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ActivityItem"
+
+  /admin/tasks:
+    get:
+      operationId: listAdminTasks
+      tags: [admin]
+      summary: List all tasks (admin)
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+        - name: category
+          in: query
+          schema:
+            type: string
+        - name: search
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+        - name: offset
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Tasks
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminTaskList"
+
+  /admin/tasks/{id}:
+    patch:
+      operationId: updateAdminTask
+      tags: [admin]
+      summary: Update a task (admin override)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AdminTaskUpdate"
+      responses:
+        "200":
+          description: Updated task
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Task"
+
+  /admin/runners:
+    get:
+      operationId: listAdminRunners
+      tags: [admin]
+      summary: List all runners (admin)
+      parameters:
+        - name: kyc_status
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+        - name: offset
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Runners
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Runner"
+
+  /admin/runners/{id}/kyc:
+    patch:
+      operationId: reviewRunnerKyc
+      tags: [admin]
+      summary: Approve or reject runner KYC
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/KycReviewInput"
+      responses:
+        "200":
+          description: Updated runner
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Runner"
+
+  /admin/users:
+    get:
+      operationId: listAdminUsers
+      tags: [admin]
+      summary: List all users (admin)
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+        - name: offset
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Users
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/User"
+
+  /admin/subscriptions:
+    get:
+      operationId: listAdminSubscriptions
+      tags: [admin]
+      summary: List all subscriptions (admin)
+      responses:
+        "200":
+          description: Subscriptions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Subscription"
+
+  /admin/analytics:
+    get:
+      operationId: getAnalytics
+      tags: [admin]
+      summary: Get analytics data
+      parameters:
+        - name: days
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Analytics
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Analytics"
+
+  /admin/runners/active-locations:
+    get:
+      operationId: getActiveRunnerLocations
+      tags: [admin]
+      summary: Get all active runner locations for fleet map
+      responses:
+        "200":
+          description: Active runner locations
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/RunnerMapMarker"
+
+  /admin/settings:
+    get:
+      operationId: getAdminSettings
+      tags: [admin]
+      summary: Get platform settings
+      responses:
+        "200":
+          description: Settings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminSettings"
+    patch:
+      operationId: updateAdminSettings
+      tags: [admin]
+      summary: Update platform settings
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AdminSettingsUpdate"
+      responses:
+        "200":
+          description: Updated settings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminSettings"
+
+  /admin/login:
+    post:
+      operationId: adminLogin
+      tags: [admin]
+      summary: Admin login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AdminLoginInput"
+      responses:
+        "200":
+          description: Admin authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+
 components:
   schemas:
     HealthStatus:
@@ -34,3 +844,748 @@ components:
       required:
         - status
 
+    MessageResponse:
+      type: object
+      properties:
+        message:
+          type: string
+      required:
+        - message
+
+    # ─── AUTH SCHEMAS ────────────────────────────────────────────────────────
+    SendOtpInput:
+      type: object
+      required: [phone]
+      properties:
+        phone:
+          type: string
+        role:
+          type: string
+          enum: [user, runner]
+
+    OtpResponse:
+      type: object
+      required: [message]
+      properties:
+        message:
+          type: string
+        otp:
+          type: string
+
+    VerifyOtpInput:
+      type: object
+      required: [phone, otp]
+      properties:
+        phone:
+          type: string
+        otp:
+          type: string
+        role:
+          type: string
+          enum: [user, runner]
+
+    AuthResponse:
+      type: object
+      required: [token, role]
+      properties:
+        token:
+          type: string
+        role:
+          type: string
+        user:
+          $ref: "#/components/schemas/User"
+        runner:
+          $ref: "#/components/schemas/Runner"
+
+    AdminLoginInput:
+      type: object
+      required: [password]
+      properties:
+        password:
+          type: string
+
+    # ─── USER SCHEMAS ────────────────────────────────────────────────────────
+    User:
+      type: object
+      required: [id, phone]
+      properties:
+        id:
+          type: integer
+        name:
+          type: ["string", "null"]
+        phone:
+          type: string
+        email:
+          type: ["string", "null"]
+        city:
+          type: ["string", "null"]
+        area:
+          type: ["string", "null"]
+        avatar:
+          type: ["string", "null"]
+        language:
+          type: string
+        createdAt:
+          type: string
+
+    UserUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+        email:
+          type: string
+        city:
+          type: string
+        area:
+          type: string
+        language:
+          type: string
+
+    UserStats:
+      type: object
+      required: [totalTasks, hoursSaved, valueSaved]
+      properties:
+        totalTasks:
+          type: integer
+        hoursSaved:
+          type: number
+        valueSaved:
+          type: number
+
+    # ─── TASK SCHEMAS ────────────────────────────────────────────────────────
+    Task:
+      type: object
+      required: [id, category, status, price, createdAt]
+      properties:
+        id:
+          type: integer
+        userId:
+          type: integer
+        runnerId:
+          type: ["integer", "null"]
+        category:
+          type: string
+          enum: [hospital, govt_office, bank, document, medicine, senior_care, errand, emergency]
+        description:
+          type: string
+        status:
+          type: string
+          enum: [pending, assigned, on_the_way, at_location, in_progress, completed, cancelled]
+        urgency:
+          type: string
+          enum: [normal, urgent]
+        locationName:
+          type: ["string", "null"]
+        locationArea:
+          type: ["string", "null"]
+        locationCity:
+          type: ["string", "null"]
+        locationLat:
+          type: ["number", "null"]
+        locationLng:
+          type: ["number", "null"]
+        distanceBand:
+          type: ["string", "null"]
+        scheduledAt:
+          type: ["string", "null"]
+        basePrice:
+          type: number
+        distanceCharge:
+          type: number
+        urgencyCharge:
+          type: number
+        price:
+          type: number
+        runnerEarning:
+          type: number
+        platformFee:
+          type: number
+        paymentMethod:
+          type: string
+          enum: [online, cash]
+        paymentStatus:
+          type: string
+          enum: [pending, paid, refunded]
+        couponCode:
+          type: ["string", "null"]
+        discountAmount:
+          type: number
+        otp:
+          type: ["string", "null"]
+        otpVerified:
+          type: boolean
+        seniorInvolved:
+          type: boolean
+        specialInstructions:
+          type: ["string", "null"]
+        proofPhotos:
+          type: array
+          items:
+            type: string
+        cancelReason:
+          type: ["string", "null"]
+        internalNotes:
+          type: ["string", "null"]
+        completedAt:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+        user:
+          $ref: "#/components/schemas/User"
+        runner:
+          $ref: "#/components/schemas/Runner"
+
+    TaskInput:
+      type: object
+      required: [category, description, locationName, locationArea, locationCity, paymentMethod]
+      properties:
+        category:
+          type: string
+          enum: [hospital, govt_office, bank, document, medicine, senior_care, errand, emergency]
+        description:
+          type: string
+        urgency:
+          type: string
+          enum: [normal, urgent]
+        locationName:
+          type: string
+        locationArea:
+          type: string
+        locationCity:
+          type: string
+        locationLat:
+          type: number
+        locationLng:
+          type: number
+        distanceBand:
+          type: string
+          enum: ["0-2", "2-5", "5+"]
+        scheduledDate:
+          type: string
+        scheduledTime:
+          type: string
+        paymentMethod:
+          type: string
+          enum: [online, cash]
+        couponCode:
+          type: string
+        seniorInvolved:
+          type: boolean
+        specialInstructions:
+          type: string
+
+    TaskStatusUpdate:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+          enum: [pending, assigned, on_the_way, at_location, in_progress, completed, cancelled]
+
+    TaskOtpVerify:
+      type: object
+      required: [otp]
+      properties:
+        otp:
+          type: string
+
+    # ─── RUNNER SCHEMAS ──────────────────────────────────────────────────────
+    Runner:
+      type: object
+      required: [id, phone]
+      properties:
+        id:
+          type: integer
+        name:
+          type: ["string", "null"]
+        phone:
+          type: string
+        email:
+          type: ["string", "null"]
+        city:
+          type: ["string", "null"]
+        area:
+          type: ["string", "null"]
+        avatar:
+          type: ["string", "null"]
+        gender:
+          type: ["string", "null"]
+        kycStatus:
+          type: string
+          enum: [pending, verified, rejected, suspended]
+        kycRejectionReason:
+          type: ["string", "null"]
+        isOnline:
+          type: boolean
+        rating:
+          type: ["number", "null"]
+        totalTasks:
+          type: integer
+        totalEarnings:
+          type: ["number", "null"]
+        currentLat:
+          type: ["number", "null"]
+        currentLng:
+          type: ["number", "null"]
+        createdAt:
+          type: string
+
+    RunnerUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+        email:
+          type: string
+        city:
+          type: string
+        area:
+          type: string
+
+    KycInput:
+      type: object
+      properties:
+        fullName:
+          type: string
+        aadhaarNumber:
+          type: string
+        aadhaarFront:
+          type: string
+        aadhaarBack:
+          type: string
+        selfie:
+          type: string
+        bankAccount:
+          type: string
+        bankIfsc:
+          type: string
+        bankAccountHolder:
+          type: string
+        emergencyContactName:
+          type: string
+        emergencyContactPhone:
+          type: string
+        emergencyContactRelation:
+          type: string
+
+    KycReviewInput:
+      type: object
+      required: [action]
+      properties:
+        action:
+          type: string
+          enum: [approve, reject]
+        rejectionReason:
+          type: string
+
+    OnlineStatusInput:
+      type: object
+      required: [isOnline]
+      properties:
+        isOnline:
+          type: boolean
+
+    RunnerEarnings:
+      type: object
+      required: [today, thisWeek, thisMonth, lifetime, totalTasks, avgRating]
+      properties:
+        today:
+          type: number
+        thisWeek:
+          type: number
+        thisMonth:
+          type: number
+        lifetime:
+          type: number
+        totalTasks:
+          type: integer
+        avgRating:
+          type: ["number", "null"]
+        pendingPayout:
+          type: number
+
+    DailyEarning:
+      type: object
+      required: [date, amount, tasks]
+      properties:
+        date:
+          type: string
+        amount:
+          type: number
+        tasks:
+          type: integer
+
+    RunnerLocation:
+      type: object
+      required: [runnerId, lat, lng]
+      properties:
+        runnerId:
+          type: integer
+        taskId:
+          type: ["integer", "null"]
+        lat:
+          type: number
+        lng:
+          type: number
+        heading:
+          type: ["number", "null"]
+        speed:
+          type: ["number", "null"]
+        recordedAt:
+          type: string
+
+    RunnerMapMarker:
+      type: object
+      required: [runnerId, name, lat, lng, status]
+      properties:
+        runnerId:
+          type: integer
+        name:
+          type: string
+        phone:
+          type: ["string", "null"]
+        avatar:
+          type: ["string", "null"]
+        rating:
+          type: ["number", "null"]
+        lat:
+          type: number
+        lng:
+          type: number
+        status:
+          type: string
+          enum: [available, on_task, offline]
+        currentTaskId:
+          type: ["integer", "null"]
+        currentTaskCategory:
+          type: ["string", "null"]
+
+    # ─── SUBSCRIPTION SCHEMAS ─────────────────────────────────────────────────
+    SubscriptionPlan:
+      type: object
+      required: [id, name, priceMonthly, priceYearly, tasksPerMonth, features]
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        priceMonthly:
+          type: number
+        priceYearly:
+          type: number
+        tasksPerMonth:
+          type: ["integer", "null"]
+        features:
+          type: array
+          items:
+            type: string
+        badge:
+          type: ["string", "null"]
+        isPopular:
+          type: boolean
+
+    Subscription:
+      type: object
+      required: [id, planId, planName, status]
+      properties:
+        id:
+          type: integer
+        userId:
+          type: integer
+        planId:
+          type: string
+        planName:
+          type: string
+        billingCycle:
+          type: string
+          enum: [monthly, yearly]
+        status:
+          type: string
+          enum: [active, cancelled, expired]
+        tasksPerMonth:
+          type: ["integer", "null"]
+        tasksUsed:
+          type: integer
+        startDate:
+          type: string
+        endDate:
+          type: ["string", "null"]
+        amount:
+          type: number
+        createdAt:
+          type: string
+
+    SubscriptionInput:
+      type: object
+      required: [planId, billingCycle]
+      properties:
+        planId:
+          type: string
+        billingCycle:
+          type: string
+          enum: [monthly, yearly]
+
+    # ─── NOTIFICATION SCHEMAS ─────────────────────────────────────────────────
+    Notification:
+      type: object
+      required: [id, type, title, message, isRead, createdAt]
+      properties:
+        id:
+          type: integer
+        userId:
+          type: ["integer", "null"]
+        runnerId:
+          type: ["integer", "null"]
+        type:
+          type: string
+        title:
+          type: string
+        message:
+          type: string
+        isRead:
+          type: boolean
+        taskId:
+          type: ["integer", "null"]
+        createdAt:
+          type: string
+
+    # ─── REVIEW SCHEMAS ──────────────────────────────────────────────────────
+    ReviewInput:
+      type: object
+      required: [rating]
+      properties:
+        rating:
+          type: integer
+          minimum: 1
+          maximum: 5
+        review:
+          type: string
+
+    Review:
+      type: object
+      required: [id, taskId, rating, createdAt]
+      properties:
+        id:
+          type: integer
+        taskId:
+          type: integer
+        userId:
+          type: integer
+        runnerId:
+          type: integer
+        rating:
+          type: integer
+        review:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+
+    # ─── ADMIN SCHEMAS ───────────────────────────────────────────────────────
+    AdminStats:
+      type: object
+      required: [totalTasksToday, activeNow, completedToday, cancelledToday, gmvToday, platformRevenue, runnerPayouts, pendingPayouts, kycPending, stuckTasks, newReviews, totalRunnersOnline, totalRunnersOnTask, totalRunnersOffline]
+      properties:
+        totalTasksToday:
+          type: integer
+        activeNow:
+          type: integer
+        completedToday:
+          type: integer
+        cancelledToday:
+          type: integer
+        gmvToday:
+          type: number
+        platformRevenue:
+          type: number
+        runnerPayouts:
+          type: number
+        pendingPayouts:
+          type: number
+        kycPending:
+          type: integer
+        stuckTasks:
+          type: integer
+        newReviews:
+          type: integer
+        totalRunnersOnline:
+          type: integer
+        totalRunnersOnTask:
+          type: integer
+        totalRunnersOffline:
+          type: integer
+
+    ActivityItem:
+      type: object
+      required: [id, type, message, createdAt]
+      properties:
+        id:
+          type: integer
+        type:
+          type: string
+        message:
+          type: string
+        createdAt:
+          type: string
+
+    AdminTaskList:
+      type: object
+      required: [tasks, total]
+      properties:
+        tasks:
+          type: array
+          items:
+            $ref: "#/components/schemas/Task"
+        total:
+          type: integer
+
+    AdminTaskUpdate:
+      type: object
+      properties:
+        status:
+          type: string
+        runnerId:
+          type: integer
+        internalNotes:
+          type: string
+
+    Analytics:
+      type: object
+      required: [dailyStats, categoryBreakdown, hourlyDistribution, runnerPerformance, userGrowth, subscriptionMrr]
+      properties:
+        dailyStats:
+          type: array
+          items:
+            $ref: "#/components/schemas/DailyStat"
+        categoryBreakdown:
+          type: array
+          items:
+            $ref: "#/components/schemas/CategoryStat"
+        hourlyDistribution:
+          type: array
+          items:
+            $ref: "#/components/schemas/HourlyStat"
+        runnerPerformance:
+          type: array
+          items:
+            $ref: "#/components/schemas/RunnerPerformance"
+        userGrowth:
+          type: array
+          items:
+            $ref: "#/components/schemas/UserGrowthPoint"
+        subscriptionMrr:
+          type: array
+          items:
+            $ref: "#/components/schemas/MrrPoint"
+
+    DailyStat:
+      type: object
+      required: [date, tasks, gmv]
+      properties:
+        date:
+          type: string
+        tasks:
+          type: integer
+        gmv:
+          type: number
+
+    CategoryStat:
+      type: object
+      required: [category, tasks, revenue]
+      properties:
+        category:
+          type: string
+        tasks:
+          type: integer
+        revenue:
+          type: number
+
+    HourlyStat:
+      type: object
+      required: [hour, tasks]
+      properties:
+        hour:
+          type: integer
+        tasks:
+          type: integer
+
+    RunnerPerformance:
+      type: object
+      required: [runnerId, name, tasks, earnings, rating]
+      properties:
+        runnerId:
+          type: integer
+        name:
+          type: string
+        tasks:
+          type: integer
+        earnings:
+          type: number
+        rating:
+          type: ["number", "null"]
+
+    UserGrowthPoint:
+      type: object
+      required: [date, total]
+      properties:
+        date:
+          type: string
+        total:
+          type: integer
+
+    MrrPoint:
+      type: object
+      required: [date, mrr]
+      properties:
+        date:
+          type: string
+        mrr:
+          type: number
+
+    AdminSettings:
+      type: object
+      properties:
+        appName:
+          type: string
+        companyName:
+          type: string
+        supportPhone:
+          type: string
+        supportEmail:
+          type: string
+        whatsappNumber:
+          type: string
+        runnerPayoutPercent:
+          type: number
+        urgencySurcharge:
+          type: number
+        cancellationFee:
+          type: number
+        maxTasksPerRunnerPerDay:
+          type: integer
+        maintenanceMode:
+          type: boolean
+
+    AdminSettingsUpdate:
+      type: object
+      properties:
+        appName:
+          type: string
+        companyName:
+          type: string
+        supportPhone:
+          type: string
+        supportEmail:
+          type: string
+        whatsappNumber:
+          type: string
+        runnerPayoutPercent:
+          type: number
+        urgencySurcharge:
+          type: number
+        cancellationFee:
+          type: number
+        maxTasksPerRunnerPerDay:
+          type: integer
+        maintenanceMode:
+          type: boolean

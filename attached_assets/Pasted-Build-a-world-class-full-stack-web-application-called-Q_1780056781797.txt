@@ -1,0 +1,755 @@
+Build a world-class full-stack web application called "QBuddy" —
+better than Zomato, Blinkit, and Uber in UX quality.
+
+COMPANY: Powered by IBNAY IFTRIBE PRIVATE LIMITED
+APP NAME: QBuddy
+TAGLINE: "UnLimit & LineLess Assistant"
+SLOGAN: "Aapka Kaam, Hamara Runner"
+COPYRIGHT: © 2025 IBNAY IFTRIBE PRIVATE LIMITED. All rights reserved.
+
+════════════════════════════════
+TECH STACK
+════════════════════════════════
+Frontend: React + Tailwind CSS + Framer Motion (animations)
+Backend: Node.js + Express
+Database: PostgreSQL (Neon DB)
+Real-time: Socket.io (live GPS + task status)
+Maps/GPS: Leaflet.js + OpenStreetMap (free, no API key needed)
+Auth: Phone OTP (store/verify in DB)
+Payments: Razorpay (test mode)
+Icons: Lucide React
+Charts: Recharts
+Animations: Framer Motion
+HTTP client: Axios
+
+════════════════════════════════
+BRAND DESIGN SYSTEM
+════════════════════════════════
+Primary purple: #6C3FD4
+Accent orange: #FF6B35
+Background: #F8F7FF
+Success: #22C55E
+Warning: #F59E0B
+Danger: #EF4444
+Text dark: #1A1A2E
+Text muted: #6B7280
+Card: #FFFFFF, box-shadow: 0 4px 24px rgba(108,63,212,0.10)
+Border radius: 16px (cards), 12px (buttons), 50% (avatars)
+Font: Inter (weights 400, 500, 600, 700)
+Gradient: linear-gradient(135deg, #6C3FD4 0%, #9B6FF7 100%)
+Button gradient: linear-gradient(135deg, #FF6B35, #FF8C42)
+
+All transitions: 0.2s ease
+Hover states on every interactive element
+Smooth page transitions with Framer Motion
+
+════════════════════════════════
+GPS TRACKING SYSTEM (Core Feature)
+════════════════════════════════
+Use Leaflet.js + OpenStreetMap tiles.
+
+RUNNER SIDE — GPS broadcast:
+- When runner accepts task, start broadcasting location
+- Use browser Geolocation API: navigator.geolocation.watchPosition()
+- Emit via Socket.io: socket.emit('runner_location', {taskId, lat, lng, heading})
+- Update every 3 seconds
+- Show runner current speed and ETA calculation
+
+USER SIDE — Live map view:
+- Full-screen map in task detail page (like Zomato order tracking)
+- Animated runner marker (use custom purple pin icon)
+- Pulsing circle around runner marker (like Blinkit)
+- User location marker (home icon)
+- Destination marker (flag icon)
+- Polyline route between runner → destination (draw straight line,
+update as runner moves)
+- Animated dotted path trail showing where runner came from
+- ETA display: "Runner arrives in ~12 mins" (calculated from distance)
+- Live status bar at bottom of map:
+"Mohammed is on the way 🏃" with runner photo + name
+- Map auto-pans to keep runner centered as they move
+- Zoom controls
+- "Runner reached!" animation (confetti burst) when runner marks arrived
+
+BACKEND — Location storage:
+CREATE TABLE runner_locations (
+runner_id INT,
+task_id INT,
+lat DECIMAL(10,8),
+lng DECIMAL(11,8),
+heading DECIMAL(5,2),
+speed DECIMAL(5,2),
+recorded_at TIMESTAMP DEFAULT NOW()
+);
+
+Socket.io rooms: each task gets room `task_${taskId}`
+Runner joins room on task accept
+User joins room on task detail page open
+Admin can see all active runners on admin map
+
+════════════════════════════════
+ADMIN LIVE MAP (Uber-style fleet view)
+════════════════════════════════
+- Full India map showing all active runners as moving dots
+- Color coded: 🟢 Available | 🔵 On Task | 🔴 Offline
+- Click runner dot → popup: name, current task, rating, phone
+- Task heatmap overlay toggle (show where most tasks are)
+- Live counter: X runners active | X tasks in progress
+
+════════════════════════════════
+DASHBOARD 1: USER APP (/app)
+════════════════════════════════
+
+BOTTOM NAV (sticky, blurred glass effect):
+🏠 Home | 📋 Tasks | 👴 Senior | 👤 Profile
+
+Splash screen: QBuddy logo animates in with purple glow,
+tagline fades in, then slides to home after 2 seconds.
+
+─── HOME PAGE ───
+Top bar:
+Left: QBuddy logo (Q in purple circle + Buddy text)
+Center: Location pin + "Ahmedabad, Gujarat" dropdown
+Right: Bell icon (notifications) + Avatar
+
+Greeting card (gradient purple):
+"Namaste, Rashida 👋"
+"Kya kaam karwana hai aaj?"
+Quick book CTA button (orange)
+
+Live stats strip (scrolling horizontal):
+🏃 23 runners active now | ⚡ Avg 8 min response | ⭐ 4.8 rated service
+
+Service grid (2×4, animated entrance):
+Each card: rounded, white, shadow, colored icon,
+category name in English + Hindi below
+
+🏥 Hospital Queue / अस्पताल
+🏛 Govt Office / सरकारी काम
+🏦 Bank Work / बैंक
+📄 Document / दस्तावेज़
+💊 Medicine / दवाई
+👴 Senior Care / बुज़ुर्ग सेवा
+📦 Errand / काम-काज
+⚡ Emergency / ज़रूरी
+
+"How QBuddy Works" section:
+3 animated steps with lottie-style CSS animations:
+1. 📱 Book in 60 seconds
+2. 🏃 Runner assigned instantly
+3. ✅ Sit back, task done
+
+Recent tasks (if any) — horizontal scroll cards
+Promotional banner: Senior Care subscription CTA
+
+─── BOOK TASK (3-step wizard) ───
+
+Progress bar at top showing Step 1/2/3
+
+STEP 1 — Task Details:
+Category shown with large icon (pre-selected from home tap)
+Change category link
+
+"Describe your task" textarea
+Placeholder: "E.g.: Collect OPD token for my father at Civil Hospital,
+doctor name is Dr. Sharma, department: Orthopedics"
+Character count: 0/300
+
+Toggle: "Senior/disabled person involved?"
+(if yes → show note: "We'll assign our most experienced runner")
+
+Urgency selector:
+[ Normal — ₹0 extra ] [ Urgent — ₹50 extra ⚡ ]
+
+Special instructions (optional): text input
+
+STEP 2 — When & Where:
+Date picker (calendar popup, block past dates)
+Time picker (30-min slots, disable past times for today)
+
+Location input with autocomplete simulation:
+"Hospital/office name"
+"Area/locality"
+"City" (dropdown: Ahmedabad | More cities coming soon)
+
+Distance estimate:
+[ 0-2 km ] [ 2-5 km ] [ 5+ km ]
+
+Map preview (small Leaflet map showing approximate area)
+
+STEP 3 — Review & Pay:
+Task summary card (all details)
+
+Price breakdown (itemized):
+┌─────────────────────────────┐
+│ Base price (Hospital Queue) ₹149 │
+│ Distance charge (2-5km) ₹ 20 │
+│ Urgency surcharge ₹ 0 │
+│ ─────────────────────────── │
+│ Total ₹169 │
+│ Runner earns: ₹118 (70%) │
+│ QBuddy fee: ₹51 (30%) │
+└─────────────────────────────┘
+
+Payment options:
+● Pay Now (Razorpay — UPI/Card/Netbanking)
+○ Pay on Completion (Cash — verified users only)
+
+Coupon code input (QBUDDY10 → 10% off hardcoded)
+
+Terms checkbox
+
+"Confirm & Book 🚀" button (orange gradient, full width)
+
+On success:
+- Confetti animation
+- "Task Booked! 🎉" modal
+- OTP shown: "Share this OTP with your runner: [XXXXXX]"
+- Redirect to task detail
+
+─── MY TASKS ───
+
+Filter tabs: All | Active | Completed | Cancelled
+
+Task cards with:
+- Left colored border by status
+- Category icon + name
+- Description preview
+- Runner name + avatar (if assigned)
+- Status badge with pulse animation if active
+- Date + time
+- Price
+- Chevron →
+
+Status system with animations:
+🟡 Pending — pulsing yellow dot
+🔵 Assigned — blue, shows runner name
+🟣 On the way — purple, shows live ETA
+🟢 At location — green
+⚡ In Progress — animated lightning
+✅ Completed — green checkmark
+❌ Cancelled — red
+
+─── TASK DETAIL (The star feature — better than Zomato) ───
+
+TOP SECTION — Live Map (60% of screen height):
+Full Leaflet map
+Custom markers:
+🏠 Your location (home icon, blue)
+📍 Task location (flag icon, orange)
+🏃 Runner (animated moving marker, purple —
+bounces slightly as position updates)
+
+Pulsing ring animation around runner marker
+Dotted trail showing runner's path
+Straight polyline: runner → destination
+
+Map overlays:
+Top-left: QBuddy logo watermark (small)
+Bottom: Runner info strip (glass morphism blur card):
+[Runner photo] Mohammed Salim ⭐4.8
+"On the way to your location"
+ETA: ~8 minutes
+[Call] [WhatsApp] buttons
+
+Status updates animate in from bottom as runner updates
+
+MIDDLE SECTION — Status Timeline:
+Vertical timeline with animated checkmarks:
+✅ Task Booked — 10:30 AM
+✅ Runner Assigned — 10:32 AM (Mohammed Salim)
+🔵 Runner On the Way — 10:35 AM (CURRENT — pulsing)
+○ Reached Location
+○ Task In Progress
+○ Completed
+
+BOTTOM SECTION:
+OTP Card (purple gradient):
+"Share this OTP with runner to mark complete"
+[ 4 8 2 9 1 7 ] ← large digits, copy button
+
+Proof Photos (shown after runner uploads):
+Grid of photos with expand on tap
+
+After completion:
+Rate Your Runner card slides up:
+⭐⭐⭐⭐⭐ tap to rate
+"Write a review..." text input
+Submit button
+
+Help & Support (bottom):
+WhatsApp support link | Call support
+
+─── SENIOR CARE PLANS (/app/senior) ───
+
+Hero: "Peace of mind for your parents 💜"
+Subtitle: "Trusted by NRI families in USA, UK, UAE, Middle East"
+
+Family photo placeholder banner
+
+Toggle: Monthly | Yearly (yearly = 2 months free)
+
+3 plan cards (center one highlighted with purple border = GOLD):
+
+SILVER — ₹2,999/month
+8 tasks per month
+✓ Hospital queue & OPD
+✓ Medicine pickup
+✓ Bank errands
+✓ WhatsApp updates to family
+✓ Monthly task summary
+[Get Silver]
+
+GOLD — ₹5,999/month ← MOST POPULAR badge
+20 tasks per month
+✓ Everything in Silver
+✓ Priority assignment (<5 min)
+✓ Dedicated runner (same person)
+✓ Monthly health escort
+✓ Photo proof every task
+✓ Family group WhatsApp
+[Get Gold — Most Popular]
+
+PLATINUM — ₹9,999/month
+Unlimited tasks
+✓ Everything in Gold
+✓ 24/7 emergency line
+✓ Government doc assistance
+✓ Grocery + errand
+✓ Weekly video check-in reports
+✓ Dedicated account manager
+[Get Platinum]
+
+Trust badges below:
+"KYC Verified Runners" | "GPS Tracked" | "Insured Tasks" | "Cancel Anytime"
+
+Testimonials (3 cards, horizontal scroll):
+"My parents are in Ahmedabad, I'm in Dubai. QBuddy Platinum gave
+me peace of mind I never had." — Imran A., Dubai
+Rating: ⭐⭐⭐⭐⭐
+
+─── PROFILE ───
+Avatar with initials (purple bg)
+Name + phone + city
+Edit profile button
+
+Subscription card (if active):
+Gold plan badge, days remaining progress bar, tasks remaining
+
+Stats row:
+[Total Tasks] [Hours Saved] [₹ Value Saved]
+
+Settings list:
+Notifications | Language (EN/HI) | Help & Support | Privacy Policy |
+Terms of Service | About QBuddy | Logout
+
+Footer: "Powered by IBNAY IFTRIBE PRIVATE LIMITED"
+Version: v1.0.0
+
+════════════════════════════════
+DASHBOARD 2: RUNNER APP (/runner)
+════════════════════════════════
+
+BOTTOM NAV: 🗂 Tasks | ▶ Active | 💰 Earnings | 👤 Profile
+
+─── TASK FEED ───
+Top: Earnings pill "Today: ₹340" | Online/Offline toggle (green/gray)
+
+Available task cards (swipe left to skip, swipe right to accept
+OR use Accept/Skip buttons):
+┌──────────────────────────────────┐
+│ 🏥 Hospital Queue 2.3 km away │
+│ Civil Hospital, Asarwa │
+│ "OPD token for elderly patient" │
+│ Today 2:00 PM │
+│ 💰 You earn: ₹118 ⏱ ~45min │
+│ [Skip →] [✓ Accept Task] │
+└──────────────────────────────────┘
+
+Accepted → confirmation animation → moves to Active tab
+
+─── ACTIVE TASK ───
+
+Task info card at top
+
+Runner's own map (sees their position + destination):
+Their location (blue dot — live GPS)
+Task location (orange flag)
+Distance + ETA to destination
+
+Step action buttons (sequential unlock):
+
+STEP 1 (enabled):
+[📍 I've Reached the Location]
+→ tapped → green tick → unlocks step 2 →
+user sees "Runner has arrived!" notification
+
+STEP 2:
+[▶ Start Task Now]
+→ timer starts showing elapsed time
+
+STEP 3:
+[📷 Upload Proof Photo]
+→ camera/file picker → photo preview → confirm upload
+→ user sees photos appear on their screen live
+
+STEP 4:
+[🔐 Enter OTP from User]
+→ 6 individual digit input boxes
+→ on correct OTP:
+Success animation (✅ green explosion)
+"Task Complete! You earned ₹118"
+Earnings animate counting up
+
+─── EARNINGS ───
+
+This week card (big purple number)
+Withdraw button → bank transfer (Razorpay payout)
+
+7-day bar chart (Recharts)
+
+Task history table:
+Date | Category | Location | Earned | Status
+
+Lifetime stats:
+Total earned | Tasks done | Avg rating | Member since
+
+─── RUNNER KYC/PROFILE ───
+
+KYC status banner (animated):
+PENDING: Orange "⏳ Verification Pending — usually within 24 hours"
+VERIFIED: Green "✅ Verified QBuddy Runner"
+REJECTED: Red "❌ Rejected: [reason]" + Resubmit button
+
+KYC form (clean card layout):
+Personal: Full name, phone, email, city, area
+Aadhaar: Number input (masked), front photo upload, back photo upload
+Selfie: Camera capture or upload, comparison instruction
+Bank: Account number, IFSC, account holder name
+Emergency: Contact name, phone, relationship
+Agreement: Terms checkbox
+
+Upload areas: dashed border → drag/click → preview thumbnail →
+green checkmark when uploaded
+
+Submit → "Under review — we'll SMS you within 24 hours"
+
+════════════════════════════════
+DASHBOARD 3: ADMIN PANEL (/admin)
+Password: qbuddy@admin2025
+════════════════════════════════
+
+SIDEBAR (collapsible, purple gradient):
+QBuddy logo at top
+📊 Dashboard
+🗺 Live Map
+📋 Tasks
+🏃 Runners
+👥 Users
+💳 Subscriptions
+💰 Pricing
+📈 Analytics
+⚙ Settings
+
+─── COMMAND CENTER (Dashboard) ───
+
+Top row metric cards (animated count-up on load):
+Total Tasks Today | Active Now | Completed | Cancelled
+
+Revenue row:
+GMV Today (₹) | Platform Revenue | Runner Payouts | Pending Payouts
+
+Alerts row (red badge if issues):
+⚠ KYC Pending: 3 runners | 🔴 Stuck Tasks: 1 | ⭐ New Reviews: 5
+
+Live activity feed (right panel):
+Real-time task events streaming in with socket:
+"🏃 Mohammed accepted task #234 — 2 min ago"
+"✅ Task #231 completed — Fatima — ₹280 earned"
+"🆕 New booking: Hospital Queue — Rashida — ₹169"
+
+─── LIVE FLEET MAP (/admin/map) ───
+
+Full screen India map (Leaflet)
+All runners shown as colored dots:
+🟢 Green = available (no task)
+🔵 Blue = on task (moving)
+⚫ Gray = offline
+
+Click any runner dot:
+Popup card: photo, name, rating, current status,
+current task detail (if any), phone number,
+[Call] [Message] [View Profile] buttons
+
+Top overlay bar:
+"🟢 12 Available | 🔵 8 On Task | ⚫ 4 Offline | Total: 24"
+
+Task pins on map (orange flags) with task detail on click
+
+Auto-refresh every 5 seconds
+
+─── TASK MANAGEMENT ───
+
+Filter bar: Status chips | Category chips | Date picker | Search
+
+Data table with pagination (20/page):
+# | User | Category | Location | Runner | Price | Status | Time | Actions
+
+Bulk actions: Assign runner | Cancel | Export CSV
+
+Task detail slide-over panel (from right):
+Full task info, user contact, payment details,
+runner contact, OTP status, proof photos,
+manual status override, internal notes field,
+"Assign Runner" dropdown with runner list + ratings
+
+─── RUNNER KYC REVIEW ───
+
+Tabs: Pending (badge count) | Verified | Rejected | Suspended
+
+Pending runner card:
+Photo | Name | Phone | Submitted time | [Review] button
+
+KYC Review modal (full screen):
+Left panel: submitted documents
+Aadhaar front (zoomable)
+Aadhaar back (zoomable)
+Selfie (zoomable)
+Side-by-side Aadhaar photo vs selfie comparison
+
+Right panel: runner details
+All form data
+Aadhaar number
+Bank details
+
+Action buttons:
+[✅ Approve — Activate Runner]
+[❌ Reject] → rejection reason dropdown + custom text → send SMS
+
+─── ANALYTICS ───
+
+Date range picker (last 7 / 30 / 90 days / custom)
+
+Charts grid:
+1. Daily tasks + GMV (dual axis line chart)
+2. Tasks by category (horizontal bar)
+3. Runner performance (sortable table)
+4. Hourly task distribution (area chart)
+5. City breakdown (if multiple cities)
+6. Subscription MRR trend (line)
+7. User growth (cumulative area chart)
+8. Average task completion time (by category)
+
+Export: Download CSV button on each chart
+
+─── SETTINGS ───
+
+General: App name, company name, support phone, support email,
+WhatsApp business number
+
+Notification templates: Edit SMS/WhatsApp message templates
+
+Platform: Runner payout %, urgency surcharge, cancellation fee,
+max tasks per runner per day
+
+Danger zone: Maintenance mode toggle
+
+Footer everywhere in admin:
+"QBuddy Admin Panel | Powered by IBNAY IFTRIBE PRIVATE LIMITED"
+"© 2025 IBNAY IFTRIBE PRIVATE LIMITED. All rights reserved."
+
+════════════════════════════════
+PUBLIC LANDING PAGE (/)
+════════════════════════════════
+
+NAVBAR:
+QBuddy logo (left) | Home | How it Works | Services |
+Senior Care | Pricing | [Book Now →] (orange button)
+
+HERO SECTION:
+Large headline (animated word by word):
+"India's First
+LineLess Assistant"
+
+Subheadline:
+"Verified local runners handle your hospital queues,
+government paperwork, bank errands & more.
+You sit back."
+
+Two CTAs:
+[🚀 Book a Runner] (orange) [Become a Runner →] (outlined purple)
+
+Hero illustration: animated map with moving runner pin
+
+Trust bar below hero:
+⭐4.9 rated | 🏃 500+ verified runners | ✅ 10,000+ tasks done |
+🏙 Ahmedabad (expanding)
+
+─── HOW IT WORKS ───
+3 animated steps with large icons
+
+─── SERVICES GRID ───
+8 service cards with descriptions and prices starting from
+
+─── WHY QBUDDY ───
+vs traditional alternatives comparison table:
+QBuddy | Doing it yourself | Hiring someone random
+GPS tracked ✅ ❌ ❌
+KYC verified ✅ ❌ ❌
+Insured ✅ ❌ ❌
+On-demand ✅ ✅ ❌
+5-min book ✅ ❌ ❌
+
+─── SENIOR CARE SECTION ───
+Emotional copy + plan cards summary
+
+─── RUNNER CTA ───
+"Earn ₹500-1500 daily. Be your own boss."
+[Join as Runner →]
+
+─── TESTIMONIALS ───
+3 testimonial cards with photos (avatars), names, city
+
+─── FOOTER ───
+Logo + tagline
+Links: About | Privacy Policy | Terms | Refund Policy |
+Contact | Careers | Blog
+
+Contact: support@qbuddy.in | WhatsApp: +91-XXXXXXXXXX
+Download app: App Store | Play Store (coming soon badges)
+
+Social: Instagram | LinkedIn | Twitter/X | YouTube
+
+"Powered by IBNAY IFTRIBE PRIVATE LIMITED"
+"© 2025 IBNAY IFTRIBE PRIVATE LIMITED. All rights reserved."
+"CIN: [Placeholder] | GST: [Placeholder]"
+"Registered Office: Ahmedabad, Gujarat, India"
+
+════════════════════════════════
+NOTIFICATION SYSTEM
+════════════════════════════════
+
+In-app notifications (bell icon, unread badge):
+Store in DB, mark read on click
+
+Notification types:
+- Task booked confirmation
+- Runner assigned (with name)
+- Runner on the way
+- Runner reached location
+- Task in progress
+- Task completed (with earnings for runner)
+- Review reminder
+- KYC approved/rejected (for runners)
+- Subscription renewal reminder
+
+Real-time delivery via Socket.io
+
+════════════════════════════════
+DATABASE SCHEMA (complete)
+════════════════════════════════
+
+All tables from before PLUS:
+
+CREATE TABLE notifications (
+id SERIAL PRIMARY KEY,
+user_id INT,
+runner_id INT,
+type VARCHAR(50),
+title VARCHAR(200),
+message TEXT,
+is_read BOOLEAN DEFAULT false,
+task_id INT,
+created_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE TABLE runner_locations (
+id SERIAL PRIMARY KEY,
+runner_id INT,
+task_id INT,
+lat DECIMAL(10,8),
+lng DECIMAL(11,8),
+heading DECIMAL(5,2) DEFAULT 0,
+speed DECIMAL(5,2) DEFAULT 0,
+recorded_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE TABLE reviews (
+id SERIAL PRIMARY KEY,
+task_id INT,
+user_id INT,
+runner_id INT,
+rating INT CHECK (rating BETWEEN 1 AND 5),
+review TEXT,
+created_at TIMESTAMP DEFAULT NOW()
+);
+
+════════════════════════════════
+SEED DATA
+════════════════════════════════
+
+Users (3):
+1. Rashida Ansari | 9876543210 | Ahmedabad | Gold plan active
+2. Vikram Mehta | 9876543211 | Ahmedabad | No subscription
+3. Sunita Patel | 9876543212 | Ahmedabad | Silver (NRI family account)
+
+Runners (5):
+1. Mohammed Salim | Verified | ⭐4.8 | 34 tasks |
+Lat: 23.0225, Lng: 72.5714 (Ahmedabad)
+2. Kavya Sharma | Verified | ⭐4.6 | 21 tasks | Female
+3. Raju Prajapati | KYC Pending | 0 tasks
+4. Deepak Yadav | KYC Rejected | reason: "Blurry Aadhaar image"
+5. Fatima Shaikh | Verified | ⭐4.9 | 52 tasks | Female
+
+Tasks (10, various statuses):
+- 2 pending (no runner yet)
+- 2 assigned (runner assigned, not started)
+- 2 in_progress (runner active, use Mohammed's location)
+- 3 completed (with ratings)
+- 1 cancelled
+
+Use real Ahmedabad locations:
+Civil Hospital Asarwa, Collectorate Office, SBI Navrangpura,
+AMTS Bus Stand, VS Hospital, Income Tax Ahmedabad
+
+════════════════════════════════
+PERFORMANCE & POLISH
+════════════════════════════════
+
+Loading states: skeleton screens on every data-fetching component
+Error states: friendly error cards with retry button
+Empty states: illustrated empty state with helpful CTA
+Pull to refresh: on task lists
+Smooth page transitions: Framer Motion slide + fade
+Button feedback: ripple effect on tap
+Form validation: inline, real-time, friendly messages
+Toast notifications: bottom of screen, auto-dismiss 3s
+Haptic feedback simulation: button scale animation on press
+
+Mobile optimizations:
+- Bottom sheet modals (not center modals)
+- Large touch targets (min 44px)
+- Swipeable cards on task feed
+- Sticky bottom nav with safe area padding
+- iOS-style momentum scrolling
+
+════════════════════════════════
+BUILD ORDER
+════════════════════════════════
+1. DB schema + seed data + Express API (all routes + Socket.io)
+2. GPS/Socket infrastructure (runner broadcasts, user receives)
+3. Admin panel complete (command center first)
+4. Live fleet map (admin)
+5. User app — home + booking flow
+6. User app — task detail with LIVE GPS MAP
+7. Runner app — task feed + active task with GPS
+8. Landing page
+9. Notifications system
+10. Final UI polish pass — every screen pixel-perfect
+
+QUALITY BAR: This must look better than Zomato, Blinkit,
+Urban Company, and Rapido combined.
+Every pixel intentional. Every interaction smooth.
+Production-ready from day one.
+
+Powered by IBNAY IFTRIBE PRIVATE LIMITED.
