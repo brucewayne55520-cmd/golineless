@@ -1,9 +1,11 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
 import { motion } from "framer-motion";
+import { ClipboardList, ChevronRight } from "lucide-react";
 import { useListTasks } from "@workspace/api-client-react";
 import { UserBottomNav } from "@/components/BottomNav";
-import { CATEGORY_ICONS, CATEGORY_NAMES, STATUS_COLORS, STATUS_LABELS, STATUS_BORDER, formatCurrency } from "@/lib/utils";
+import { CategoryIcon } from "@/components/CategoryIcon";
+import { CATEGORY_NAMES, STATUS_COLORS, STATUS_LABELS, STATUS_BORDER, formatCurrency } from "@/lib/utils";
 
 const FILTERS = ["all", "pending", "assigned", "in_progress", "completed", "cancelled"] as const;
 const FILTER_LABELS: Record<string, string> = {
@@ -18,7 +20,6 @@ export default function MyTasks() {
 
   return (
     <div className="min-h-screen bg-[#F8F7FF] pb-24">
-      {/* Header */}
       <div className="bg-white px-4 py-4 border-b border-gray-100 sticky top-0 z-30">
         <h1 className="text-xl font-black text-[#1A1A2E]">My Tasks</h1>
         <div className="flex gap-2 mt-3 overflow-x-auto pb-1">
@@ -43,7 +44,7 @@ export default function MyTasks() {
           ))
         ) : !tasks || tasks.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 text-center">
-            <div className="text-6xl mb-4">📋</div>
+            <ClipboardList size={48} className="text-gray-300 mb-4" />
             <h3 className="font-bold text-[#1A1A2E] text-lg">No tasks yet</h3>
             <p className="text-gray-500 text-sm mt-1 mb-5">Book your first runner today!</p>
             <button
@@ -65,7 +66,9 @@ export default function MyTasks() {
               className={`bg-white rounded-2xl p-4 shadow-sm border-l-4 cursor-pointer hover:shadow-md transition-all ${STATUS_BORDER[task.status] ?? "border-l-gray-300"}`}
             >
               <div className="flex items-start gap-3">
-                <span className="text-2xl">{CATEGORY_ICONS[task.category] ?? "📦"}</span>
+                <div className="text-[#6C3FD4] flex-shrink-0 mt-0.5">
+                  <CategoryIcon category={task.category} size={22} />
+                </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between gap-2 mb-1">
                     <span className="font-semibold text-[#1A1A2E] text-sm">{CATEGORY_NAMES[task.category]}</span>
@@ -87,7 +90,7 @@ export default function MyTasks() {
                     <span className="text-xs font-bold text-[#6C3FD4]">{formatCurrency(task.price)}</span>
                   </div>
                 </div>
-                <span className="text-gray-300 text-lg">›</span>
+                <ChevronRight size={16} className="text-gray-300 flex-shrink-0 mt-0.5" />
               </div>
             </motion.div>
           ))

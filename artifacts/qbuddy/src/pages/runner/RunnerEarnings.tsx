@@ -1,5 +1,6 @@
 import { motion } from "framer-motion";
 import { toast } from "sonner";
+import { CheckCircle2, Star, ClipboardList } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 import { useGetRunnerEarnings, useGetRunnerDailyEarnings, useListTasks } from "@workspace/api-client-react";
 import { RunnerBottomNav } from "@/components/BottomNav";
@@ -16,19 +17,13 @@ export default function RunnerEarnings() {
 
   return (
     <div className="min-h-screen pb-24" style={{ background: "#0F0F1A" }}>
-      {/* Header */}
       <div className="px-4 pt-5 pb-4 border-b border-white/10">
         <h1 className="text-xl font-black text-white">Earnings</h1>
       </div>
 
-      {/* Weekly card */}
       <div className="mx-4 mt-4 rounded-2xl p-6 text-white" style={{ background: "linear-gradient(135deg, #6C3FD4, #9B6FF7)" }}>
         <p className="text-white/70 text-xs mb-1">This Week</p>
-        <motion.div
-          initial={{ opacity: 0, scale: 0.8 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="text-4xl font-black mb-4"
-        >
+        <motion.div initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} className="text-4xl font-black mb-4">
           {e ? formatCurrency(e.thisWeek ?? 0) : "Rs 0"}
         </motion.div>
         <div className="grid grid-cols-3 gap-3">
@@ -45,7 +40,6 @@ export default function RunnerEarnings() {
         </div>
       </div>
 
-      {/* Withdraw button */}
       <div className="mx-4 mt-3">
         <button
           onClick={() => toast.info("Coming soon! Payouts every Monday.")}
@@ -56,14 +50,13 @@ export default function RunnerEarnings() {
         </button>
       </div>
 
-      {/* 7-day chart */}
       {dailyData.length > 0 && (
         <div className="mx-4 mt-4 bg-white/8 border border-white/10 rounded-2xl p-4">
           <h3 className="text-white font-bold mb-4">Last 7 Days</h3>
           <ResponsiveContainer width="100%" height={140}>
             <BarChart data={dailyData}>
               <XAxis dataKey="date" tick={{ fontSize: 9, fill: "rgba(255,255,255,0.4)" }} tickFormatter={(v) => v.slice(5)} />
-              <YAxis tick={{ fontSize: 9, fill: "rgba(255,255,255,0.4)" }} tickFormatter={(v) => `${v}`} />
+              <YAxis tick={{ fontSize: 9, fill: "rgba(255,255,255,0.4)" }} />
               <Tooltip
                 contentStyle={{ background: "#1A1A2E", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 12, color: "white", fontSize: 12 }}
                 formatter={(v: any) => [`Rs ${v}`, "Earned"]}
@@ -74,15 +67,14 @@ export default function RunnerEarnings() {
         </div>
       )}
 
-      {/* Lifetime stats */}
       {e && (
         <div className="mx-4 mt-4 grid grid-cols-2 gap-3">
           {[
-            { icon: "✅", label: "Tasks Done", val: e.totalTasks ?? 0 },
-            { icon: "⭐", label: "Avg Rating", val: e.avgRating ? Number(e.avgRating).toFixed(1) : "N/A" },
+            { Icon: CheckCircle2, label: "Tasks Done", val: e.totalTasks ?? 0, color: "#22C55E" },
+            { Icon: Star, label: "Avg Rating", val: e.avgRating ? Number(e.avgRating).toFixed(1) : "N/A", color: "#FF6B35" },
           ].map((s) => (
             <div key={s.label} className="bg-white/8 border border-white/10 rounded-2xl p-4 text-center">
-              <div className="text-2xl mb-1">{s.icon}</div>
+              <s.Icon size={22} className="mx-auto mb-1" style={{ color: s.color }} />
               <div className="text-white font-black text-xl">{s.val}</div>
               <div className="text-white/40 text-xs">{s.label}</div>
             </div>
@@ -90,12 +82,11 @@ export default function RunnerEarnings() {
         </div>
       )}
 
-      {/* Task history */}
       <div className="mx-4 mt-4">
         <h3 className="text-white font-bold mb-3">Task History</h3>
         {completedTasks.length === 0 ? (
           <div className="text-center py-8 text-white/40">
-            <div className="text-4xl mb-2">📋</div>
+            <ClipboardList size={36} className="mx-auto mb-2 opacity-40" />
             <p>No completed tasks yet</p>
           </div>
         ) : (

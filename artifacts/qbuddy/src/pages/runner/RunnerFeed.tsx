@@ -2,9 +2,11 @@ import { useState } from "react";
 import { useLocation } from "wouter";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
+import { MapPin, Calendar, Search, CheckCircle } from "lucide-react";
 import { useListAvailableTasks, useAcceptTask, useGetRunnerMe, useToggleOnlineStatus } from "@workspace/api-client-react";
 import { RunnerBottomNav } from "@/components/BottomNav";
-import { CATEGORY_ICONS, CATEGORY_NAMES, formatCurrency } from "@/lib/utils";
+import { CategoryIcon } from "@/components/CategoryIcon";
+import { CATEGORY_NAMES, formatCurrency } from "@/lib/utils";
 
 export default function RunnerFeed() {
   const [, navigate] = useLocation();
@@ -18,7 +20,7 @@ export default function RunnerFeed() {
   const isOnline = r?.isOnline ?? false;
 
   const handleToggle = () => {
-    toggleOnline.mutate({ body: { isOnline: !isOnline } } as any, {
+    toggleOnline.mutate({ data: { isOnline: !isOnline } } as any, {
       onSuccess: () => { refetchRunner(); },
       onError: () => toast.error("Failed to toggle status"),
     });
@@ -37,7 +39,6 @@ export default function RunnerFeed() {
 
   return (
     <div className="min-h-screen pb-20" style={{ background: "#0F0F1A" }}>
-      {/* Header */}
       <div className="px-4 pt-4 pb-3 flex items-center justify-between border-b border-white/10">
         <div>
           <h1 className="text-xl font-black text-white">Available Tasks</h1>
@@ -63,7 +64,6 @@ export default function RunnerFeed() {
         </div>
       </div>
 
-      {/* KYC warning */}
       {r && r.kycStatus !== "verified" && (
         <div className={`mx-4 mt-4 rounded-2xl p-4 ${r.kycStatus === "rejected" ? "bg-red-500/20 border border-red-500/30" : "bg-yellow-500/20 border border-yellow-500/30"}`}>
           <p className={`text-sm font-bold ${r.kycStatus === "rejected" ? "text-red-400" : "text-yellow-400"}`}>
@@ -78,7 +78,6 @@ export default function RunnerFeed() {
         </div>
       )}
 
-      {/* Task list */}
       <div className="px-4 pt-4 space-y-4">
         {isLoading ? (
           Array.from({ length: 3 }).map((_, i) => (
@@ -86,7 +85,7 @@ export default function RunnerFeed() {
           ))
         ) : !tasks || (tasks as any[]).length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 text-center">
-            <div className="text-5xl mb-4">👀</div>
+            <Search size={40} className="text-white/20 mb-4" />
             <h3 className="font-bold text-white text-lg">No tasks available</h3>
             <p className="text-white/50 text-sm mt-1">New tasks appear here automatically</p>
           </div>
@@ -100,7 +99,9 @@ export default function RunnerFeed() {
               className="bg-white/8 border border-white/10 rounded-2xl p-4"
             >
               <div className="flex items-start gap-3 mb-3">
-                <span className="text-3xl">{CATEGORY_ICONS[task.category] ?? "📦"}</span>
+                <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center text-white flex-shrink-0">
+                  <CategoryIcon category={task.category} size={22} />
+                </div>
                 <div className="flex-1">
                   <div className="flex items-center justify-between">
                     <h3 className="font-bold text-white">{CATEGORY_NAMES[task.category]}</h3>
@@ -108,13 +109,18 @@ export default function RunnerFeed() {
                       {formatCurrency(Number(task.price ?? 0) * 0.7)} for you
                     </span>
                   </div>
-                  {task.locationArea && <p className="text-white/50 text-xs mt-0.5">📍 {task.locationArea}, {task.locationCity ?? "Ahmedabad"}</p>}
+                  {task.locationArea && (
+                    <p className="text-white/50 text-xs mt-0.5 flex items-center gap-1">
+                      <MapPin size={10} /> {task.locationArea}, {task.locationCity ?? "Ahmedabad"}
+                    </p>
+                  )}
                 </div>
               </div>
               <p className="text-white/60 text-sm mb-3 line-clamp-2">{task.description}</p>
               {task.scheduledAt && (
-                <p className="text-white/40 text-xs mb-3">
-                  📅 {new Date(task.scheduledAt).toLocaleDateString("en-IN")} at {new Date(task.scheduledAt).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })}
+                <p className="text-white/40 text-xs mb-3 flex items-center gap-1">
+                  <Calendar size={11} />
+                  {new Date(task.scheduledAt).toLocaleDateString("en-IN")} at {new Date(task.scheduledAt).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })}
                 </p>
               )}
               <div className="flex gap-3">
@@ -124,10 +130,11 @@ export default function RunnerFeed() {
                 <button
                   onClick={() => handleAccept(task.id)}
                   disabled={accepting === task.id || r?.kycStatus !== "verified"}
-                  className="flex-2 px-6 py-2.5 rounded-xl text-white text-sm font-bold flex-1"
+                  className="flex-1 px-6 py-2.5 rounded-xl text-white text-sm font-bold flex items-center justify-center gap-1.5"
                   style={{ background: "linear-gradient(135deg, #FF6B35, #FF8C42)" }}
                 >
-                  {accepting === task.id ? "Accepting..." : "✓ Accept Task"}
+                  <CheckCircle size={14} />
+                  {accepting === task.id ? "Accepting..." : "Accept Task"}
                 </button>
               </div>
             </motion.div>

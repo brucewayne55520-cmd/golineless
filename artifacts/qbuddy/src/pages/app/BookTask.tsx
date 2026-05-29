@@ -1,10 +1,12 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 import confetti from "canvas-confetti";
+import { Clock, Zap, MapPin, CreditCard, Banknote, Sparkles, ArrowLeft } from "lucide-react";
 import { useCreateTask } from "@workspace/api-client-react";
-import { CATEGORY_ICONS, CATEGORY_NAMES, CATEGORY_PRICES, formatCurrency } from "@/lib/utils";
+import { CategoryIcon } from "@/components/CategoryIcon";
+import { CATEGORY_NAMES, CATEGORY_PRICES, formatCurrency } from "@/lib/utils";
 
 const DISTANCE_CHARGES: Record<string, number> = { "0-2": 0, "2-5": 20, "5+": 50 };
 const DISTANCE_LABELS: Record<string, string> = { "0-2": "0–2 km", "2-5": "2–5 km", "5+": "5+ km" };
@@ -51,7 +53,7 @@ export default function BookTask() {
   const handleBook = () => {
     if (!terms) { toast.error("Please accept terms"); return; }
     createTask.mutate({
-      body: {
+      data: {
         category, description, urgency, locationName, locationArea, locationCity: "Ahmedabad",
         distanceBand, scheduledDate, scheduledTime, paymentMethod,
         couponCode: couponApplied ? "QBUDDY10" : undefined,
@@ -72,9 +74,10 @@ export default function BookTask() {
 
   return (
     <div className="min-h-screen bg-[#F8F7FF]">
-      {/* Header */}
       <div className="bg-white px-4 py-3 flex items-center gap-3 border-b border-gray-100">
-        <button onClick={() => step > 1 ? setStep(s => s - 1) : navigate("/app/home")} className="text-xl">←</button>
+        <button onClick={() => step > 1 ? setStep(s => s - 1) : navigate("/app/home")} className="text-gray-500">
+          <ArrowLeft size={20} />
+        </button>
         <div className="flex-1">
           <h1 className="font-bold text-[#1A1A2E]">Book a Runner</h1>
           <div className="flex gap-1 mt-1">
@@ -92,7 +95,9 @@ export default function BookTask() {
             <motion.div key="step1" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-5">
               <div className="bg-white rounded-2xl p-5 shadow-sm">
                 <div className="flex items-center gap-3 mb-4">
-                  <span className="text-4xl">{CATEGORY_ICONS[category]}</span>
+                  <div className="w-12 h-12 rounded-xl bg-purple-50 flex items-center justify-center text-[#6C3FD4]">
+                    <CategoryIcon category={category} size={28} />
+                  </div>
                   <div>
                     <h2 className="font-bold text-[#1A1A2E] text-lg">{CATEGORY_NAMES[category]}</h2>
                     <button onClick={() => {}} className="text-xs text-[#6C3FD4] font-semibold">Change category</button>
@@ -133,15 +138,15 @@ export default function BookTask() {
                 <label className="text-sm font-medium text-gray-700 mb-3 block">Urgency</label>
                 <div className="grid grid-cols-2 gap-3">
                   {[
-                    { val: "normal", label: "Normal", sub: "No extra charge", icon: "🕐" },
-                    { val: "urgent", label: "Urgent", sub: "+Rs 50 surcharge", icon: "⚡" },
+                    { val: "normal", label: "Normal", sub: "No extra charge", Icon: Clock },
+                    { val: "urgent", label: "Urgent", sub: "+Rs 50 surcharge", Icon: Zap },
                   ].map((opt) => (
                     <button
                       key={opt.val}
                       onClick={() => setUrgency(opt.val as any)}
                       className={`p-3 rounded-xl border-2 text-left transition-all ${urgency === opt.val ? "border-[#6C3FD4] bg-purple-50" : "border-gray-200"}`}
                     >
-                      <span className="text-xl">{opt.icon}</span>
+                      <opt.Icon size={18} className={urgency === opt.val ? "text-[#6C3FD4]" : "text-gray-400"} />
                       <div className="text-sm font-bold mt-1">{opt.label}</div>
                       <div className="text-xs text-gray-500">{opt.sub}</div>
                     </button>
@@ -164,7 +169,7 @@ export default function BookTask() {
                 className="w-full py-4 rounded-2xl text-white font-bold text-lg"
                 style={{ background: "linear-gradient(135deg, #6C3FD4, #9B6FF7)" }}
               >
-                Next: When &amp; Where →
+                Next: When &amp; Where
               </button>
             </motion.div>
           )}
@@ -232,10 +237,9 @@ export default function BookTask() {
                 </div>
               </div>
 
-              {/* Static map placeholder */}
               <div className="bg-gray-100 rounded-2xl h-36 flex items-center justify-center">
                 <div className="text-center text-gray-400">
-                  <div className="text-3xl mb-1">📍</div>
+                  <MapPin size={28} className="mx-auto mb-1" />
                   <div className="text-sm">Ahmedabad, Gujarat</div>
                   <div className="text-xs">23.0225, 72.5714</div>
                 </div>
@@ -246,7 +250,7 @@ export default function BookTask() {
                 className="w-full py-4 rounded-2xl text-white font-bold text-lg"
                 style={{ background: "linear-gradient(135deg, #6C3FD4, #9B6FF7)" }}
               >
-                Next: Review &amp; Pay →
+                Next: Review &amp; Pay
               </button>
             </motion.div>
           )}
@@ -282,15 +286,15 @@ export default function BookTask() {
                 <h3 className="font-bold text-[#1A1A2E] mb-3">Payment Method</h3>
                 <div className="grid grid-cols-2 gap-3">
                   {[
-                    { val: "online", label: "Pay Now", icon: "💳", sub: "Razorpay" },
-                    { val: "cash", label: "Pay on Completion", icon: "💵", sub: "Cash to runner" },
+                    { val: "online", label: "Pay Now", Icon: CreditCard, sub: "Razorpay" },
+                    { val: "cash", label: "Pay on Completion", Icon: Banknote, sub: "Cash to runner" },
                   ].map((opt) => (
                     <button
                       key={opt.val}
                       onClick={() => setPaymentMethod(opt.val)}
                       className={`p-3 rounded-xl border-2 text-left transition-all ${paymentMethod === opt.val ? "border-[#6C3FD4] bg-purple-50" : "border-gray-200"}`}
                     >
-                      <span className="text-xl">{opt.icon}</span>
+                      <opt.Icon size={18} className={paymentMethod === opt.val ? "text-[#6C3FD4]" : "text-gray-400"} />
                       <div className="text-sm font-bold mt-1">{opt.label}</div>
                       <div className="text-xs text-gray-500">{opt.sub}</div>
                     </button>
@@ -313,7 +317,7 @@ export default function BookTask() {
                     className="px-4 py-2 rounded-xl text-white text-sm font-semibold"
                     style={{ background: couponApplied ? "#22C55E" : "linear-gradient(135deg, #6C3FD4, #9B6FF7)" }}
                   >
-                    {couponApplied ? "Applied ✓" : "Apply"}
+                    {couponApplied ? "Applied" : "Apply"}
                   </button>
                 </div>
               </div>
@@ -329,27 +333,18 @@ export default function BookTask() {
                 className="w-full py-4 rounded-2xl text-white font-bold text-lg"
                 style={{ background: "linear-gradient(135deg, #FF6B35, #FF8C42)" }}
               >
-                {createTask.isPending ? "Booking..." : "Confirm & Book 🚀"}
+                {createTask.isPending ? "Booking..." : "Confirm & Book"}
               </button>
             </motion.div>
           )}
         </AnimatePresence>
       </div>
 
-      {/* Success modal */}
       <AnimatePresence>
         {bookedTask && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="fixed inset-0 bg-black/50 flex items-end z-50"
-          >
-            <motion.div
-              initial={{ y: 100 }}
-              animate={{ y: 0 }}
-              className="bg-white w-full rounded-t-3xl p-8 text-center"
-            >
-              <div className="text-5xl mb-3">🎉</div>
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="fixed inset-0 bg-black/50 flex items-end z-50">
+            <motion.div initial={{ y: 100 }} animate={{ y: 0 }} className="bg-white w-full rounded-t-3xl p-8 text-center">
+              <Sparkles size={40} className="text-[#6C3FD4] mx-auto mb-3" />
               <h2 className="text-2xl font-black text-[#1A1A2E] mb-2">Task Booked!</h2>
               <p className="text-gray-500 mb-4">Your runner will be assigned shortly.</p>
               <div className="bg-purple-50 rounded-2xl p-4 mb-5">

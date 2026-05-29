@@ -14,7 +14,7 @@ export default function AdminSettings() {
 
   const handleSave = () => {
     if (!form) return;
-    updateSettings.mutate({ body: form } as any, {
+    updateSettings.mutate({ data: form } as any, {
       onSuccess: () => { toast.success("Settings saved!"); refetch(); },
       onError: () => toast.error("Failed to save"),
     });

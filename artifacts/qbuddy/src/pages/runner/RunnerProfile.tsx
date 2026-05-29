@@ -2,10 +2,12 @@ import { useState } from "react";
 import { useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
+import { Star, CheckCircle2, Wallet, HelpCircle, FileText, Lock, ChevronRight, X, Camera } from "lucide-react";
 import { useGetRunnerMe, useSubmitKyc, useLogout } from "@workspace/api-client-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { RunnerBottomNav } from "@/components/BottomNav";
 import { getInitials } from "@/lib/utils";
+import type { LucideIcon } from "lucide-react";
 
 export default function RunnerProfile() {
   const [, navigate] = useLocation();
@@ -28,7 +30,7 @@ export default function RunnerProfile() {
   const handleSubmitKyc = () => {
     if (!form.agreed) { toast.error("Please accept the agreement"); return; }
     submitKyc.mutate({
-      body: { ...form, aadhaarFront, aadhaarBack, selfie } as any,
+      data: { ...form, aadhaarFront, aadhaarBack, selfie } as any,
     }, {
       onSuccess: () => { toast.success("KYC submitted!"); setShowKyc(false); refetch(); },
       onError: () => toast.error("Failed to submit KYC"),
@@ -43,15 +45,30 @@ export default function RunnerProfile() {
     reader.readAsDataURL(file);
   };
 
-  const handleLogout = () => { logout(); navigate("/"); };
+  const handleLogout = () => {
+    logoutMutation.mutate(undefined as any, {
+      onSettled: () => { logout(); navigate("/"); },
+    });
+  };
 
   const kycStatusColor = r?.kycStatus === "verified" ? "text-green-400 bg-green-400/20 border-green-400/30" :
     r?.kycStatus === "rejected" ? "text-red-400 bg-red-400/20 border-red-400/30" :
     "text-yellow-400 bg-yellow-400/20 border-yellow-400/30";
 
+  const menuItems: { Icon: LucideIcon; label: string }[] = [
+    { Icon: HelpCircle, label: "Help & Support" },
+    { Icon: FileText, label: "Terms of Service" },
+    { Icon: Lock, label: "Privacy Policy" },
+  ];
+
+  const stats: { Icon: LucideIcon; val: string | number; label: string; color: string }[] = [
+    { Icon: CheckCircle2, val: r?.totalTasks ?? 0, label: "Tasks", color: "#22C55E" },
+    { Icon: Star, val: r?.rating ? Number(r.rating).toFixed(1) : "—", label: "Rating", color: "#FF6B35" },
+    { Icon: Wallet, val: r?.totalEarnings ? `Rs ${Math.round(Number(r.totalEarnings))}` : "Rs 0", label: "Earned", color: "#6C3FD4" },
+  ];
+
   return (
     <div className="min-h-screen pb-24" style={{ background: "#0F0F1A" }}>
-      {/* Header */}
       <div className="px-4 pt-5 pb-4 border-b border-white/10 flex items-center gap-4">
         <div className="w-14 h-14 rounded-full flex items-center justify-center text-xl font-black text-white" style={{ background: "linear-gradient(135deg, #FF6B35, #FF8C42)" }}>
           {getInitials(r?.name)}
@@ -59,17 +76,20 @@ export default function RunnerProfile() {
         <div>
           <h2 className="font-black text-white text-lg">{r?.name ?? "Runner"}</h2>
           <p className="text-white/50 text-sm">{r?.phone}</p>
-          {r?.rating && <p className="text-yellow-400 text-xs font-semibold">⭐ {Number(r.rating).toFixed(1)} · {r.totalTasks ?? 0} tasks</p>}
+          {r?.rating && (
+            <p className="text-yellow-400 text-xs font-semibold flex items-center gap-1">
+              <Star size={11} /> {Number(r.rating).toFixed(1)} · {r.totalTasks ?? 0} tasks
+            </p>
+          )}
         </div>
       </div>
 
-      {/* KYC status */}
       <div className="mx-4 mt-4">
         <div className={`rounded-2xl p-4 border ${kycStatusColor}`}>
           <div className="flex items-center justify-between">
             <div>
               <p className="font-bold text-sm">
-                KYC Status: {r?.kycStatus === "verified" ? "Verified ✓" : r?.kycStatus === "rejected" ? "Rejected" : "Pending"}
+                KYC Status: {r?.kycStatus === "verified" ? "Verified" : r?.kycStatus === "rejected" ? "Rejected" : "Pending"}
               </p>
               {r?.kycStatus === "rejected" && r?.kycRejectionReason && (
                 <p className="text-xs mt-1 opacity-70">Reason: {r.kycRejectionReason}</p>
@@ -89,32 +109,22 @@ export default function RunnerProfile() {
         </div>
       </div>
 
-      {/* Stats */}
       <div className="mx-4 mt-4 grid grid-cols-3 gap-3">
-        {[
-          { icon: "✅", val: r?.totalTasks ?? 0, label: "Tasks" },
-          { icon: "⭐", val: r?.rating ? Number(r.rating).toFixed(1) : "—", label: "Rating" },
-          { icon: "💰", val: r?.totalEarnings ? `Rs ${Math.round(Number(r.totalEarnings))}` : "Rs 0", label: "Earned" },
-        ].map((s) => (
+        {stats.map((s) => (
           <div key={s.label} className="bg-white/8 border border-white/10 rounded-2xl p-3 text-center">
-            <div className="text-xl mb-1">{s.icon}</div>
+            <s.Icon size={20} className="mx-auto mb-1" style={{ color: s.color }} />
             <div className="text-white font-black">{s.val}</div>
             <div className="text-white/40 text-xs">{s.label}</div>
           </div>
         ))}
       </div>
 
-      {/* Settings */}
       <div className="mx-4 mt-4 bg-white/8 border border-white/10 rounded-2xl overflow-hidden">
-        {[
-          { icon: "❓", label: "Help & Support" },
-          { icon: "📄", label: "Terms of Service" },
-          { icon: "🔒", label: "Privacy Policy" },
-        ].map((item, i) => (
+        {menuItems.map((item, i) => (
           <button key={item.label} className={`w-full flex items-center gap-3 px-4 py-3.5 text-left ${i > 0 ? "border-t border-white/5" : ""}`}>
-            <span>{item.icon}</span>
+            <item.Icon size={16} className="text-white/50" />
             <span className="text-white/70 text-sm flex-1">{item.label}</span>
-            <span className="text-white/30">›</span>
+            <ChevronRight size={14} className="text-white/30" />
           </button>
         ))}
       </div>
@@ -125,7 +135,6 @@ export default function RunnerProfile() {
         </button>
       </div>
 
-      {/* KYC Modal */}
       <AnimatePresence>
         {showKyc && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-black/80 z-50 flex items-end">
@@ -137,7 +146,9 @@ export default function RunnerProfile() {
             >
               <div className="flex items-center justify-between mb-5">
                 <h2 className="text-white font-black text-xl">KYC Verification</h2>
-                <button onClick={() => setShowKyc(false)} className="text-white/50 text-2xl">×</button>
+                <button onClick={() => setShowKyc(false)} className="text-white/50">
+                  <X size={22} />
+                </button>
               </div>
               <div className="space-y-4">
                 <div>
@@ -172,10 +183,12 @@ export default function RunnerProfile() {
                         {doc.val ? (
                           <div>
                             <img src={doc.val} alt="" className="w-16 h-16 object-cover rounded-lg mx-auto mb-1" />
-                            <p className="text-green-400 text-xs">✓ {doc.label} uploaded</p>
+                            <p className="text-green-400 text-xs">{doc.label} uploaded</p>
                           </div>
                         ) : (
-                          <p className="text-white/40 text-sm">📷 {doc.label}</p>
+                          <p className="text-white/40 text-sm flex items-center justify-center gap-1">
+                            <Camera size={14} /> {doc.label}
+                          </p>
                         )}
                       </div>
                     </label>

@@ -5,17 +5,6 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-export const CATEGORY_ICONS: Record<string, string> = {
-  hospital: "🏥",
-  govt_office: "🏛",
-  bank: "🏦",
-  document: "📄",
-  medicine: "💊",
-  senior_care: "👴",
-  errand: "📦",
-  emergency: "⚡",
-};
-
 export const CATEGORY_NAMES: Record<string, string> = {
   hospital: "Hospital Queue",
   govt_office: "Govt Office",

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
+import { PersonStanding, MapPin, Star, CheckCircle2, XCircle, X } from "lucide-react";
 import { useListAdminRunners, useReviewRunnerKyc } from "@workspace/api-client-react";
 import AdminSidebar from "@/components/AdminSidebar";
 import { getInitials } from "@/lib/utils";
@@ -19,7 +20,7 @@ export default function AdminRunners() {
 
   const handleReview = (action: "approve" | "reject") => {
     if (!selected) return;
-    reviewKyc.mutate({ id: String(selected.id), body: { action, rejectionReason: rejReason || undefined } } as any, {
+    reviewKyc.mutate({ id: String(selected.id), data: { action, rejectionReason: rejReason || undefined } } as any, {
       onSuccess: () => { toast.success(action === "approve" ? "Runner approved!" : "Runner rejected"); setSelected(null); refetch(); },
       onError: () => toast.error("Action failed"),
     });
@@ -33,7 +34,6 @@ export default function AdminRunners() {
           <h1 className="text-2xl font-black text-[#1A1A2E]">Runners</h1>
         </div>
 
-        {/* Tabs */}
         <div className="flex gap-2 mb-5">
           {TABS.map(t => (
             <button
@@ -46,14 +46,13 @@ export default function AdminRunners() {
           ))}
         </div>
 
-        {/* Grid */}
         {isLoading ? (
           <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
             {[1,2,3,4,5,6].map(i => <div key={i} className="h-48 bg-gray-200 rounded-2xl animate-pulse" />)}
           </div>
         ) : list.length === 0 ? (
           <div className="text-center py-16 text-gray-400">
-            <div className="text-5xl mb-3">🏃</div>
+            <PersonStanding size={40} className="mx-auto mb-3 opacity-40" />
             <p>No {TAB_LABELS[tab]} runners</p>
           </div>
         ) : (
@@ -70,8 +69,16 @@ export default function AdminRunners() {
                   </div>
                 </div>
                 <div className="space-y-1 text-xs text-gray-500 mb-4">
-                  {runner.city && <p>📍 {runner.city}, {runner.area}</p>}
-                  {runner.rating && <p>⭐ {Number(runner.rating).toFixed(1)} · {runner.totalTasks} tasks</p>}
+                  {runner.city && (
+                    <p className="flex items-center gap-1">
+                      <MapPin size={11} /> {runner.city}, {runner.area}
+                    </p>
+                  )}
+                  {runner.rating && (
+                    <p className="flex items-center gap-1">
+                      <Star size={11} className="text-yellow-400" /> {Number(runner.rating).toFixed(1)} · {runner.totalTasks} tasks
+                    </p>
+                  )}
                   <p>Joined: {new Date(runner.createdAt).toLocaleDateString("en-IN")}</p>
                 </div>
                 <button
@@ -86,7 +93,6 @@ export default function AdminRunners() {
           </div>
         )}
 
-        {/* KYC Review Modal */}
         <AnimatePresence>
           {selected && (
             <>
@@ -99,7 +105,9 @@ export default function AdminRunners() {
               >
                 <div className="p-6 border-b border-gray-100 flex items-center justify-between">
                   <h2 className="text-xl font-black text-[#1A1A2E]">KYC Review — {selected.name ?? selected.phone}</h2>
-                  <button onClick={() => setSelected(null)} className="text-gray-400 text-2xl hover:text-gray-600">×</button>
+                  <button onClick={() => setSelected(null)} className="text-gray-400 hover:text-gray-600">
+                    <X size={22} />
+                  </button>
                 </div>
                 <div className="p-6 grid md:grid-cols-2 gap-6">
                   <div>
@@ -165,17 +173,17 @@ export default function AdminRunners() {
                         <button
                           onClick={() => handleReview("approve")}
                           disabled={reviewKyc.isPending}
-                          className="flex-1 py-3 rounded-xl text-white font-bold"
+                          className="flex-1 py-3 rounded-xl text-white font-bold flex items-center justify-center gap-2"
                           style={{ background: "linear-gradient(135deg, #22C55E, #16A34A)" }}
                         >
-                          ✅ Approve
+                          <CheckCircle2 size={16} /> Approve
                         </button>
                         <button
                           onClick={() => handleReview("reject")}
                           disabled={reviewKyc.isPending}
-                          className="flex-1 py-3 rounded-xl text-white font-bold bg-red-500 hover:bg-red-600"
+                          className="flex-1 py-3 rounded-xl text-white font-bold bg-red-500 hover:bg-red-600 flex items-center justify-center gap-2"
                         >
-                          ❌ Reject
+                          <XCircle size={16} /> Reject
                         </button>
                       </div>
                     </>

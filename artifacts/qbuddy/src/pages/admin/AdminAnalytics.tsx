@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Star } from "lucide-react";
 import { LineChart, Line, BarChart, Bar, AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend } from "recharts";
 import { useGetAnalytics } from "@workspace/api-client-react";
 import AdminSidebar from "@/components/AdminSidebar";
@@ -28,7 +29,6 @@ export default function AdminAnalytics() {
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Daily tasks + GMV */}
             <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 md:col-span-2">
               <h3 className="font-bold text-[#1A1A2E] mb-4">Daily Tasks & GMV</h3>
               <ResponsiveContainer width="100%" height={220}>
@@ -45,11 +45,10 @@ export default function AdminAnalytics() {
               </ResponsiveContainer>
             </div>
 
-            {/* Category breakdown */}
             <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
               <h3 className="font-bold text-[#1A1A2E] mb-4">Tasks by Category</h3>
               <ResponsiveContainer width="100%" height={200}>
-                <BarChart data={(d?.categoryBreakdown ?? []).map((c: any) => ({ ...c, name: CATEGORY_NAMES[c.category] ?? c.category })) } layout="vertical">
+                <BarChart data={(d?.categoryBreakdown ?? []).map((c: any) => ({ ...c, name: CATEGORY_NAMES[c.category] ?? c.category }))} layout="vertical">
                   <XAxis type="number" tick={{ fontSize: 10 }} />
                   <YAxis dataKey="name" type="category" tick={{ fontSize: 9 }} width={80} />
                   <Tooltip contentStyle={{ borderRadius: 12, fontSize: 12 }} />
@@ -58,7 +57,6 @@ export default function AdminAnalytics() {
               </ResponsiveContainer>
             </div>
 
-            {/* Hourly distribution */}
             <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
               <h3 className="font-bold text-[#1A1A2E] mb-4">Hourly Distribution</h3>
               <ResponsiveContainer width="100%" height={200}>
@@ -72,7 +70,6 @@ export default function AdminAnalytics() {
               </ResponsiveContainer>
             </div>
 
-            {/* User growth */}
             <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
               <h3 className="font-bold text-[#1A1A2E] mb-4">User Growth</h3>
               <ResponsiveContainer width="100%" height={200}>
@@ -86,7 +83,6 @@ export default function AdminAnalytics() {
               </ResponsiveContainer>
             </div>
 
-            {/* Runner performance */}
             {d?.runnerPerformance?.length > 0 && (
               <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
                 <h3 className="font-bold text-[#1A1A2E] mb-4">Runner Performance</h3>
@@ -98,7 +94,13 @@ export default function AdminAnalytics() {
                         <td className="py-2 font-medium">{r.name}</td>
                         <td className="py-2">{r.tasks}</td>
                         <td className="py-2">{formatCurrency(r.earnings)}</td>
-                        <td className="py-2">{r.rating ? `⭐ ${Number(r.rating).toFixed(1)}` : "—"}</td>
+                        <td className="py-2">
+                          {r.rating ? (
+                            <span className="flex items-center gap-1">
+                              <Star size={10} className="text-yellow-400" /> {Number(r.rating).toFixed(1)}
+                            </span>
+                          ) : "—"}
+                        </td>
                       </tr>
                     ))}</tbody>
                   </table>

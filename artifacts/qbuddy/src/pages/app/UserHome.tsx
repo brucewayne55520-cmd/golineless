@@ -1,11 +1,11 @@
 import { useLocation } from "wouter";
 import { motion } from "framer-motion";
+import { MapPin, Bell, PersonStanding, Zap, Star, Smartphone, CheckCircle2, HeartHandshake } from "lucide-react";
 import { useListTasks, useListNotifications } from "@workspace/api-client-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { UserBottomNav } from "@/components/BottomNav";
-import { CATEGORY_ICONS, CATEGORY_NAMES, CATEGORY_HINDI, CATEGORY_PRICES, STATUS_COLORS, STATUS_LABELS, formatCurrency } from "@/lib/utils";
-
-const categories = Object.keys(CATEGORY_ICONS);
+import { CategoryIcon, CATEGORY_KEYS } from "@/components/CategoryIcon";
+import { CATEGORY_NAMES, CATEGORY_HINDI, CATEGORY_PRICES, STATUS_COLORS, STATUS_LABELS, formatCurrency } from "@/lib/utils";
 
 export default function UserHome() {
   const [, navigate] = useLocation();
@@ -14,9 +14,20 @@ export default function UserHome() {
   const { data: notifs } = useListNotifications();
   const unreadCount = notifs?.filter((n: any) => !n.isRead).length ?? 0;
 
+  const howItWorks = [
+    { Icon: Smartphone, text: "Book in 60s" },
+    { Icon: PersonStanding, text: "Runner assigned" },
+    { Icon: CheckCircle2, text: "Task done!" },
+  ];
+
+  const statStrip = [
+    { Icon: PersonStanding, text: "23 runners active" },
+    { Icon: Zap, text: "Avg 8 min response" },
+    { Icon: Star, text: "4.8 rated service" },
+  ];
+
   return (
     <div className="min-h-screen bg-[#F8F7FF] pb-20">
-      {/* Top bar */}
       <div className="bg-white px-4 py-3 flex items-center justify-between border-b border-gray-100 sticky top-0 z-30">
         <div className="flex items-center gap-2">
           <div className="w-8 h-8 bg-[#6C3FD4] rounded-full flex items-center justify-center">
@@ -24,13 +35,13 @@ export default function UserHome() {
           </div>
           <span className="font-black text-[#1A1A2E] text-lg">QBuddy</span>
         </div>
-        <div className="flex items-center gap-1 text-gray-400">
-          <span className="text-sm">📍</span>
+        <div className="flex items-center gap-1 text-gray-500">
+          <MapPin size={13} />
           <span className="text-xs font-medium text-gray-600">Ahmedabad, Gujarat</span>
         </div>
         <div className="flex items-center gap-3">
           <button onClick={() => {}} className="relative">
-            <span className="text-xl">🔔</span>
+            <Bell size={20} className="text-gray-500" />
             {unreadCount > 0 && (
               <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full text-white text-[9px] font-bold flex items-center justify-center">{unreadCount}</span>
             )}
@@ -41,7 +52,6 @@ export default function UserHome() {
         </div>
       </div>
 
-      {/* Greeting card */}
       <div className="px-4 pt-4">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -49,34 +59,33 @@ export default function UserHome() {
           className="rounded-2xl p-5 text-white"
           style={{ background: "linear-gradient(135deg, #6C3FD4, #9B6FF7)" }}
         >
-          <p className="text-white/70 text-sm mb-0.5">Namaste, {user?.name?.split(" ")[0] ?? "Friend"} 👋</p>
+          <p className="text-white/70 text-sm mb-0.5">Namaste, {user?.name?.split(" ")[0] ?? "Friend"}</p>
           <h2 className="text-xl font-bold mb-3">Kya kaam karwana hai aaj?</h2>
           <button
             onClick={() => navigate("/app/book")}
-            className="px-5 py-2 rounded-xl text-[#6C3FD4] font-bold text-sm"
-            style={{ background: "linear-gradient(135deg, #FF6B35, #FF8C42)", color: "white" }}
+            className="px-5 py-2 rounded-xl font-bold text-sm text-white"
+            style={{ background: "linear-gradient(135deg, #FF6B35, #FF8C42)" }}
           >
             Book a Runner
           </button>
         </motion.div>
       </div>
 
-      {/* Stats strip */}
       <div className="px-4 mt-4">
         <div className="flex gap-3 overflow-x-auto pb-1 scrollbar-hide">
-          {["🏃 23 runners active", "⚡ Avg 8 min response", "⭐ 4.8 rated service"].map((stat) => (
-            <div key={stat} className="flex-shrink-0 bg-white rounded-xl px-3 py-2 text-xs font-medium text-gray-600 border border-gray-100 shadow-sm">
-              {stat}
+          {statStrip.map((s) => (
+            <div key={s.text} className="flex-shrink-0 bg-white rounded-xl px-3 py-2 flex items-center gap-1.5 text-xs font-medium text-gray-600 border border-gray-100 shadow-sm">
+              <s.Icon size={12} className="text-[#6C3FD4]" />
+              {s.text}
             </div>
           ))}
         </div>
       </div>
 
-      {/* Service grid */}
       <div className="px-4 mt-5">
         <h3 className="font-bold text-[#1A1A2E] mb-3">What do you need?</h3>
         <div className="grid grid-cols-4 gap-2">
-          {categories.map((cat, i) => (
+          {CATEGORY_KEYS.map((cat, i) => (
             <motion.button
               key={cat}
               initial={{ opacity: 0, scale: 0.8 }}
@@ -85,7 +94,9 @@ export default function UserHome() {
               onClick={() => navigate(`/app/book?category=${cat}`)}
               className="bg-white rounded-2xl p-3 flex flex-col items-center gap-1 shadow-sm border border-gray-50 hover:shadow-md hover:border-purple-100 transition-all active:scale-95"
             >
-              <span className="text-2xl">{CATEGORY_ICONS[cat]}</span>
+              <div className="text-[#6C3FD4]">
+                <CategoryIcon category={cat} size={22} />
+              </div>
               <span className="text-[9px] font-semibold text-[#1A1A2E] text-center leading-tight">{CATEGORY_NAMES[cat]}</span>
               <span className="text-[8px] text-gray-400">{CATEGORY_HINDI[cat]}</span>
             </motion.button>
@@ -93,24 +104,18 @@ export default function UserHome() {
         </div>
       </div>
 
-      {/* How it works */}
       <div className="px-4 mt-6">
         <h3 className="font-bold text-[#1A1A2E] mb-3">How it works</h3>
         <div className="flex gap-3">
-          {[
-            { icon: "📱", text: "Book in 60s" },
-            { icon: "🏃", text: "Runner assigned" },
-            { icon: "✅", text: "Task done!" },
-          ].map((s, i) => (
+          {howItWorks.map((s, i) => (
             <div key={s.text} className="flex-1 bg-white rounded-xl p-3 text-center shadow-sm border border-gray-50">
-              <div className="text-xl mb-1">{s.icon}</div>
+              <s.Icon size={18} className="mx-auto mb-1 text-[#6C3FD4]" />
               <div className="text-[10px] font-semibold text-gray-600">{s.text}</div>
             </div>
           ))}
         </div>
       </div>
 
-      {/* Recent tasks */}
       {isLoading ? (
         <div className="px-4 mt-6 space-y-2">
           {[1, 2].map(i => <div key={i} className="h-20 bg-gray-100 rounded-xl animate-pulse" />)}
@@ -131,7 +136,9 @@ export default function UserHome() {
                 className="flex-shrink-0 w-52 bg-white rounded-2xl p-4 shadow-sm border border-gray-100 cursor-pointer"
               >
                 <div className="flex items-center gap-2 mb-2">
-                  <span className="text-2xl">{CATEGORY_ICONS[task.category] ?? "📦"}</span>
+                  <div className="text-[#6C3FD4]">
+                    <CategoryIcon category={task.category} size={20} />
+                  </div>
                   <div>
                     <div className="text-sm font-semibold text-[#1A1A2E]">{CATEGORY_NAMES[task.category]}</div>
                     <span className={`text-[10px] px-2 py-0.5 rounded-full border ${STATUS_COLORS[task.status] ?? "bg-gray-100 text-gray-600 border-gray-200"}`}>
@@ -147,7 +154,6 @@ export default function UserHome() {
         </div>
       ) : null}
 
-      {/* Senior Care CTA */}
       <div className="px-4 mt-6 mb-4">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -160,7 +166,7 @@ export default function UserHome() {
               <h3 className="font-bold text-lg">Senior Care Plans</h3>
               <p className="text-white/80 text-xs mt-1">Peace of mind for your parents</p>
             </div>
-            <span className="text-4xl">👴</span>
+            <HeartHandshake size={36} className="text-white/80" />
           </div>
           <button
             onClick={() => navigate("/app/senior")}

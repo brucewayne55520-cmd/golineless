@@ -1,24 +1,26 @@
 import { useLocation } from "wouter";
+import { Home, ClipboardList, HeartHandshake, User, List, Play, Wallet } from "lucide-react";
 import { cn } from "@/lib/utils";
+import type { LucideIcon } from "lucide-react";
 
 interface NavItem {
   path: string;
-  icon: string;
+  icon: LucideIcon;
   label: string;
 }
 
 const userNav: NavItem[] = [
-  { path: "/app/home", icon: "🏠", label: "Home" },
-  { path: "/app/tasks", icon: "📋", label: "Tasks" },
-  { path: "/app/senior", icon: "👴", label: "Senior" },
-  { path: "/app/profile", icon: "👤", label: "Profile" },
+  { path: "/app/home", icon: Home, label: "Home" },
+  { path: "/app/tasks", icon: ClipboardList, label: "Tasks" },
+  { path: "/app/senior", icon: HeartHandshake, label: "Senior" },
+  { path: "/app/profile", icon: User, label: "Profile" },
 ];
 
 const runnerNav: NavItem[] = [
-  { path: "/runner/feed", icon: "📋", label: "Tasks" },
-  { path: "/runner/active", icon: "▶️", label: "Active" },
-  { path: "/runner/earnings", icon: "💰", label: "Earnings" },
-  { path: "/runner/profile", icon: "👤", label: "Profile" },
+  { path: "/runner/feed", icon: List, label: "Tasks" },
+  { path: "/runner/active", icon: Play, label: "Active" },
+  { path: "/runner/earnings", icon: Wallet, label: "Earnings" },
+  { path: "/runner/profile", icon: User, label: "Profile" },
 ];
 
 export function UserBottomNav() {
@@ -28,6 +30,7 @@ export function UserBottomNav() {
       <div className="flex">
         {userNav.map((item) => {
           const active = location.startsWith(item.path);
+          const Icon = item.icon;
           return (
             <button
               key={item.path}
@@ -37,7 +40,7 @@ export function UserBottomNav() {
                 active ? "text-[#6C3FD4]" : "text-gray-400"
               )}
             >
-              <span className={cn("text-xl transition-transform", active && "scale-110")}>{item.icon}</span>
+              <Icon size={active ? 22 : 20} className="transition-all" />
               <span className={cn("text-[10px] font-semibold", active && "font-bold")}>{item.label}</span>
               {active && <div className="absolute top-0 w-10 h-0.5 rounded-full bg-[#6C3FD4]" />}
             </button>
@@ -55,6 +58,7 @@ export function RunnerBottomNav() {
       <div className="flex">
         {runnerNav.map((item) => {
           const active = location.startsWith(item.path);
+          const Icon = item.icon;
           return (
             <button
               key={item.path}
@@ -64,7 +68,7 @@ export function RunnerBottomNav() {
                 active ? "text-[#FF6B35]" : "text-white/40"
               )}
             >
-              <span className={cn("text-xl transition-transform", active && "scale-110")}>{item.icon}</span>
+              <Icon size={active ? 22 : 20} className="transition-all" />
               <span className="text-[10px] font-semibold">{item.label}</span>
             </button>
           );

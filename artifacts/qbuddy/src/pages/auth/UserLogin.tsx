@@ -17,7 +17,7 @@ export default function UserLogin() {
   const handleSend = (e: React.FormEvent) => {
     e.preventDefault();
     if (!phone || phone.length < 10) { toast.error("Enter a valid 10-digit phone number"); return; }
-    sendOtp.mutate({ body: { phone: `+91${phone}`, role: "user" } }, {
+    sendOtp.mutate({ data: { phone: `+91${phone}`, role: "user" } }, {
       onSuccess: (data) => {
         toast.success("OTP sent!");
         if ((data as any).otp) toast.info(`Dev OTP: ${(data as any).otp}`, { duration: 10000 });
@@ -31,7 +31,7 @@ export default function UserLogin() {
     e.preventDefault();
     const otpStr = otp.join("");
     if (otpStr.length !== 6) { toast.error("Enter 6-digit OTP"); return; }
-    verifyOtp.mutate({ body: { phone: `+91${phone}`, otp: otpStr, role: "user" } }, {
+    verifyOtp.mutate({ data: { phone: `+91${phone}`, otp: otpStr, role: "user" } }, {
       onSuccess: (data) => {
         login(data.token, "user", (data as any).user);
         toast.success("Welcome to QBuddy!");
@@ -131,7 +131,7 @@ export default function UserLogin() {
               </button>
               <button
                 type="button"
-                onClick={() => sendOtp.mutate({ body: { phone: `+91${phone}`, role: "user" } })}
+                onClick={() => sendOtp.mutate({ data: { phone: `+91${phone}`, role: "user" } })}
                 className="w-full text-center text-sm text-gray-500"
               >
                 Didn't receive? <span className="text-[#6C3FD4] font-semibold">Resend OTP</span>

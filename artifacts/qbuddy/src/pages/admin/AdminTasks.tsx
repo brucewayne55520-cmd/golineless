@@ -22,7 +22,7 @@ export default function AdminTasks() {
 
   const handleUpdate = () => {
     if (!selected) return;
-    updateTask.mutate({ id: String(selected.id), body: { status: newStatus || undefined, internalNotes: notes } } as any, {
+    updateTask.mutate({ id: String(selected.id), data: { status: newStatus || undefined, internalNotes: notes } } as any, {
       onSuccess: () => { toast.success("Task updated"); setSelected(null); refetch(); },
       onError: () => toast.error("Update failed"),
     });

@@ -1,15 +1,17 @@
 import { useLocation } from "wouter";
+import { LayoutDashboard, Map, ClipboardList, PersonStanding, Users, Crown, TrendingUp, Settings, LogOut } from "lucide-react";
 import { cn } from "@/lib/utils";
+import type { LucideIcon } from "lucide-react";
 
-const navItems = [
-  { path: "/admin", icon: "📊", label: "Dashboard", exact: true },
-  { path: "/admin/map", icon: "🗺️", label: "Live Map" },
-  { path: "/admin/tasks", icon: "📋", label: "Tasks" },
-  { path: "/admin/runners", icon: "🏃", label: "Runners" },
-  { path: "/admin/users", icon: "👥", label: "Users" },
-  { path: "/admin/subscriptions", icon: "👑", label: "Subscriptions" },
-  { path: "/admin/analytics", icon: "📈", label: "Analytics" },
-  { path: "/admin/settings", icon: "⚙️", label: "Settings" },
+const navItems: { path: string; icon: LucideIcon; label: string; exact?: boolean }[] = [
+  { path: "/admin", icon: LayoutDashboard, label: "Dashboard", exact: true },
+  { path: "/admin/map", icon: Map, label: "Live Map" },
+  { path: "/admin/tasks", icon: ClipboardList, label: "Tasks" },
+  { path: "/admin/runners", icon: PersonStanding, label: "Runners" },
+  { path: "/admin/users", icon: Users, label: "Users" },
+  { path: "/admin/subscriptions", icon: Crown, label: "Subscriptions" },
+  { path: "/admin/analytics", icon: TrendingUp, label: "Analytics" },
+  { path: "/admin/settings", icon: Settings, label: "Settings" },
 ];
 
 export default function AdminSidebar() {
@@ -23,7 +25,6 @@ export default function AdminSidebar() {
   return (
     <aside className="w-56 flex-shrink-0 flex flex-col min-h-screen border-r border-white/10"
       style={{ background: "linear-gradient(180deg, #6C3FD4 0%, #4A2D9A 100%)" }}>
-      {/* Logo */}
       <div className="p-5 border-b border-white/10">
         <div className="flex items-center gap-2">
           <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center">
@@ -36,10 +37,10 @@ export default function AdminSidebar() {
         </div>
       </div>
 
-      {/* Nav */}
       <nav className="flex-1 py-3">
         {navItems.map((item) => {
           const active = item.exact ? location === item.path : location.startsWith(item.path);
+          const Icon = item.icon;
           return (
             <button
               key={item.path}
@@ -49,7 +50,7 @@ export default function AdminSidebar() {
                 active ? "bg-white/20 text-white" : "text-white/60 hover:bg-white/10 hover:text-white"
               )}
             >
-              <span className="text-base">{item.icon}</span>
+              <Icon size={16} />
               {item.label}
               {active && <div className="ml-auto w-1.5 h-5 bg-white/60 rounded-full" />}
             </button>
@@ -57,10 +58,9 @@ export default function AdminSidebar() {
         })}
       </nav>
 
-      {/* Logout */}
       <div className="p-4 border-t border-white/10">
         <button onClick={handleLogout} className="w-full flex items-center gap-2 text-white/50 hover:text-white text-sm transition-colors">
-          <span>🚪</span> Logout
+          <LogOut size={15} /> Logout
         </button>
       </div>
     </aside>

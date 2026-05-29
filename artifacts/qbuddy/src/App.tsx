@@ -142,7 +142,7 @@ function AdminLoginPage() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    mutation.mutate({ body: { password } }, {
+    mutation.mutate({ data: { password } }, {
       onSuccess: (data) => {
         localStorage.setItem("qbuddy_admin_token", data.token);
         navigate("/admin");

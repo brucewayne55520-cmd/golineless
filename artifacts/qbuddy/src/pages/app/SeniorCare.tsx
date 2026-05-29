@@ -24,7 +24,7 @@ export default function SeniorCare() {
   const createSub = useCreateSubscription();
 
   const handleSubscribe = (planId: string) => {
-    createSub.mutate({ body: { planId, billingCycle: billing } } as any, {
+    createSub.mutate({ data: { planId, billingCycle: billing } } as any, {
       onSuccess: () => toast.success("Subscription activated!"),
       onError: () => toast.error("Failed to subscribe"),
     });

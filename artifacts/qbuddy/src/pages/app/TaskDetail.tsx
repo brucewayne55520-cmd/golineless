@@ -2,9 +2,11 @@ import { useState, useEffect, useRef } from "react";
 import { useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
+import { ArrowLeft, Star, Phone, MessageSquare } from "lucide-react";
 import { useGetTask, useSubmitReview } from "@workspace/api-client-react";
 import { UserBottomNav } from "@/components/BottomNav";
-import { CATEGORY_ICONS, CATEGORY_NAMES, STATUS_LABELS, STATUS_COLORS, formatCurrency } from "@/lib/utils";
+import { CategoryIcon } from "@/components/CategoryIcon";
+import { CATEGORY_NAMES, STATUS_LABELS, STATUS_COLORS, formatCurrency } from "@/lib/utils";
 
 interface Props { id: string; }
 
@@ -29,27 +31,18 @@ function LeafletMap({ task }: { task: any }) {
     const load = async () => {
       const L = await import("leaflet");
       await import("leaflet/dist/leaflet.css");
-      // Fix default icons
       delete (L.Icon.Default.prototype as any)._getIconUrl;
       L.Icon.Default.mergeOptions({
         iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
         iconRetinaUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
         shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
       });
-
       const lat = task.locationLat ? Number(task.locationLat) : 23.0225;
       const lng = task.locationLng ? Number(task.locationLng) : 72.5714;
-
       map = L.map(containerRef.current!).setView([lat, lng], 14);
       mapRef.current = map;
-
-      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-        attribution: "© OpenStreetMap contributors"
-      }).addTo(map);
-
-      // Task location marker
-      L.marker([lat, lng]).addTo(map)
-        .bindPopup(`<b>${task.locationName ?? "Task Location"}</b><br>${task.locationArea ?? ""}`);
+      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { attribution: "© OpenStreetMap contributors" }).addTo(map);
+      L.marker([lat, lng]).addTo(map).bindPopup(`<b>${task.locationName ?? "Task Location"}</b><br>${task.locationArea ?? ""}`);
     };
     load().catch(console.error);
     return () => { map?.remove(); mapRef.current = null; };
@@ -69,7 +62,7 @@ export default function TaskDetail({ id }: Props) {
 
   const handleReview = () => {
     if (!rating) { toast.error("Please select a rating"); return; }
-    submitReview.mutate({ id, body: { rating, review: reviewText } } as any, {
+    submitReview.mutate({ id, data: { rating, review: reviewText } } as any, {
       onSuccess: () => { toast.success("Review submitted!"); refetch(); },
       onError: () => toast.error("Failed to submit review"),
     });
@@ -88,21 +81,22 @@ export default function TaskDetail({ id }: Props) {
 
   const t = task as any;
   const statusIdx = STATUS_ORDER.indexOf(t.status);
-  const currentStepIdx = TIMELINE_STEPS.findIndex(s => s.status === t.status);
 
   return (
     <div className="min-h-screen bg-[#F8F7FF] pb-24">
-      {/* Header */}
       <div className="bg-white px-4 py-3 flex items-center gap-3 border-b border-gray-100">
-        <button onClick={() => navigate("/app/tasks")} className="text-xl text-gray-500">←</button>
+        <button onClick={() => navigate("/app/tasks")} className="text-gray-500">
+          <ArrowLeft size={20} />
+        </button>
         <div className="flex-1">
           <h1 className="font-bold text-[#1A1A2E]">Task #{t.id}</h1>
           <span className={`text-xs px-2 py-0.5 rounded-full border ${STATUS_COLORS[t.status] ?? ""}`}>{STATUS_LABELS[t.status]}</span>
         </div>
-        <span className="text-xl">{CATEGORY_ICONS[t.category] ?? "📦"}</span>
+        <div className="text-[#6C3FD4]">
+          <CategoryIcon category={t.category} size={22} />
+        </div>
       </div>
 
-      {/* Map */}
       <div className="relative h-56 bg-gray-100">
         <LeafletMap task={t} />
         {t.runner && (
@@ -112,22 +106,30 @@ export default function TaskDetail({ id }: Props) {
             </div>
             <div className="flex-1">
               <p className="font-semibold text-sm text-[#1A1A2E]">{t.runner.name ?? "Runner"}</p>
-              <p className="text-xs text-gray-500">{t.runner.rating ? `⭐ ${Number(t.runner.rating).toFixed(1)}` : "New Runner"} · ETA ~8 mins</p>
+              <p className="text-xs text-gray-500 flex items-center gap-1">
+                {t.runner.rating && <><Star size={10} className="text-yellow-400" /> {Number(t.runner.rating).toFixed(1)}</>}
+                {!t.runner.rating && "New Runner"} · ETA ~8 mins
+              </p>
             </div>
             <div className="flex gap-2">
-              <a href={`tel:${t.runner.phone}`} className="w-9 h-9 bg-green-100 rounded-full flex items-center justify-center text-green-600">📞</a>
+              <a href={`tel:${t.runner.phone}`} className="w-9 h-9 bg-green-100 rounded-full flex items-center justify-center text-green-600">
+                <Phone size={16} />
+              </a>
               <a href={`https://wa.me/${t.runner.phone?.replace(/\D/g, "")}`} target="_blank" rel="noreferrer"
-                className="w-9 h-9 bg-green-100 rounded-full flex items-center justify-center text-green-600">💬</a>
+                className="w-9 h-9 bg-green-100 rounded-full flex items-center justify-center text-green-600">
+                <MessageSquare size={16} />
+              </a>
             </div>
           </div>
         )}
       </div>
 
       <div className="px-4 pt-4 space-y-4">
-        {/* Task info */}
         <div className="bg-white rounded-2xl p-4 shadow-sm">
           <div className="flex items-center gap-3 mb-3">
-            <span className="text-3xl">{CATEGORY_ICONS[t.category]}</span>
+            <div className="text-[#6C3FD4]">
+              <CategoryIcon category={t.category} size={28} />
+            </div>
             <div>
               <h2 className="font-bold text-[#1A1A2E]">{CATEGORY_NAMES[t.category]}</h2>
               {t.locationName && <p className="text-xs text-gray-500">{t.locationName}, {t.locationArea}</p>}
@@ -140,7 +142,6 @@ export default function TaskDetail({ id }: Props) {
           </div>
         </div>
 
-        {/* Status timeline */}
         <div className="bg-white rounded-2xl p-4 shadow-sm">
           <h3 className="font-bold text-[#1A1A2E] mb-4">Status</h3>
           <div className="space-y-3">
@@ -156,9 +157,6 @@ export default function TaskDetail({ id }: Props) {
                       <span className="w-2 h-2 rounded-full bg-gray-300" />
                     )}
                   </div>
-                  {i < TIMELINE_STEPS.length - 1 && (
-                    <div className={`absolute ml-3 w-0.5 h-3 ${done ? "bg-[#6C3FD4]" : "bg-gray-200"}`} style={{ transform: "translateY(14px)" }} />
-                  )}
                   <span className={`text-sm ${current ? "font-bold text-[#6C3FD4]" : done ? "text-gray-700" : "text-gray-400"}`}>
                     {step.label}
                     {current && ["assigned","on_the_way","at_location","in_progress"].includes(step.status) && (
@@ -171,7 +169,6 @@ export default function TaskDetail({ id }: Props) {
           </div>
         </div>
 
-        {/* OTP */}
         {t.otp && t.status !== "completed" && (
           <div className="rounded-2xl p-5 text-white" style={{ background: "linear-gradient(135deg, #6C3FD4, #9B6FF7)" }}>
             <p className="text-white/80 text-xs mb-2">Share this OTP with your runner to complete the task:</p>
@@ -180,30 +177,24 @@ export default function TaskDetail({ id }: Props) {
                 <div key={i} className="w-10 h-12 bg-white/20 border border-white/30 rounded-xl flex items-center justify-center text-xl font-black">{d}</div>
               ))}
             </div>
-            <button
-              onClick={() => { navigator.clipboard.writeText(t.otp); toast.success("OTP copied!"); }}
-              className="text-xs text-white/80 underline"
-            >
+            <button onClick={() => { navigator.clipboard.writeText(t.otp); toast.success("OTP copied!"); }} className="text-xs text-white/80 underline">
               Copy OTP
             </button>
           </div>
         )}
 
-        {/* Rating */}
         {t.status === "completed" && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="bg-white rounded-2xl p-5 shadow-sm"
-          >
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="bg-white rounded-2xl p-5 shadow-sm">
             <h3 className="font-bold text-[#1A1A2E] mb-4">Rate your Runner</h3>
             <div className="flex gap-2 justify-center mb-4">
               {[1, 2, 3, 4, 5].map((star) => (
                 <button
                   key={star}
                   onClick={() => setRating(star)}
-                  className={`text-3xl transition-transform hover:scale-110 ${star <= rating ? "text-yellow-400" : "text-gray-300"}`}
-                >★</button>
+                  className="transition-transform hover:scale-110"
+                >
+                  <Star size={28} className={star <= rating ? "text-yellow-400 fill-yellow-400" : "text-gray-300"} />
+                </button>
               ))}
             </div>
             <textarea
@@ -219,7 +210,7 @@ export default function TaskDetail({ id }: Props) {
               className="w-full py-3 rounded-xl text-white font-semibold"
               style={{ background: "linear-gradient(135deg, #6C3FD4, #9B6FF7)" }}
             >
-              {submitReview.isSuccess ? "Review Submitted ✓" : submitReview.isPending ? "Submitting..." : "Submit Review"}
+              {submitReview.isSuccess ? "Review Submitted" : submitReview.isPending ? "Submitting..." : "Submit Review"}
             </button>
           </motion.div>
         )}

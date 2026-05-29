@@ -1,16 +1,13 @@
-import { useEffect, useRef } from "react";
 import { motion } from "framer-motion";
+import { ClipboardList, Zap, CheckCircle2, XCircle, Wallet, Building2, PersonStanding, Clock, AlertTriangle, Star } from "lucide-react";
 import { useGetAdminStats, useGetAdminActivity } from "@workspace/api-client-react";
 import AdminSidebar from "@/components/AdminSidebar";
 import { formatCurrency } from "@/lib/utils";
+import type { LucideIcon } from "lucide-react";
 
 function CountUp({ value, prefix = "" }: { value: number; prefix?: string }) {
   return (
-    <motion.span
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      transition={{ duration: 0.5 }}
-    >
+    <motion.span initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5 }}>
       {prefix}{value?.toLocaleString("en-IN") ?? 0}
     </motion.span>
   );
@@ -23,18 +20,18 @@ export default function AdminDashboard() {
   const s = stats as any;
   const acts = (activity as any[]) ?? [];
 
-  const metricCards = s ? [
-    { label: "Tasks Today", val: s.totalTasksToday, icon: "📋", color: "#6C3FD4" },
-    { label: "Active Now", val: s.activeNow, icon: "⚡", color: "#FF6B35" },
-    { label: "Completed", val: s.completedToday, icon: "✅", color: "#22C55E" },
-    { label: "Cancelled", val: s.cancelledToday, icon: "❌", color: "#EF4444" },
+  const metricCards: { label: string; val: number; Icon: LucideIcon; color: string }[] = s ? [
+    { label: "Tasks Today", val: s.totalTasksToday, Icon: ClipboardList, color: "#6C3FD4" },
+    { label: "Active Now", val: s.activeNow, Icon: Zap, color: "#FF6B35" },
+    { label: "Completed", val: s.completedToday, Icon: CheckCircle2, color: "#22C55E" },
+    { label: "Cancelled", val: s.cancelledToday, Icon: XCircle, color: "#EF4444" },
   ] : [];
 
-  const revenueCards = s ? [
-    { label: "GMV Today", val: s.gmvToday, icon: "💰" },
-    { label: "Platform Revenue", val: s.platformRevenue, icon: "🏦" },
-    { label: "Runner Payouts", val: s.runnerPayouts, icon: "🏃" },
-    { label: "Pending Payouts", val: s.pendingPayouts, icon: "⏳" },
+  const revenueCards: { label: string; val: number; Icon: LucideIcon }[] = s ? [
+    { label: "GMV Today", val: s.gmvToday, Icon: Wallet },
+    { label: "Platform Revenue", val: s.platformRevenue, Icon: Building2 },
+    { label: "Runner Payouts", val: s.runnerPayouts, Icon: PersonStanding },
+    { label: "Pending Payouts", val: s.pendingPayouts, Icon: Clock },
   ] : [];
 
   return (
@@ -46,7 +43,6 @@ export default function AdminDashboard() {
           <p className="text-gray-500 text-sm">QBuddy real-time operations</p>
         </div>
 
-        {/* Runner fleet status */}
         {s && (
           <div className="flex gap-4 mb-6 text-sm">
             <div className="flex items-center gap-2 bg-green-100 px-3 py-1.5 rounded-xl">
@@ -64,7 +60,6 @@ export default function AdminDashboard() {
           </div>
         )}
 
-        {/* Metric cards */}
         {isLoading ? (
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
             {[1,2,3,4].map(i => <div key={i} className="h-28 bg-gray-200 rounded-2xl animate-pulse" />)}
@@ -80,7 +75,7 @@ export default function AdminDashboard() {
                 className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100"
               >
                 <div className="flex items-center justify-between mb-3">
-                  <span className="text-2xl">{card.icon}</span>
+                  <card.Icon size={20} style={{ color: card.color }} />
                   <div className="w-2 h-2 rounded-full" style={{ background: card.color }} />
                 </div>
                 <div className="text-3xl font-black" style={{ color: card.color }}>
@@ -92,40 +87,43 @@ export default function AdminDashboard() {
           </div>
         )}
 
-        {/* Revenue */}
         {s && (
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-            {revenueCards.map((card, i) => (
+            {revenueCards.map((card) => (
               <div key={card.label} className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
-                <p className="text-gray-400 text-xs mb-1">{card.icon} {card.label}</p>
+                <div className="flex items-center gap-2 mb-1">
+                  <card.Icon size={14} className="text-gray-400" />
+                  <p className="text-gray-400 text-xs">{card.label}</p>
+                </div>
                 <p className="text-xl font-black text-[#1A1A2E]">{formatCurrency(card.val)}</p>
               </div>
             ))}
           </div>
         )}
 
-        {/* Alerts */}
         {s && (
           <div className="flex gap-4 mb-6 flex-wrap">
             {s.kycPending > 0 && (
-              <div className="bg-yellow-50 border border-yellow-200 rounded-xl px-4 py-2">
-                <span className="text-yellow-700 text-sm font-semibold">⏳ {s.kycPending} KYC Pending</span>
+              <div className="bg-yellow-50 border border-yellow-200 rounded-xl px-4 py-2 flex items-center gap-2">
+                <Clock size={14} className="text-yellow-600" />
+                <span className="text-yellow-700 text-sm font-semibold">{s.kycPending} KYC Pending</span>
               </div>
             )}
             {s.stuckTasks > 0 && (
-              <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-2">
-                <span className="text-red-700 text-sm font-semibold">⚠️ {s.stuckTasks} Stuck Tasks</span>
+              <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-2 flex items-center gap-2">
+                <AlertTriangle size={14} className="text-red-500" />
+                <span className="text-red-700 text-sm font-semibold">{s.stuckTasks} Stuck Tasks</span>
               </div>
             )}
             {s.newReviews > 0 && (
-              <div className="bg-blue-50 border border-blue-200 rounded-xl px-4 py-2">
-                <span className="text-blue-700 text-sm font-semibold">⭐ {s.newReviews} New Reviews</span>
+              <div className="bg-blue-50 border border-blue-200 rounded-xl px-4 py-2 flex items-center gap-2">
+                <Star size={14} className="text-blue-500" />
+                <span className="text-blue-700 text-sm font-semibold">{s.newReviews} New Reviews</span>
               </div>
             )}
           </div>
         )}
 
-        {/* Activity feed */}
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
           <h3 className="font-bold text-[#1A1A2E] mb-4">Live Activity Feed</h3>
           {acts.length === 0 ? (

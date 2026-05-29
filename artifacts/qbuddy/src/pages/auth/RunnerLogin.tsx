@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useLocation } from "wouter";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
+import { PersonStanding } from "lucide-react";
 import { useSendOtp, useVerifyOtp } from "@workspace/api-client-react";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -17,7 +18,7 @@ export default function RunnerLogin() {
   const handleSend = (e: React.FormEvent) => {
     e.preventDefault();
     if (!phone || phone.length < 10) { toast.error("Enter a valid 10-digit phone number"); return; }
-    sendOtp.mutate({ body: { phone: `+91${phone}`, role: "runner" } }, {
+    sendOtp.mutate({ data: { phone: `+91${phone}`, role: "runner" } }, {
       onSuccess: (data) => {
         toast.success("OTP sent!");
         if ((data as any).otp) toast.info(`Dev OTP: ${(data as any).otp}`, { duration: 10000 });
@@ -31,7 +32,7 @@ export default function RunnerLogin() {
     e.preventDefault();
     const otpStr = otp.join("");
     if (otpStr.length !== 6) { toast.error("Enter 6-digit OTP"); return; }
-    verifyOtp.mutate({ body: { phone: `+91${phone}`, otp: otpStr, role: "runner" } }, {
+    verifyOtp.mutate({ data: { phone: `+91${phone}`, otp: otpStr, role: "runner" } }, {
       onSuccess: (data) => {
         login(data.token, "runner", undefined, (data as any).runner);
         toast.success("Welcome, Runner!");
@@ -56,7 +57,7 @@ export default function RunnerLogin() {
           <div className="text-center mb-8">
             <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4"
               style={{ background: "linear-gradient(135deg, #FF6B35, #FF8C42)" }}>
-              <span className="text-white text-2xl">🏃</span>
+              <PersonStanding className="text-white" size={28} />
             </div>
             <h1 className="text-2xl font-black text-white">Runner Portal</h1>
             <p className="text-white/60 text-sm mt-1">Earn up to Rs 1,500 daily</p>

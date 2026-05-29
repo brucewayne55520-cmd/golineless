@@ -1,8 +1,10 @@
 import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
+import { Smartphone, PersonStanding, CheckCircle2, Star, MapPin, HeartHandshake } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
-import { CATEGORY_ICONS, CATEGORY_NAMES, CATEGORY_PRICES, CATEGORY_HINDI } from "@/lib/utils";
+import { CategoryIcon, CATEGORY_KEYS } from "@/components/CategoryIcon";
+import { CATEGORY_NAMES, CATEGORY_PRICES, CATEGORY_HINDI } from "@/lib/utils";
 
 function Splash({ onDone }: { onDone: () => void }) {
   useEffect(() => {
@@ -56,18 +58,23 @@ function Splash({ onDone }: { onDone: () => void }) {
   );
 }
 
-const categories = Object.keys(CATEGORY_ICONS);
-
 const steps = [
-  { icon: "📱", title: "Book in 60 seconds", desc: "Select category, describe your task" },
-  { icon: "🏃", title: "Runner assigned instantly", desc: "Verified local runner picks your task" },
-  { icon: "✅", title: "Sit back, task done", desc: "Track live & get proof on completion" },
+  { Icon: Smartphone, title: "Book in 60 seconds", desc: "Select category, describe your task" },
+  { Icon: PersonStanding, title: "Runner assigned instantly", desc: "Verified local runner picks your task" },
+  { Icon: CheckCircle2, title: "Sit back, task done", desc: "Track live & get proof on completion" },
 ];
 
 const testimonials = [
   { name: "Priya Sharma", city: "Ahmedabad", text: "Saved me 4 hours at the passport office. The runner was so professional!", rating: 5 },
   { name: "Ankit Patel", city: "Ahmedabad", text: "My parents are in Ahmedabad, I'm in the US. QBuddy handles all their errands. Life changing!", rating: 5 },
   { name: "Sunita Mehta", city: "Ahmedabad", text: "Used it for bank work 3 times now. Always on time, always professional.", rating: 5 },
+];
+
+const trustItems = [
+  { Icon: Star, val: "4.9", label: "Rated" },
+  { Icon: PersonStanding, val: "500+", label: "Runners" },
+  { Icon: CheckCircle2, val: "10,000+", label: "Tasks Done" },
+  { Icon: MapPin, val: "Ahmedabad", label: "& Growing" },
 ];
 
 export default function Landing() {
@@ -90,7 +97,6 @@ export default function Landing() {
 
       {!showSplash && (
         <div className="min-h-screen bg-[#F8F7FF]">
-          {/* Navbar */}
           <nav className="sticky top-0 z-40 bg-white/80 backdrop-blur-md border-b border-purple-100 px-6 py-4">
             <div className="max-w-6xl mx-auto flex items-center justify-between">
               <div className="flex items-center gap-2">
@@ -114,7 +120,6 @@ export default function Landing() {
             </div>
           </nav>
 
-          {/* Hero */}
           <section className="relative overflow-hidden pt-16 pb-20 px-6">
             <div className="max-w-6xl mx-auto grid md:grid-cols-2 gap-12 items-center">
               <motion.div initial={{ opacity: 0, x: -40 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.7 }}>
@@ -165,7 +170,9 @@ export default function Landing() {
                       transition={{ repeat: Infinity, duration: 3, ease: "easeInOut" }}
                       className="text-center"
                     >
-                      <div className="text-7xl mb-2">🏃</div>
+                      <div className="w-20 h-20 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-2">
+                        <PersonStanding size={48} className="text-white" />
+                      </div>
                       <div className="bg-white rounded-2xl px-4 py-2 shadow-lg text-sm font-semibold text-[#6C3FD4]">
                         On the way!
                       </div>
@@ -176,18 +183,12 @@ export default function Landing() {
             </div>
           </section>
 
-          {/* Trust bar */}
           <section className="bg-white py-6 border-y border-gray-100">
             <div className="max-w-4xl mx-auto px-6">
               <div className="flex flex-wrap items-center justify-center gap-8 text-center">
-                {[
-                  { icon: "⭐", val: "4.9", label: "Rated" },
-                  { icon: "🏃", val: "500+", label: "Runners" },
-                  { icon: "✅", val: "10,000+", label: "Tasks Done" },
-                  { icon: "📍", val: "Ahmedabad", label: "& Growing" },
-                ].map((item) => (
+                {trustItems.map((item) => (
                   <div key={item.label} className="flex items-center gap-2">
-                    <span className="text-2xl">{item.icon}</span>
+                    <item.Icon size={22} className="text-[#6C3FD4]" />
                     <div>
                       <div className="font-bold text-[#1A1A2E]">{item.val}</div>
                       <div className="text-xs text-gray-500">{item.label}</div>
@@ -198,7 +199,6 @@ export default function Landing() {
             </div>
           </section>
 
-          {/* How it Works */}
           <section id="how" className="py-20 px-6">
             <div className="max-w-4xl mx-auto">
               <motion.div initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="text-center mb-12">
@@ -215,7 +215,9 @@ export default function Landing() {
                     transition={{ delay: i * 0.15 }}
                     className="text-center bg-white rounded-2xl p-8 shadow-md"
                   >
-                    <div className="text-5xl mb-4">{step.icon}</div>
+                    <div className="w-14 h-14 rounded-full bg-purple-50 flex items-center justify-center mx-auto mb-4">
+                      <step.Icon size={28} className="text-[#6C3FD4]" />
+                    </div>
                     <div className="w-7 h-7 bg-[#6C3FD4] text-white rounded-full flex items-center justify-center text-sm font-bold mx-auto mb-3">{i + 1}</div>
                     <h3 className="font-bold text-[#1A1A2E] mb-2">{step.title}</h3>
                     <p className="text-gray-500 text-sm">{step.desc}</p>
@@ -225,7 +227,6 @@ export default function Landing() {
             </div>
           </section>
 
-          {/* Services */}
           <section id="services" className="py-20 px-6 bg-white">
             <div className="max-w-4xl mx-auto">
               <motion.div initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="text-center mb-12">
@@ -233,7 +234,7 @@ export default function Landing() {
                 <p className="text-gray-500">Whatever the task, we have a runner for it</p>
               </motion.div>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                {categories.map((cat, i) => (
+                {CATEGORY_KEYS.map((cat, i) => (
                   <motion.div
                     key={cat}
                     initial={{ opacity: 0, scale: 0.9 }}
@@ -243,7 +244,9 @@ export default function Landing() {
                     onClick={() => navigate(`/login?category=${cat}`)}
                     className="cursor-pointer bg-[#F8F7FF] hover:bg-purple-50 rounded-2xl p-5 text-center transition-all hover:shadow-md hover:-translate-y-1"
                   >
-                    <div className="text-4xl mb-2">{CATEGORY_ICONS[cat]}</div>
+                    <div className="flex justify-center mb-2 text-[#6C3FD4]">
+                      <CategoryIcon category={cat} size={36} />
+                    </div>
                     <div className="font-semibold text-[#1A1A2E] text-sm">{CATEGORY_NAMES[cat]}</div>
                     <div className="text-xs text-gray-400 mt-0.5">{CATEGORY_HINDI[cat]}</div>
                     <div className="text-xs text-[#6C3FD4] font-bold mt-2">from Rs {CATEGORY_PRICES[cat]}</div>
@@ -253,7 +256,6 @@ export default function Landing() {
             </div>
           </section>
 
-          {/* Senior Care CTA */}
           <section id="senior" className="py-20 px-6">
             <div className="max-w-4xl mx-auto">
               <motion.div
@@ -263,7 +265,7 @@ export default function Landing() {
                 className="rounded-3xl p-10 text-white text-center"
                 style={{ background: "linear-gradient(135deg, #6C3FD4, #9B6FF7)" }}
               >
-                <div className="text-5xl mb-4">👴</div>
+                <HeartHandshake size={48} className="mx-auto mb-4 text-white/90" />
                 <h2 className="text-3xl font-black mb-3">Senior Care Plans</h2>
                 <p className="text-white/80 mb-2">Peace of mind for your parents back home.</p>
                 <p className="text-white/70 text-sm mb-6">Trusted by NRI families in USA, UK, UAE, Middle East</p>
@@ -277,7 +279,6 @@ export default function Landing() {
             </div>
           </section>
 
-          {/* Runner CTA */}
           <section className="py-20 px-6 bg-white">
             <div className="max-w-4xl mx-auto text-center">
               <motion.div initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}>
@@ -294,7 +295,6 @@ export default function Landing() {
             </div>
           </section>
 
-          {/* Testimonials */}
           <section className="py-20 px-6">
             <div className="max-w-4xl mx-auto">
               <motion.div initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="text-center mb-10">
@@ -312,7 +312,7 @@ export default function Landing() {
                   >
                     <div className="flex gap-1 mb-3">
                       {Array.from({ length: t.rating }).map((_, j) => (
-                        <span key={j} className="text-yellow-400 text-lg">★</span>
+                        <Star key={j} size={16} className="text-yellow-400 fill-yellow-400" />
                       ))}
                     </div>
                     <p className="text-gray-600 text-sm mb-4 leading-relaxed">"{t.text}"</p>
@@ -331,7 +331,6 @@ export default function Landing() {
             </div>
           </section>
 
-          {/* Footer */}
           <footer className="bg-[#1A1A2E] text-white py-16 px-6">
             <div className="max-w-6xl mx-auto">
               <div className="flex flex-col md:flex-row gap-10 justify-between mb-10">
