@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
-import { HeartHandshake, CheckCircle2, ShieldCheck, MapPin, Star } from "lucide-react";
+import { HeartHandshake, CheckCircle2, ShieldCheck, MapPin, Star, Globe, Phone, Clock, Sparkles } from "lucide-react";
 import { useListSubscriptionPlans, useCreateSubscription } from "@workspace/api-client-react";
 import { UserBottomNav } from "@/components/BottomNav";
 import { formatCurrency } from "@/lib/utils";
@@ -12,17 +12,36 @@ const GOLD = "#C9A84C";
 const GOLD_GRAD = "linear-gradient(135deg, #C9A84C, #D4B870)";
 
 const trustBadges = [
-  { Icon: ShieldCheck, text: "KYC Verified Runners" },
-  { Icon: MapPin, text: "GPS Tracked" },
-  { Icon: CheckCircle2, text: "Photo Proof" },
-  { Icon: HeartHandshake, text: "Cancel Anytime" },
+  { Icon: ShieldCheck, title: "KYC Verified Runners", desc: "Aadhaar + selfie verified" },
+  { Icon: MapPin, title: "GPS Tracked", desc: "Every visit, every time" },
+  { Icon: CheckCircle2, title: "Photo Proof", desc: "Task evidence sent to you" },
+  { Icon: Phone, title: "Family Updates", desc: "You're always in the loop" },
+  { Icon: Clock, title: "Flexible Scheduling", desc: "Book when needed" },
+  { Icon: Globe, title: "NRI-Friendly", desc: "Manage from anywhere" },
 ];
 
 const testimonials = [
-  { name: "Rajesh (Son in USA)", text: "Go LineLess takes care of my parents in Ahmedabad like I'm there. Worth every rupee!" },
-  { name: "Priya (NRI, UK)", text: "My mother's hospital visits and medicine pickups are all handled. So grateful!" },
-  { name: "Suresh (Dubai)", text: "The runner is like family now. My parents trust her completely." },
+  {
+    name: "Rajesh Mehta",
+    location: "Son in San Francisco, USA",
+    text: "My parents are 75 and 72. Go LineLess runners handle their hospital visits, medicine pickups, and bank work every week. I feel like I'm still there with them.",
+    rating: 5,
+  },
+  {
+    name: "Priya Patel",
+    location: "Daughter in London, UK",
+    text: "My mother's monthly doctor visits were my biggest worry. Now I get photo proof and a call update after every visit. Absolute peace of mind.",
+    rating: 5,
+  },
+  {
+    name: "Suresh Sharma",
+    location: "Son in Dubai, UAE",
+    text: "The runner has become like family to my parents. They trust her completely. Worth every rupee — I only wish this service existed earlier.",
+    rating: 5,
+  },
 ];
+
+const nriCountries = ["🇺🇸 USA", "🇬🇧 UK", "🇦🇪 UAE", "🇨🇦 Canada", "🇦🇺 Australia", "🇸🇬 Singapore"];
 
 export default function SeniorCare() {
   const [billing, setBilling] = useState<"monthly" | "yearly">("monthly");
@@ -31,46 +50,93 @@ export default function SeniorCare() {
 
   const handleSubscribe = (planId: string) => {
     createSub.mutate({ data: { planId, billingCycle: billing } } as any, {
-      onSuccess: () => toast.success("Subscription activated!"),
-      onError: () => toast.error("Failed to subscribe"),
+      onSuccess: () => toast.success("Subscription activated! Welcome to the family."),
+      onError: () => toast.error("Failed to subscribe. Please try again."),
     });
   };
 
   return (
     <div className="min-h-screen pb-24" style={{ background: "#F8F9FC" }}>
-      <div className="rounded-b-3xl p-6 text-white relative overflow-hidden" style={{ background: NAVY_GRAD }}>
-        <div className="absolute top-0 right-0 w-48 h-48 rounded-full opacity-10" style={{ background: `radial-gradient(circle, ${GOLD}, transparent)`, transform: "translate(30%, -30%)" }} />
-        <div className="text-center relative z-10">
-          <HeartHandshake size={44} className="mx-auto mb-3" style={{ color: GOLD }} />
-          <h1 className="text-2xl font-black mb-2">Senior Care Plans</h1>
-          <p className="text-white/80 text-sm">Peace of mind for your parents</p>
-          <p className="text-white/60 text-xs mt-1">Trusted by NRI families in USA, UK, UAE, Middle East</p>
+      {/* Hero */}
+      <div className="relative overflow-hidden" style={{ background: NAVY_GRAD }}>
+        <div className="absolute top-0 right-0 w-64 h-64 rounded-full opacity-10" style={{ background: `radial-gradient(circle, ${GOLD}, transparent)`, transform: "translate(30%, -30%)" }} />
+        <div className="absolute bottom-0 left-0 w-48 h-48 rounded-full opacity-5" style={{ background: `radial-gradient(circle, white, transparent)`, transform: "translate(-30%, 30%)" }} />
+        <div className="relative z-10 px-5 pt-8 pb-6 text-center">
+          <motion.div
+            initial={{ scale: 0.5, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ type: "spring", stiffness: 200 }}
+            className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg"
+            style={{ background: GOLD_GRAD }}
+          >
+            <HeartHandshake size={30} className="text-white" />
+          </motion.div>
+          <motion.h1
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+            className="text-2xl font-black text-white mb-2 leading-tight"
+          >
+            Care for your parents,<br />from anywhere in the world.
+          </motion.h1>
+          <motion.p
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.4 }}
+            className="text-white/70 text-sm leading-relaxed mb-4"
+          >
+            Trusted by NRI families across {nriCountries.length} countries.<br />
+            Your parents deserve the best support.
+          </motion.p>
+          <div className="flex flex-wrap gap-1.5 justify-center">
+            {nriCountries.map(c => (
+              <span key={c} className="text-xs font-medium text-white/70 bg-white/10 border border-white/20 px-2.5 py-1 rounded-full">{c}</span>
+            ))}
+          </div>
         </div>
       </div>
 
+      {/* Emotional copy strip */}
+      <div className="mx-4 mt-4 bg-white rounded-2xl p-4 border border-gray-100 shadow-sm">
+        <div className="flex items-center gap-2 mb-2">
+          <Sparkles size={14} style={{ color: GOLD }} />
+          <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">Why families choose us</span>
+        </div>
+        <p className="text-sm text-gray-700 leading-relaxed">
+          When you're thousands of miles away, you need more than just a service — you need someone you <em>trust</em> to be there for your parents. Our verified runners become a reliable presence in their lives.
+        </p>
+      </div>
+
+      {/* Billing toggle */}
       <div className="px-4 mt-5">
         <div className="bg-white rounded-2xl p-1.5 flex shadow-sm border border-gray-100">
           {(["monthly", "yearly"] as const).map((b) => (
             <button
               key={b}
               onClick={() => setBilling(b)}
-              className={`flex-1 py-2.5 rounded-xl text-sm font-semibold transition-all ${billing === b ? "text-white" : "text-gray-500"}`}
+              className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition-all relative ${billing === b ? "text-white shadow-sm" : "text-gray-500"}`}
               style={billing === b ? { background: NAVY_GRAD } : {}}
             >
-              {b === "monthly" ? "Monthly" : "Yearly (2 months free!)"}
+              {b === "monthly" ? "Monthly" : "Yearly"}
+              {b === "yearly" && (
+                <span className="ml-1.5 text-[10px] font-semibold px-1.5 py-0.5 rounded-full" style={{ background: billing === "yearly" ? `${GOLD}40` : "#F3F4F6", color: billing === "yearly" ? GOLD : "#9CA3AF" }}>
+                  Save 2 months
+                </span>
+              )}
             </button>
           ))}
         </div>
       </div>
 
+      {/* Plans */}
       <div className="px-4 mt-5 space-y-4">
         {isLoading ? (
-          Array.from({ length: 3 }).map((_, i) => <div key={i} className="h-40 bg-gray-100 rounded-2xl animate-pulse" />)
-        ) : !plans || plans.length === 0 ? (
-          <div className="text-center py-16 text-gray-400">
-            <div className="text-4xl mb-3">📋</div>
-            <p className="font-medium">No plans available yet</p>
-            <p className="text-xs mt-1">We're setting up our senior care plans. Check back soon!</p>
+          Array.from({ length: 3 }).map((_, i) => <div key={i} className="h-48 bg-gray-100 rounded-2xl animate-pulse" />)
+        ) : !plans || (plans as any[]).length === 0 ? (
+          <div className="text-center py-16 bg-white rounded-2xl border border-gray-100 shadow-sm">
+            <HeartHandshake size={40} className="mx-auto mb-3 text-gray-300" />
+            <p className="font-bold text-gray-500">Plans coming soon</p>
+            <p className="text-xs text-gray-400 mt-1 px-6">We're finalizing our senior care packages. Check back in a few days!</p>
           </div>
         ) : (
           (plans as any[]).map((plan: any, i: number) => (
@@ -79,82 +145,115 @@ export default function SeniorCare() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: i * 0.1 }}
-              className={`bg-white rounded-2xl p-5 shadow-sm ${plan.isPopular ? "border-2" : "border border-gray-100"}`}
+              className={`bg-white rounded-2xl overflow-hidden shadow-sm ${plan.isPopular ? "border-2 shadow-md" : "border border-gray-100"}`}
               style={plan.isPopular ? { borderColor: GOLD } : {}}
             >
               {plan.isPopular && (
-                <div className="text-white text-xs font-bold px-3 py-1 rounded-full inline-block mb-3" style={{ background: GOLD_GRAD }}>
-                  MOST POPULAR
+                <div className="py-2 text-center text-[#0A1628] text-xs font-black tracking-wider" style={{ background: GOLD_GRAD }}>
+                  ★ MOST CHOSEN BY NRI FAMILIES
                 </div>
               )}
-              <div className="flex justify-between items-start">
-                <div>
-                  <h3 className="font-bold text-[#0A1628] text-lg">{plan.name}</h3>
-                  {plan.badge && <span className="text-xs font-medium" style={{ color: NAVY }}>{plan.badge}</span>}
-                </div>
-                <div className="text-right">
-                  <div className="text-2xl font-black" style={{ color: NAVY }}>
-                    {formatCurrency(billing === "monthly" ? plan.priceMonthly : plan.priceYearly)}
+              <div className="p-5">
+                <div className="flex justify-between items-start mb-4">
+                  <div>
+                    <h3 className="font-black text-[#0A1628] text-lg">{plan.name}</h3>
+                    {plan.badge && (
+                      <span className="text-xs font-semibold px-2 py-0.5 rounded-full mt-1 inline-block" style={{ background: "#EEF2FA", color: NAVY }}>{plan.badge}</span>
+                    )}
                   </div>
-                  <div className="text-xs text-gray-400">/{billing === "monthly" ? "month" : "year"}</div>
+                  <div className="text-right">
+                    <div className="text-3xl font-black" style={{ color: NAVY }}>
+                      {formatCurrency(billing === "monthly" ? plan.priceMonthly : plan.priceYearly)}
+                    </div>
+                    <div className="text-xs text-gray-400">/{billing === "monthly" ? "month" : "year"}</div>
+                    {billing === "yearly" && plan.priceMonthly && (
+                      <div className="text-[10px] font-semibold mt-0.5" style={{ color: GOLD }}>
+                        Save {formatCurrency(plan.priceMonthly * 12 - plan.priceYearly)}
+                      </div>
+                    )}
+                  </div>
                 </div>
+                {plan.tasksPerMonth && (
+                  <div className="flex items-center gap-2 mb-3 p-2.5 rounded-xl" style={{ background: "#EEF2FA" }}>
+                    <CheckCircle2 size={14} style={{ color: NAVY }} />
+                    <p className="text-sm font-bold" style={{ color: NAVY }}>{plan.tasksPerMonth} assisted visits / month</p>
+                  </div>
+                )}
+                {plan.features?.length > 0 && (
+                  <ul className="space-y-2 mb-4">
+                    {plan.features.map((f: string) => (
+                      <li key={f} className="text-xs text-gray-600 flex items-start gap-2">
+                        <span className="font-black flex-shrink-0 mt-0.5" style={{ color: GOLD }}>✓</span>
+                        <span>{f}</span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                <button
+                  onClick={() => handleSubscribe(plan.id)}
+                  disabled={createSub.isPending}
+                  className="w-full py-3.5 rounded-xl font-black text-sm shadow-sm hover:shadow-md transition-all"
+                  style={plan.isPopular
+                    ? { background: GOLD_GRAD, color: "#0A1628" }
+                    : { background: NAVY_GRAD, color: "white" }}
+                >
+                  {createSub.isPending ? "Activating..." : "Get Started →"}
+                </button>
               </div>
-              {plan.tasksPerMonth && (
-                <p className="text-sm text-gray-600 mt-2">{plan.tasksPerMonth} tasks/month</p>
-              )}
-              {plan.features?.length > 0 && (
-                <ul className="mt-3 space-y-1.5">
-                  {plan.features.map((f: string) => (
-                    <li key={f} className="text-xs text-gray-600 flex items-center gap-2">
-                      <span className="font-bold" style={{ color: GOLD }}>✓</span> {f}
-                    </li>
-                  ))}
-                </ul>
-              )}
-              <button
-                onClick={() => handleSubscribe(plan.id)}
-                disabled={createSub.isPending}
-                className="w-full mt-4 py-3 rounded-xl font-bold text-sm text-white"
-                style={{ background: plan.isPopular ? GOLD_GRAD : NAVY_GRAD }}
-              >
-                Subscribe Now
-              </button>
             </motion.div>
           ))
         )}
       </div>
 
-      <div className="px-4 mt-6">
-        <h3 className="font-bold text-[#0A1628] mb-3">Why families trust us</h3>
+      {/* Trust grid */}
+      <div className="px-4 mt-8">
+        <h3 className="font-black text-[#0A1628] text-base mb-4">Built for your peace of mind</h3>
         <div className="grid grid-cols-2 gap-3">
           {trustBadges.map((b) => (
-            <div key={b.text} className="bg-white rounded-xl p-3 flex items-center gap-2 shadow-sm border border-gray-100">
-              <b.Icon size={18} style={{ color: NAVY }} />
-              <span className="text-xs font-medium text-gray-700">{b.text}</span>
+            <div key={b.title} className="bg-white rounded-xl p-3.5 flex items-start gap-2.5 shadow-sm border border-gray-100">
+              <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: "#EEF2FA" }}>
+                <b.Icon size={16} style={{ color: NAVY }} />
+              </div>
+              <div>
+                <p className="text-xs font-bold text-[#0A1628]">{b.title}</p>
+                <p className="text-[10px] text-gray-400 mt-0.5">{b.desc}</p>
+              </div>
             </div>
           ))}
         </div>
       </div>
 
-      <div className="px-4 mt-6">
-        <h3 className="font-bold text-[#0A1628] mb-3">What NRI families say</h3>
+      {/* Testimonials */}
+      <div className="px-4 mt-8">
+        <h3 className="font-black text-[#0A1628] text-base mb-4">What NRI families say</h3>
         <div className="space-y-3">
           {testimonials.map((t) => (
-            <div key={t.name} className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
-              <div className="flex gap-1 mb-2">
+            <div key={t.name} className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
+              <div className="flex gap-1 mb-3">
                 {[1,2,3,4,5].map(s => <Star key={s} size={12} className="fill-yellow-400 text-yellow-400" />)}
               </div>
-              <p className="text-xs text-gray-600 italic">"{t.text}"</p>
-              <p className="text-xs font-semibold text-gray-500 mt-2">— {t.name}</p>
+              <p className="text-sm text-gray-700 leading-relaxed italic">"{t.text}"</p>
+              <div className="flex items-center gap-2 mt-3 pt-3 border-t border-gray-50">
+                <div className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-black" style={{ background: NAVY_GRAD }}>
+                  {t.name[0]}
+                </div>
+                <div>
+                  <p className="text-xs font-bold text-[#0A1628]">{t.name}</p>
+                  <p className="text-[10px] text-gray-400">{t.location}</p>
+                </div>
+              </div>
             </div>
           ))}
         </div>
       </div>
 
+      {/* Disclaimer */}
       <div className="px-4 mt-6 mb-4">
-        <div className="rounded-2xl p-4 text-xs text-gray-500 border border-gray-200 bg-white">
-          <p className="font-semibold text-gray-700 mb-1">Important Disclaimer</p>
-          Go LineLess assists with queue, pickup, submission and support tasks. We do not guarantee approvals, government outcomes, medical decisions or bank decisions.
+        <div className="rounded-2xl p-4 border border-amber-200 bg-amber-50">
+          <p className="text-xs font-bold text-amber-800 mb-1">Important Note</p>
+          <p className="text-xs text-amber-700 leading-relaxed">
+            Go LineLess assists with queue management, pickup, submission and support tasks. We do not guarantee government approvals, medical decisions or bank outcomes.
+          </p>
         </div>
       </div>
 
