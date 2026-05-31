@@ -1,0 +1,8 @@
+uploads = []
+generated = []
+
+[[outputs]]
+id = "xeHuAHGG9AOwoPn_6bNpM"
+uri = "file://golineless-source.tar.gz"
+type = "unspecified"
+title = "Go LineLess — Source Code (331 KB)"
