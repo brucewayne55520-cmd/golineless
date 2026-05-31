@@ -3,6 +3,9 @@ import { Home, ClipboardList, HeartHandshake, User, List, Play, Wallet } from "l
 import { cn } from "@/lib/utils";
 import type { LucideIcon } from "lucide-react";
 
+const NAVY = "#0F2557";
+const GOLD = "#C9A84C";
+
 interface NavItem {
   path: string;
   icon: LucideIcon;
@@ -26,7 +29,7 @@ const runnerNav: NavItem[] = [
 export function UserBottomNav() {
   const [location, navigate] = useLocation();
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-40 bg-white/90 backdrop-blur-xl border-t border-gray-100 safe-area-pb">
+    <nav className="fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-xl border-t border-gray-100 safe-area-pb">
       <div className="flex">
         {userNav.map((item) => {
           const active = location.startsWith(item.path);
@@ -37,12 +40,13 @@ export function UserBottomNav() {
               onClick={() => navigate(item.path)}
               className={cn(
                 "flex-1 flex flex-col items-center gap-0.5 py-3 transition-all min-h-[56px]",
-                active ? "text-[#6C3FD4]" : "text-gray-400"
+                active ? "" : "text-gray-400"
               )}
+              style={active ? { color: NAVY } : {}}
             >
               <Icon size={active ? 22 : 20} className="transition-all" />
               <span className={cn("text-[10px] font-semibold", active && "font-bold")}>{item.label}</span>
-              {active && <div className="absolute top-0 w-10 h-0.5 rounded-full bg-[#6C3FD4]" />}
+              {active && <div className="absolute top-0 w-10 h-0.5 rounded-full" style={{ background: GOLD }} />}
             </button>
           );
         })}
@@ -54,7 +58,7 @@ export function UserBottomNav() {
 export function RunnerBottomNav() {
   const [location, navigate] = useLocation();
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-40 bg-[#1A1A2E]/95 backdrop-blur-xl border-t border-white/10">
+    <nav className="fixed bottom-0 left-0 right-0 z-40 backdrop-blur-xl border-t border-white/10" style={{ background: "rgba(8,14,30,0.97)" }}>
       <div className="flex">
         {runnerNav.map((item) => {
           const active = location.startsWith(item.path);
@@ -65,8 +69,9 @@ export function RunnerBottomNav() {
               onClick={() => navigate(item.path)}
               className={cn(
                 "flex-1 flex flex-col items-center gap-0.5 py-3 transition-all",
-                active ? "text-[#FF6B35]" : "text-white/40"
+                active ? "" : "text-white/40"
               )}
+              style={active ? { color: GOLD } : {}}
             >
               <Icon size={active ? 22 : 20} className="transition-all" />
               <span className="text-[10px] font-semibold">{item.label}</span>

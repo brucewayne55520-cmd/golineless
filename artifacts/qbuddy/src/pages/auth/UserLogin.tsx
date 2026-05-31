@@ -5,6 +5,9 @@ import { toast } from "sonner";
 import { useSendOtp, useVerifyOtp } from "@workspace/api-client-react";
 import { useAuth } from "@/contexts/AuthContext";
 
+const NAVY_GRAD = "linear-gradient(135deg, #0F2557, #1D3D7C)";
+const GOLD_GRAD = "linear-gradient(135deg, #C9A84C, #D4B870)";
+
 export default function UserLogin() {
   const [step, setStep] = useState<"phone" | "otp">("phone");
   const [phone, setPhone] = useState("");
@@ -34,7 +37,7 @@ export default function UserLogin() {
     verifyOtp.mutate({ data: { phone: `+91${phone}`, otp: otpStr, role: "user" } }, {
       onSuccess: (data) => {
         login(data.token, "user", (data as any).user);
-        toast.success("Welcome to QBuddy!");
+        toast.success("Welcome to Go LineLess!");
         navigate("/app/home");
       },
       onError: () => toast.error("Invalid OTP"),
@@ -45,34 +48,26 @@ export default function UserLogin() {
     if (val.length > 1) return;
     const next = [...otp]; next[idx] = val;
     setOtp(next);
-    if (val && idx < 5) {
-      const el = document.getElementById(`otp-${idx + 1}`);
-      el?.focus();
-    }
+    if (val && idx < 5) document.getElementById(`otp-${idx + 1}`)?.focus();
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#F8F7FF] px-4">
-      <motion.div
-        initial={{ opacity: 0, y: 30 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="w-full max-w-sm"
-      >
-        <div className="bg-white rounded-3xl p-8 shadow-xl">
+    <div className="min-h-screen flex items-center justify-center px-4" style={{ background: "linear-gradient(135deg, #F8F9FC, #EEF2FA)" }}>
+      <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-sm">
+        <div className="bg-white rounded-3xl p-8 shadow-xl border border-gray-100">
           <div className="text-center mb-8">
-            <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4"
-              style={{ background: "linear-gradient(135deg, #6C3FD4, #9B6FF7)" }}>
-              <span className="text-white font-black text-2xl">Q</span>
+            <div className="inline-block bg-white border border-gray-100 rounded-2xl p-3 shadow-sm mb-4">
+              <img src="/logo.jpg" alt="Go LineLess" className="h-14 w-auto" />
             </div>
-            <h1 className="text-2xl font-black text-[#1A1A2E]">Welcome to QBuddy</h1>
-            <p className="text-gray-500 text-sm mt-1">Aapka Kaam, Hamara Runner</p>
+            <h1 className="text-2xl font-black text-[#0A1628]">Welcome</h1>
+            <p className="text-gray-500 text-sm mt-1">Life Without Waiting</p>
           </div>
 
           {step === "phone" ? (
             <form onSubmit={handleSend} className="space-y-4">
               <div>
                 <label className="text-sm font-medium text-gray-700 mb-1 block">Mobile Number</label>
-                <div className="flex border border-gray-200 rounded-xl overflow-hidden focus-within:ring-2 focus-within:ring-[#6C3FD4]">
+                <div className="flex border border-gray-200 rounded-xl overflow-hidden focus-within:ring-2" style={{ "--tw-ring-color": "#0F2557" } as any}>
                   <span className="px-3 py-3 bg-gray-50 text-gray-600 font-medium border-r border-gray-200">+91</span>
                   <input
                     type="tel"
@@ -80,7 +75,7 @@ export default function UserLogin() {
                     value={phone}
                     onChange={(e) => setPhone(e.target.value.replace(/\D/g, ""))}
                     placeholder="9876543210"
-                    className="flex-1 px-3 py-3 outline-none text-[#1A1A2E] text-lg tracking-wider"
+                    className="flex-1 px-3 py-3 outline-none text-[#0A1628] text-lg tracking-wider"
                   />
                 </div>
               </div>
@@ -88,13 +83,13 @@ export default function UserLogin() {
                 type="submit"
                 disabled={sendOtp.isPending}
                 className="w-full py-4 rounded-2xl text-white font-bold text-lg"
-                style={{ background: "linear-gradient(135deg, #FF6B35, #FF8C42)" }}
+                style={{ background: GOLD_GRAD }}
               >
                 {sendOtp.isPending ? "Sending..." : "Get OTP"}
               </button>
               <p className="text-center text-sm text-gray-500 mt-2">
                 Are you a runner?{" "}
-                <button type="button" onClick={() => navigate("/runner/login")} className="text-[#6C3FD4] font-semibold">
+                <button type="button" onClick={() => navigate("/runner/login")} className="font-semibold" style={{ color: "#0F2557" }}>
                   Login here
                 </button>
               </p>
@@ -103,8 +98,8 @@ export default function UserLogin() {
             <form onSubmit={handleVerify} className="space-y-6">
               <div className="text-center">
                 <p className="text-sm text-gray-500">Enter the 6-digit OTP sent to</p>
-                <p className="font-semibold text-[#1A1A2E]">+91 {phone}</p>
-                <button type="button" onClick={() => setStep("phone")} className="text-[#6C3FD4] text-xs mt-1">Change number</button>
+                <p className="font-semibold text-[#0A1628]">+91 {phone}</p>
+                <button type="button" onClick={() => setStep("phone")} className="text-xs mt-1" style={{ color: "#0F2557" }}>Change number</button>
               </div>
               <div className="flex gap-2 justify-center">
                 {otp.map((digit, idx) => (
@@ -116,8 +111,9 @@ export default function UserLogin() {
                     maxLength={1}
                     value={digit}
                     onChange={(e) => handleOtpChange(e.target.value, idx)}
-                    onKeyDown={(e) => { if (e.key === "Backspace" && !digit && idx > 0) { document.getElementById(`otp-${idx - 1}`)?.focus(); } }}
-                    className="w-11 h-14 border-2 border-gray-200 rounded-xl text-center text-2xl font-bold text-[#6C3FD4] focus:border-[#6C3FD4] focus:outline-none transition-colors"
+                    onKeyDown={(e) => { if (e.key === "Backspace" && !digit && idx > 0) document.getElementById(`otp-${idx - 1}`)?.focus(); }}
+                    className="w-11 h-14 border-2 border-gray-200 rounded-xl text-center text-2xl font-bold focus:outline-none transition-colors"
+                    style={{ color: "#0F2557", borderColor: digit ? "#0F2557" : "" }}
                   />
                 ))}
               </div>
@@ -125,7 +121,7 @@ export default function UserLogin() {
                 type="submit"
                 disabled={verifyOtp.isPending}
                 className="w-full py-4 rounded-2xl text-white font-bold text-lg"
-                style={{ background: "linear-gradient(135deg, #6C3FD4, #9B6FF7)" }}
+                style={{ background: NAVY_GRAD }}
               >
                 {verifyOtp.isPending ? "Verifying..." : "Verify & Continue"}
               </button>
@@ -134,7 +130,7 @@ export default function UserLogin() {
                 onClick={() => sendOtp.mutate({ data: { phone: `+91${phone}`, role: "user" } })}
                 className="w-full text-center text-sm text-gray-500"
               >
-                Didn't receive? <span className="text-[#6C3FD4] font-semibold">Resend OTP</span>
+                Didn't receive? <span className="font-semibold" style={{ color: "#0F2557" }}>Resend OTP</span>
               </button>
             </form>
           )}

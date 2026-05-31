@@ -2,11 +2,16 @@ import { useState } from "react";
 import { useLocation } from "wouter";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
-import { MapPin, Calendar, Search, CheckCircle } from "lucide-react";
+import { MapPin, Calendar, Search, CheckCircle, Clock, Zap } from "lucide-react";
 import { useListAvailableTasks, useAcceptTask, useGetRunnerMe, useToggleOnlineStatus } from "@workspace/api-client-react";
 import { RunnerBottomNav } from "@/components/BottomNav";
 import { CategoryIcon } from "@/components/CategoryIcon";
 import { CATEGORY_NAMES, formatCurrency } from "@/lib/utils";
+
+const NAVY_GRAD = "linear-gradient(135deg, #0F2557, #1D3D7C)";
+const GOLD = "#C9A84C";
+const GOLD_GRAD = "linear-gradient(135deg, #C9A84C, #D4B870)";
+const BG = "#080E1E";
 
 export default function RunnerFeed() {
   const [, navigate] = useLocation();
@@ -38,11 +43,13 @@ export default function RunnerFeed() {
   };
 
   return (
-    <div className="min-h-screen pb-20" style={{ background: "#0F0F1A" }}>
+    <div className="min-h-screen pb-20" style={{ background: BG }}>
       <div className="px-4 pt-4 pb-3 flex items-center justify-between border-b border-white/10">
         <div>
-          <h1 className="text-xl font-black text-white">Available Tasks</h1>
-          <p className="text-white/40 text-xs mt-0.5">
+          <div className="flex items-center gap-2 mb-0.5">
+            <img src="/logo.jpg" alt="Go LineLess" className="h-6 w-auto brightness-0 invert" />
+          </div>
+          <p className="text-white/40 text-xs">
             {r?.name ? `Hello, ${r.name.split(" ")[0]}!` : "Welcome, Runner!"}
           </p>
         </div>
@@ -56,12 +63,17 @@ export default function RunnerFeed() {
             <span className="text-white/60 text-xs">{isOnline ? "Online" : "Offline"}</span>
             <button
               onClick={handleToggle}
-              className={`w-12 h-6 rounded-full transition-colors relative ${isOnline ? "bg-green-500" : "bg-gray-600"}`}
+              className="w-12 h-6 rounded-full transition-colors relative"
+              style={{ background: isOnline ? "#22C55E" : "#374151" }}
             >
               <div className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${isOnline ? "translate-x-6" : "translate-x-0.5"}`} />
             </button>
           </div>
         </div>
+      </div>
+
+      <div className="px-4 py-3 border-b border-white/5">
+        <h1 className="text-lg font-black text-white">Available Tasks</h1>
       </div>
 
       {r && r.kycStatus !== "verified" && (
@@ -71,7 +83,7 @@ export default function RunnerFeed() {
           </p>
           <p className="text-white/60 text-xs mt-1">
             {r.kycStatus === "rejected" ? `Reason: ${r.kycRejectionReason ?? "Please resubmit documents"}. ` : "Complete KYC to start accepting tasks. "}
-            <button onClick={() => navigate("/runner/profile")} className="text-[#FF6B35] underline">
+            <button onClick={() => navigate("/runner/profile")} className="underline" style={{ color: GOLD }}>
               {r.kycStatus === "rejected" ? "Resubmit KYC" : "Complete KYC"}
             </button>
           </p>
@@ -88,6 +100,7 @@ export default function RunnerFeed() {
             <Search size={40} className="text-white/20 mb-4" />
             <h3 className="font-bold text-white text-lg">No tasks available</h3>
             <p className="text-white/50 text-sm mt-1">New tasks appear here automatically</p>
+            {!isOnline && <p className="text-yellow-400 text-xs mt-2">Go Online to see tasks</p>}
           </div>
         ) : (
           (tasks as any[]).map((task: any, i: number) => (
@@ -105,7 +118,7 @@ export default function RunnerFeed() {
                 <div className="flex-1">
                   <div className="flex items-center justify-between">
                     <h3 className="font-bold text-white">{CATEGORY_NAMES[task.category]}</h3>
-                    <span className="text-xs text-[#FF6B35] font-bold bg-[#FF6B35]/20 px-2 py-0.5 rounded-lg">
+                    <span className="text-xs font-bold px-2 py-0.5 rounded-lg" style={{ color: GOLD, background: `${GOLD}20` }}>
                       {formatCurrency(Number(task.price ?? 0) * 0.7)} for you
                     </span>
                   </div>
@@ -114,6 +127,18 @@ export default function RunnerFeed() {
                       <MapPin size={10} /> {task.locationArea}, {task.locationCity ?? "Ahmedabad"}
                     </p>
                   )}
+                  <div className="flex items-center gap-3 mt-1">
+                    {task.distanceBand && (
+                      <span className="text-white/40 text-xs flex items-center gap-1">
+                        <Clock size={9} /> {task.distanceBand} km
+                      </span>
+                    )}
+                    {task.urgency === "urgent" && (
+                      <span className="text-red-400 text-xs flex items-center gap-1 font-semibold">
+                        <Zap size={9} /> Urgent
+                      </span>
+                    )}
+                  </div>
                 </div>
               </div>
               <p className="text-white/60 text-sm mb-3 line-clamp-2">{task.description}</p>
@@ -124,14 +149,14 @@ export default function RunnerFeed() {
                 </p>
               )}
               <div className="flex gap-3">
-                <button className="flex-1 py-2.5 rounded-xl border border-white/20 text-white/60 text-sm font-medium hover:bg-white/5">
+                <button className="flex-1 py-2.5 rounded-xl border border-white/20 text-white/60 text-sm font-medium hover:bg-white/5 transition-colors">
                   Skip
                 </button>
                 <button
                   onClick={() => handleAccept(task.id)}
                   disabled={accepting === task.id || r?.kycStatus !== "verified"}
-                  className="flex-1 px-6 py-2.5 rounded-xl text-white text-sm font-bold flex items-center justify-center gap-1.5"
-                  style={{ background: "linear-gradient(135deg, #FF6B35, #FF8C42)" }}
+                  className="flex-1 px-6 py-2.5 rounded-xl text-[#0A1628] text-sm font-bold flex items-center justify-center gap-1.5"
+                  style={{ background: r?.kycStatus !== "verified" ? "#374151" : GOLD_GRAD }}
                 >
                   <CheckCircle size={14} />
                   {accepting === task.id ? "Accepting..." : "Accept Task"}

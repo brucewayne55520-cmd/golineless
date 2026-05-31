@@ -1,57 +1,69 @@
 import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
-import { Smartphone, PersonStanding, CheckCircle2, Star, MapPin, HeartHandshake } from "lucide-react";
+import {
+  Smartphone, PersonStanding, CheckCircle2, Star, MapPin, HeartHandshake,
+  ShieldCheck, Camera, KeyRound, CreditCard, ChevronDown, ChevronUp,
+  Clock, Zap, PhoneCall
+} from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { CategoryIcon, CATEGORY_KEYS } from "@/components/CategoryIcon";
 import { CATEGORY_NAMES, CATEGORY_PRICES, CATEGORY_HINDI } from "@/lib/utils";
 
+const NAVY = "#0F2557";
+const NAVY_GRAD = "linear-gradient(135deg, #0F2557, #1D3D7C)";
+const GOLD = "#C9A84C";
+const GOLD_GRAD = "linear-gradient(135deg, #C9A84C, #D4B870)";
+
 function Splash({ onDone }: { onDone: () => void }) {
   useEffect(() => {
-    const t = setTimeout(onDone, 2200);
+    const t = setTimeout(onDone, 2400);
     return () => clearTimeout(t);
   }, [onDone]);
 
   return (
     <motion.div
       className="fixed inset-0 flex flex-col items-center justify-center z-50"
-      style={{ background: "linear-gradient(135deg, #6C3FD4, #9B6FF7)" }}
+      style={{ background: NAVY_GRAD }}
       exit={{ opacity: 0, scale: 1.05 }}
       transition={{ duration: 0.4 }}
     >
       <motion.div
         initial={{ scale: 0.5, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
-        transition={{ type: "spring", stiffness: 200, damping: 15 }}
+        transition={{ type: "spring", stiffness: 180, damping: 14 }}
         className="flex flex-col items-center"
       >
-        <div className="w-24 h-24 bg-white rounded-full flex items-center justify-center mb-4 shadow-2xl">
-          <span className="text-5xl font-black text-[#6C3FD4]">Q</span>
-        </div>
-        <motion.h1
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3 }}
-          className="text-4xl font-black text-white tracking-tight"
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.2 }}
+          className="bg-white rounded-2xl p-4 shadow-2xl mb-5"
         >
-          Q<span className="font-light">Buddy</span>
-        </motion.h1>
+          <img src="/logo.jpg" alt="Go LineLess" className="h-20 w-auto" />
+        </motion.div>
         <motion.p
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.6 }}
-          className="text-white/80 mt-2 text-sm tracking-widest uppercase"
-          style={{ textShadow: "0 0 20px rgba(255,255,255,0.5)" }}
+          className="text-white/80 text-sm tracking-widest uppercase font-medium"
         >
-          UnLimit &amp; LineLess Assistant
+          Life Without Waiting
         </motion.p>
+        <motion.div
+          initial={{ scaleX: 0 }}
+          animate={{ scaleX: 1 }}
+          transition={{ delay: 1.0, duration: 0.8 }}
+          className="h-0.5 w-32 mt-3 rounded-full"
+          style={{ background: GOLD_GRAD }}
+        />
         <motion.p
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          transition={{ delay: 1.0 }}
-          className="text-white/60 text-xs mt-1"
+          transition={{ delay: 1.4 }}
+          className="text-white/50 text-xs mt-3"
         >
-          Aapka Kaam, Hamara Runner
+          India's trusted offline assistance network
         </motion.p>
       </motion.div>
     </motion.div>
@@ -59,26 +71,38 @@ function Splash({ onDone }: { onDone: () => void }) {
 }
 
 const steps = [
-  { Icon: Smartphone, title: "Book in 60 seconds", desc: "Select category, describe your task" },
-  { Icon: PersonStanding, title: "Runner assigned instantly", desc: "Verified local runner picks your task" },
-  { Icon: CheckCircle2, title: "Sit back, task done", desc: "Track live & get proof on completion" },
+  { Icon: Smartphone, title: "Book in 60 seconds", desc: "Select category, describe your task, set date & time" },
+  { Icon: PersonStanding, title: "Runner assigned instantly", desc: "KYC-verified local runner picks up your task" },
+  { Icon: CheckCircle2, title: "Track live. Task done.", desc: "Photo proof + OTP completion — no guesswork" },
+];
+
+const trustFeatures = [
+  { Icon: ShieldCheck, title: "KYC Verified Runners", desc: "Every runner passes Aadhaar & selfie verification before going live" },
+  { Icon: MapPin, title: "Live GPS Tracking", desc: "See your runner on the map in real time" },
+  { Icon: Camera, title: "Photo Proof", desc: "Runners upload visual proof on task completion" },
+  { Icon: KeyRound, title: "OTP Completion", desc: "6-digit OTP ensures only you can mark a task done" },
+  { Icon: CreditCard, title: "Secure Payments", desc: "Pay online or cash on completion — your choice" },
+  { Icon: HeartHandshake, title: "Senior Care Support", desc: "Specialist runners trained to assist elderly with patience" },
 ];
 
 const testimonials = [
-  { name: "Priya Sharma", city: "Ahmedabad", text: "Saved me 4 hours at the passport office. The runner was so professional!", rating: 5 },
-  { name: "Ankit Patel", city: "Ahmedabad", text: "My parents are in Ahmedabad, I'm in the US. QBuddy handles all their errands. Life changing!", rating: 5 },
-  { name: "Sunita Mehta", city: "Ahmedabad", text: "Used it for bank work 3 times now. Always on time, always professional.", rating: 5 },
+  { name: "Priya Sharma", city: "Ahmedabad", text: "Saved me 4 hours at the passport office. The runner was incredibly professional — exactly what I needed.", rating: 5 },
+  { name: "Ankit Patel", city: "USA → Ahmedabad", text: "My parents are in Ahmedabad, I'm in the US. Go LineLess handles all their errands. Absolute peace of mind.", rating: 5 },
+  { name: "Sunita Mehta", city: "Ahmedabad", text: "Used it for bank work three times now. Always on time, always reliable. I recommend it to everyone.", rating: 5 },
 ];
 
-const trustItems = [
-  { Icon: Star, val: "4.9", label: "Rated" },
-  { Icon: PersonStanding, val: "500+", label: "Runners" },
-  { Icon: CheckCircle2, val: "10,000+", label: "Tasks Done" },
-  { Icon: MapPin, val: "Ahmedabad", label: "& Growing" },
+const faqs = [
+  { q: "How does Go LineLess work?", a: "You book a task in under 60 seconds, a verified runner is assigned, they complete the task, upload photo proof, and you confirm with a 6-digit OTP. Simple." },
+  { q: "Are the runners trustworthy?", a: "Every runner undergoes Aadhaar verification, selfie check, and background screening before they can accept tasks. You also see their rating and reviews." },
+  { q: "What if the runner cannot complete the task?", a: "Go LineLess assists with queue, pickup, submission and support tasks. We do not guarantee government approvals, medical decisions, or bank decisions. If a task cannot be completed, you are refunded." },
+  { q: "Is Go LineLess available outside Ahmedabad?", a: "We're currently in a pilot launch phase in Ahmedabad and actively expanding. Sign up to get notified when we reach your city." },
+  { q: "Can I schedule a task for later?", a: "Yes. Pick any future date and time when booking. Great for early morning hospital queues or same-day bank visits." },
+  { q: "How much does it cost?", a: "Pricing starts from Rs 89 for errands and goes up by category, distance band, and urgency. You see the full breakdown before confirming." },
 ];
 
 export default function Landing() {
   const [showSplash, setShowSplash] = useState(true);
+  const [openFaq, setOpenFaq] = useState<number | null>(null);
   const [, navigate] = useLocation();
   const { token, role } = useAuth();
 
@@ -96,114 +120,101 @@ export default function Landing() {
       </AnimatePresence>
 
       {!showSplash && (
-        <div className="min-h-screen bg-[#F8F7FF]">
-          <nav className="sticky top-0 z-40 bg-white/80 backdrop-blur-md border-b border-purple-100 px-6 py-4">
+        <div className="min-h-screen bg-white text-[#0A1628]">
+          {/* Navbar */}
+          <nav className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-gray-100 px-6 py-4 shadow-sm">
             <div className="max-w-6xl mx-auto flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <div className="w-9 h-9 bg-[#6C3FD4] rounded-full flex items-center justify-center">
-                  <span className="text-white font-black text-lg">Q</span>
-                </div>
-                <span className="text-xl font-black text-[#1A1A2E]">QBuddy</span>
-              </div>
+              <img src="/logo.jpg" alt="Go LineLess" className="h-9 w-auto" />
               <div className="hidden md:flex gap-6 text-sm font-medium text-gray-600">
-                <a href="#how" className="hover:text-[#6C3FD4] transition-colors">How it Works</a>
-                <a href="#services" className="hover:text-[#6C3FD4] transition-colors">Services</a>
-                <a href="#senior" className="hover:text-[#6C3FD4] transition-colors">Senior Care</a>
+                <a href="#how" className="hover:text-[#0F2557] transition-colors">How it Works</a>
+                <a href="#services" className="hover:text-[#0F2557] transition-colors">Services</a>
+                <a href="#trust" className="hover:text-[#0F2557] transition-colors">Trust & Safety</a>
+                <a href="#senior" className="hover:text-[#0F2557] transition-colors">Senior Care</a>
+                <a href="#pricing" className="hover:text-[#0F2557] transition-colors">Pricing</a>
               </div>
               <button
                 onClick={() => navigate("/login")}
-                className="px-5 py-2 rounded-xl text-white text-sm font-semibold"
-                style={{ background: "linear-gradient(135deg, #FF6B35, #FF8C42)" }}
+                className="px-5 py-2.5 rounded-xl text-white text-sm font-bold shadow-md hover:shadow-lg transition-all hover:scale-105"
+                style={{ background: GOLD_GRAD }}
               >
-                Book Now
+                Book a Runner
               </button>
             </div>
           </nav>
 
-          <section className="relative overflow-hidden pt-16 pb-20 px-6">
-            <div className="max-w-6xl mx-auto grid md:grid-cols-2 gap-12 items-center">
+          {/* Hero */}
+          <section className="relative overflow-hidden pt-20 pb-24 px-6" style={{ background: "linear-gradient(135deg, #F8F9FC 0%, #EEF2FA 100%)" }}>
+            <div className="max-w-6xl mx-auto grid md:grid-cols-2 gap-14 items-center">
               <motion.div initial={{ opacity: 0, x: -40 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.7 }}>
-                <span className="inline-block px-3 py-1 bg-purple-100 text-[#6C3FD4] rounded-full text-xs font-semibold mb-4">
-                  Now in Ahmedabad
+                <span className="inline-flex items-center gap-2 px-3 py-1.5 bg-white border border-gray-200 rounded-full text-xs font-semibold text-[#0F2557] mb-5 shadow-sm">
+                  <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+                  Pilot Launching in Ahmedabad
                 </span>
-                <h1 className="text-5xl font-black text-[#1A1A2E] leading-tight mb-4">
-                  India's First
+                <h1 className="text-5xl md:text-6xl font-black text-[#0A1628] leading-tight mb-3">
+                  Life without
                   <br />
-                  <span style={{ background: "linear-gradient(135deg, #6C3FD4, #FF6B35)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
-                    LineLess
+                  <span style={{ background: GOLD_GRAD, WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
+                    waiting.
                   </span>
-                  <br />
-                  Assistant
                 </h1>
-                <p className="text-gray-600 text-lg mb-8 leading-relaxed">
-                  Send a trusted, verified runner to handle your queues, paperwork, bank work, and more.
-                  You sit back while we run around for you.
+                <p className="text-gray-600 text-lg mb-8 leading-relaxed max-w-md">
+                  Book verified human assistants for hospital queues, reports, medicine pickup, bank visits, documentation, senior care and real-world errands — with live tracking, photo proof and OTP completion.
                 </p>
                 <div className="flex gap-4 flex-wrap">
                   <button
                     onClick={() => navigate("/login")}
                     className="px-8 py-4 rounded-2xl text-white font-bold text-lg shadow-lg hover:shadow-xl transition-all hover:scale-105"
-                    style={{ background: "linear-gradient(135deg, #FF6B35, #FF8C42)" }}
+                    style={{ background: GOLD_GRAD }}
                   >
                     Book a Runner
                   </button>
                   <button
                     onClick={() => navigate("/runner/login")}
-                    className="px-8 py-4 rounded-2xl text-[#6C3FD4] font-bold text-lg border-2 border-[#6C3FD4] hover:bg-purple-50 transition-all"
+                    className="px-8 py-4 rounded-2xl font-bold text-lg border-2 hover:bg-[#0F2557]/5 transition-all"
+                    style={{ borderColor: NAVY, color: NAVY }}
                   >
                     Become a Runner
                   </button>
                 </div>
+                <p className="mt-5 text-xs text-gray-400 max-w-sm">
+                  Go LineLess assists with queue, pickup, submission and support tasks. We do not guarantee government approvals, medical decisions or bank outcomes.
+                </p>
               </motion.div>
+
               <motion.div
                 initial={{ opacity: 0, x: 40 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ duration: 0.7, delay: 0.2 }}
                 className="hidden md:flex items-center justify-center"
               >
-                <div className="relative w-80 h-80">
-                  <div className="absolute inset-0 rounded-full opacity-20 animate-pulse" style={{ background: "radial-gradient(circle, #6C3FD4, transparent)" }} />
-                  <div className="absolute inset-8 rounded-full opacity-30" style={{ background: "radial-gradient(circle, #FF6B35, transparent)" }} />
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <motion.div
-                      animate={{ y: [-10, 10, -10] }}
-                      transition={{ repeat: Infinity, duration: 3, ease: "easeInOut" }}
-                      className="text-center"
-                    >
-                      <div className="w-20 h-20 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-2">
-                        <PersonStanding size={48} className="text-white" />
-                      </div>
-                      <div className="bg-white rounded-2xl px-4 py-2 shadow-lg text-sm font-semibold text-[#6C3FD4]">
-                        On the way!
-                      </div>
-                    </motion.div>
+                <div className="relative">
+                  <div className="w-72 h-72 rounded-full opacity-10 absolute inset-0" style={{ background: `radial-gradient(circle, ${NAVY}, transparent)` }} />
+                  <div className="relative bg-white rounded-3xl p-8 shadow-2xl border border-gray-100 w-72">
+                    <img src="/logo.jpg" alt="Go LineLess" className="w-full h-auto mb-4" />
+                    <div className="space-y-2">
+                      {[
+                        { label: "Runner assigned", color: "#22C55E" },
+                        { label: "On the way · 8 min", color: GOLD },
+                        { label: "OTP: 4 8 2 9 1 7", color: NAVY },
+                      ].map((item) => (
+                        <div key={item.label} className="flex items-center gap-2 bg-gray-50 rounded-xl px-3 py-2">
+                          <div className="w-2 h-2 rounded-full" style={{ background: item.color }} />
+                          <span className="text-xs font-semibold text-gray-700">{item.label}</span>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 </div>
               </motion.div>
             </div>
           </section>
 
-          <section className="bg-white py-6 border-y border-gray-100">
-            <div className="max-w-4xl mx-auto px-6">
-              <div className="flex flex-wrap items-center justify-center gap-8 text-center">
-                {trustItems.map((item) => (
-                  <div key={item.label} className="flex items-center gap-2">
-                    <item.Icon size={22} className="text-[#6C3FD4]" />
-                    <div>
-                      <div className="font-bold text-[#1A1A2E]">{item.val}</div>
-                      <div className="text-xs text-gray-500">{item.label}</div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </section>
-
-          <section id="how" className="py-20 px-6">
+          {/* How it works */}
+          <section id="how" className="py-20 px-6 bg-white">
             <div className="max-w-4xl mx-auto">
-              <motion.div initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="text-center mb-12">
-                <h2 className="text-3xl font-black text-[#1A1A2E] mb-3">How QBuddy Works</h2>
-                <p className="text-gray-500">3 simple steps to your personal runner</p>
+              <motion.div initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="text-center mb-14">
+                <h2 className="text-3xl font-black text-[#0A1628] mb-3">How it works</h2>
+                <p className="text-gray-500">Three steps. No fuss. Task done.</p>
               </motion.div>
               <div className="grid md:grid-cols-3 gap-8">
                 {steps.map((step, i) => (
@@ -213,13 +224,15 @@ export default function Landing() {
                     whileInView={{ opacity: 1, y: 0 }}
                     viewport={{ once: true }}
                     transition={{ delay: i * 0.15 }}
-                    className="text-center bg-white rounded-2xl p-8 shadow-md"
+                    className="text-center bg-white rounded-2xl p-8 shadow-md border border-gray-100"
                   >
-                    <div className="w-14 h-14 rounded-full bg-purple-50 flex items-center justify-center mx-auto mb-4">
-                      <step.Icon size={28} className="text-[#6C3FD4]" />
+                    <div className="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-4" style={{ background: "linear-gradient(135deg, #EEF2FA, #D9E3F5)" }}>
+                      <step.Icon size={28} style={{ color: NAVY }} />
                     </div>
-                    <div className="w-7 h-7 bg-[#6C3FD4] text-white rounded-full flex items-center justify-center text-sm font-bold mx-auto mb-3">{i + 1}</div>
-                    <h3 className="font-bold text-[#1A1A2E] mb-2">{step.title}</h3>
+                    <div className="w-7 h-7 rounded-full flex items-center justify-center text-sm font-black mx-auto mb-3 text-white" style={{ background: GOLD_GRAD }}>
+                      {i + 1}
+                    </div>
+                    <h3 className="font-bold text-[#0A1628] mb-2">{step.title}</h3>
                     <p className="text-gray-500 text-sm">{step.desc}</p>
                   </motion.div>
                 ))}
@@ -227,11 +240,12 @@ export default function Landing() {
             </div>
           </section>
 
-          <section id="services" className="py-20 px-6 bg-white">
+          {/* Services */}
+          <section id="services" className="py-20 px-6" style={{ background: "linear-gradient(135deg, #F8F9FC, #EEF2FA)" }}>
             <div className="max-w-4xl mx-auto">
-              <motion.div initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="text-center mb-12">
-                <h2 className="text-3xl font-black text-[#1A1A2E] mb-3">Our Services</h2>
-                <p className="text-gray-500">Whatever the task, we have a runner for it</p>
+              <motion.div initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="text-center mb-14">
+                <h2 className="text-3xl font-black text-[#0A1628] mb-3">Our Services</h2>
+                <p className="text-gray-500">Whatever the real-world task, we have a verified runner for it</p>
               </motion.div>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 {CATEGORY_KEYS.map((cat, i) => (
@@ -242,52 +256,145 @@ export default function Landing() {
                     viewport={{ once: true }}
                     transition={{ delay: i * 0.07 }}
                     onClick={() => navigate(`/login?category=${cat}`)}
-                    className="cursor-pointer bg-[#F8F7FF] hover:bg-purple-50 rounded-2xl p-5 text-center transition-all hover:shadow-md hover:-translate-y-1"
+                    className="cursor-pointer bg-white hover:shadow-lg rounded-2xl p-5 text-center transition-all hover:-translate-y-1 border border-gray-100"
                   >
-                    <div className="flex justify-center mb-2 text-[#6C3FD4]">
+                    <div className="flex justify-center mb-3" style={{ color: NAVY }}>
                       <CategoryIcon category={cat} size={36} />
                     </div>
-                    <div className="font-semibold text-[#1A1A2E] text-sm">{CATEGORY_NAMES[cat]}</div>
+                    <div className="font-semibold text-[#0A1628] text-sm">{CATEGORY_NAMES[cat]}</div>
                     <div className="text-xs text-gray-400 mt-0.5">{CATEGORY_HINDI[cat]}</div>
-                    <div className="text-xs text-[#6C3FD4] font-bold mt-2">from Rs {CATEGORY_PRICES[cat]}</div>
+                    <div className="text-xs font-bold mt-2" style={{ color: GOLD }}>from Rs {CATEGORY_PRICES[cat]}</div>
                   </motion.div>
                 ))}
               </div>
             </div>
           </section>
 
-          <section id="senior" className="py-20 px-6">
+          {/* Trust & Safety */}
+          <section id="trust" className="py-20 px-6 bg-white">
+            <div className="max-w-5xl mx-auto">
+              <motion.div initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="text-center mb-14">
+                <h2 className="text-3xl font-black text-[#0A1628] mb-3">Trust & Safety</h2>
+                <p className="text-gray-500">Built for families, elders, and people who deserve real-world reliability</p>
+              </motion.div>
+              <div className="grid md:grid-cols-3 gap-6">
+                {trustFeatures.map((item, i) => (
+                  <motion.div
+                    key={item.title}
+                    initial={{ opacity: 0, y: 20 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true }}
+                    transition={{ delay: i * 0.1 }}
+                    className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm hover:shadow-md transition-all"
+                  >
+                    <div className="w-12 h-12 rounded-xl flex items-center justify-center mb-4" style={{ background: "linear-gradient(135deg, #EEF2FA, #D9E3F5)" }}>
+                      <item.Icon size={22} style={{ color: NAVY }} />
+                    </div>
+                    <h3 className="font-bold text-[#0A1628] mb-1">{item.title}</h3>
+                    <p className="text-gray-500 text-sm">{item.desc}</p>
+                  </motion.div>
+                ))}
+              </div>
+            </div>
+          </section>
+
+          {/* Senior Care */}
+          <section id="senior" className="py-20 px-6" style={{ background: "linear-gradient(135deg, #F8F9FC, #EEF2FA)" }}>
             <div className="max-w-4xl mx-auto">
               <motion.div
                 initial={{ opacity: 0, y: 30 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
-                className="rounded-3xl p-10 text-white text-center"
-                style={{ background: "linear-gradient(135deg, #6C3FD4, #9B6FF7)" }}
+                className="rounded-3xl p-10 md:p-14 text-white relative overflow-hidden"
+                style={{ background: NAVY_GRAD }}
               >
-                <HeartHandshake size={48} className="mx-auto mb-4 text-white/90" />
-                <h2 className="text-3xl font-black mb-3">Senior Care Plans</h2>
-                <p className="text-white/80 mb-2">Peace of mind for your parents back home.</p>
-                <p className="text-white/70 text-sm mb-6">Trusted by NRI families in USA, UK, UAE, Middle East</p>
-                <button
-                  onClick={() => navigate("/login")}
-                  className="px-8 py-3 rounded-xl font-bold text-[#6C3FD4] bg-white hover:bg-gray-50 transition-all"
-                >
-                  View Senior Plans
-                </button>
+                <div className="absolute top-0 right-0 w-64 h-64 rounded-full opacity-10" style={{ background: `radial-gradient(circle, ${GOLD}, transparent)`, transform: "translate(30%, -30%)" }} />
+                <div className="relative z-10 text-center">
+                  <HeartHandshake size={48} className="mx-auto mb-5 opacity-90" style={{ color: GOLD }} />
+                  <h2 className="text-3xl font-black mb-3">Senior Care Plans</h2>
+                  <p className="text-white/80 mb-1">Premium subscription plans for elderly assistance.</p>
+                  <p className="text-white/60 text-sm mb-8">Trusted by NRI families in USA, UK, UAE & Middle East</p>
+                  <div className="grid md:grid-cols-3 gap-4 mb-8">
+                    {[
+                      { plan: "Basic Care", features: ["4 tasks/month", "Hospital companion", "Medicine pickup"] },
+                      { plan: "Plus Care", features: ["8 tasks/month", "Bank & document help", "Family updates"] },
+                      { plan: "Premium Care", features: ["Unlimited tasks", "Priority runner", "24/7 support"] },
+                    ].map((p) => (
+                      <div key={p.plan} className="bg-white/10 border border-white/20 rounded-2xl p-5 text-left">
+                        <h4 className="font-bold text-white mb-3">{p.plan}</h4>
+                        <ul className="space-y-1.5">
+                          {p.features.map(f => (
+                            <li key={f} className="text-white/70 text-xs flex items-center gap-2">
+                              <span style={{ color: GOLD }}>✓</span> {f}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    ))}
+                  </div>
+                  <button
+                    onClick={() => navigate("/login")}
+                    className="px-8 py-3.5 rounded-2xl font-bold text-[#0F2557] transition-all hover:scale-105 shadow-lg"
+                    style={{ background: GOLD_GRAD }}
+                  >
+                    View Senior Plans
+                  </button>
+                </div>
               </motion.div>
             </div>
           </section>
 
-          <section className="py-20 px-6 bg-white">
-            <div className="max-w-4xl mx-auto text-center">
-              <motion.div initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}>
-                <h2 className="text-3xl font-black text-[#1A1A2E] mb-3">Earn Rs 500–1,500 Daily</h2>
-                <p className="text-gray-500 mb-6">Be your own boss. Set your hours. QBuddy runners earn more than most gig jobs.</p>
+          {/* Pricing */}
+          <section id="pricing" className="py-20 px-6 bg-white">
+            <div className="max-w-3xl mx-auto">
+              <motion.div initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="text-center mb-14">
+                <h2 className="text-3xl font-black text-[#0A1628] mb-3">Transparent Pricing</h2>
+                <p className="text-gray-500">No hidden fees. Full price breakdown before you confirm.</p>
+              </motion.div>
+              <div className="bg-white rounded-3xl border border-gray-100 shadow-lg overflow-hidden">
+                <div className="px-6 py-4 border-b border-gray-100 text-sm font-semibold text-gray-500 grid grid-cols-3">
+                  <span>Service</span><span className="text-center">Base Price</span><span className="text-right">Starting from</span>
+                </div>
+                {CATEGORY_KEYS.map((cat) => (
+                  <div key={cat} className="px-6 py-3.5 grid grid-cols-3 border-b border-gray-50 last:border-0 hover:bg-gray-50 transition-colors">
+                    <div className="flex items-center gap-2 text-sm font-medium text-[#0A1628]">
+                      <span style={{ color: NAVY }}><CategoryIcon category={cat} size={16} /></span>
+                      {CATEGORY_NAMES[cat]}
+                    </div>
+                    <div className="text-center text-sm text-gray-500">+ distance + urgency</div>
+                    <div className="text-right text-sm font-bold" style={{ color: GOLD }}>Rs {CATEGORY_PRICES[cat]}</div>
+                  </div>
+                ))}
+                <div className="px-6 py-4 bg-gray-50 text-xs text-gray-400">
+                  Distance surcharge: +Rs 0 (0–2 km) · +Rs 20 (2–5 km) · +Rs 50 (5+ km) · Urgent +Rs 50
+                </div>
+              </div>
+            </div>
+          </section>
+
+          {/* Become a Runner */}
+          <section className="py-20 px-6" style={{ background: "linear-gradient(135deg, #F8F9FC, #EEF2FA)" }}>
+            <div className="max-w-4xl mx-auto">
+              <motion.div initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="text-center">
+                <h2 className="text-3xl font-black text-[#0A1628] mb-3">Earn Rs 500–1,500 Daily</h2>
+                <p className="text-gray-500 mb-8 max-w-md mx-auto">Be your own boss. Set your hours. Go LineLess runners earn more than most gig jobs — with meaningful work that helps real people.</p>
+                <div className="grid md:grid-cols-3 gap-4 mb-10 max-w-2xl mx-auto">
+                  {[
+                    { Icon: Clock, title: "Flexible Hours", desc: "Go online when you want" },
+                    { Icon: Zap, title: "Instant Tasks", desc: "Tasks appear in real time" },
+                    { Icon: PhoneCall, title: "Runner Support", desc: "We're always here for you" },
+                  ].map((item) => (
+                    <div key={item.title} className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm">
+                      <item.Icon size={22} className="mb-2" style={{ color: NAVY }} />
+                      <h4 className="font-bold text-[#0A1628] text-sm">{item.title}</h4>
+                      <p className="text-gray-500 text-xs mt-1">{item.desc}</p>
+                    </div>
+                  ))}
+                </div>
                 <button
                   onClick={() => navigate("/runner/login")}
-                  className="px-8 py-4 rounded-2xl text-white font-bold text-lg"
-                  style={{ background: "linear-gradient(135deg, #6C3FD4, #9B6FF7)" }}
+                  className="px-8 py-4 rounded-2xl text-white font-bold text-lg shadow-lg hover:shadow-xl transition-all hover:scale-105"
+                  style={{ background: NAVY_GRAD }}
                 >
                   Join as a Runner
                 </button>
@@ -295,10 +402,11 @@ export default function Landing() {
             </div>
           </section>
 
-          <section className="py-20 px-6">
+          {/* Testimonials */}
+          <section className="py-20 px-6 bg-white">
             <div className="max-w-4xl mx-auto">
-              <motion.div initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="text-center mb-10">
-                <h2 className="text-3xl font-black text-[#1A1A2E]">What our users say</h2>
+              <motion.div initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="text-center mb-12">
+                <h2 className="text-3xl font-black text-[#0A1628]">What our users say</h2>
               </motion.div>
               <div className="grid md:grid-cols-3 gap-6">
                 {testimonials.map((t, i) => (
@@ -308,7 +416,7 @@ export default function Landing() {
                     whileInView={{ opacity: 1, y: 0 }}
                     viewport={{ once: true }}
                     transition={{ delay: i * 0.1 }}
-                    className="bg-white rounded-2xl p-6 shadow-md"
+                    className="bg-white rounded-2xl p-6 shadow-md border border-gray-100"
                   >
                     <div className="flex gap-1 mb-3">
                       {Array.from({ length: t.rating }).map((_, j) => (
@@ -317,11 +425,11 @@ export default function Landing() {
                     </div>
                     <p className="text-gray-600 text-sm mb-4 leading-relaxed">"{t.text}"</p>
                     <div className="flex items-center gap-2">
-                      <div className="w-8 h-8 bg-[#6C3FD4] rounded-full flex items-center justify-center text-white text-xs font-bold">
+                      <div className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold" style={{ background: NAVY_GRAD }}>
                         {t.name[0]}
                       </div>
                       <div>
-                        <div className="text-sm font-semibold text-[#1A1A2E]">{t.name}</div>
+                        <div className="text-sm font-semibold text-[#0A1628]">{t.name}</div>
                         <div className="text-xs text-gray-400">{t.city}</div>
                       </div>
                     </div>
@@ -331,22 +439,63 @@ export default function Landing() {
             </div>
           </section>
 
-          <footer className="bg-[#1A1A2E] text-white py-16 px-6">
+          {/* FAQ */}
+          <section className="py-20 px-6" style={{ background: "linear-gradient(135deg, #F8F9FC, #EEF2FA)" }}>
+            <div className="max-w-3xl mx-auto">
+              <motion.div initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="text-center mb-12">
+                <h2 className="text-3xl font-black text-[#0A1628] mb-3">Frequently Asked Questions</h2>
+              </motion.div>
+              <div className="space-y-3">
+                {faqs.map((faq, i) => (
+                  <motion.div
+                    key={i}
+                    initial={{ opacity: 0, y: 10 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true }}
+                    transition={{ delay: i * 0.07 }}
+                    className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm"
+                  >
+                    <button
+                      onClick={() => setOpenFaq(openFaq === i ? null : i)}
+                      className="w-full flex items-center justify-between px-6 py-4 text-left"
+                    >
+                      <span className="font-semibold text-[#0A1628] text-sm">{faq.q}</span>
+                      {openFaq === i ? <ChevronUp size={16} className="text-gray-400 flex-shrink-0" /> : <ChevronDown size={16} className="text-gray-400 flex-shrink-0" />}
+                    </button>
+                    <AnimatePresence>
+                      {openFaq === i && (
+                        <motion.div
+                          initial={{ height: 0, opacity: 0 }}
+                          animate={{ height: "auto", opacity: 1 }}
+                          exit={{ height: 0, opacity: 0 }}
+                          transition={{ duration: 0.2 }}
+                          className="overflow-hidden"
+                        >
+                          <div className="px-6 pb-4 text-sm text-gray-500 border-t border-gray-50">{faq.a}</div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </motion.div>
+                ))}
+              </div>
+            </div>
+          </section>
+
+          {/* Footer */}
+          <footer className="py-16 px-6" style={{ background: NAVY_GRAD }}>
             <div className="max-w-6xl mx-auto">
               <div className="flex flex-col md:flex-row gap-10 justify-between mb-10">
                 <div>
-                  <div className="flex items-center gap-2 mb-3">
-                    <div className="w-8 h-8 bg-[#6C3FD4] rounded-full flex items-center justify-center">
-                      <span className="font-black text-white">Q</span>
-                    </div>
-                    <span className="text-xl font-black">QBuddy</span>
+                  <div className="bg-white rounded-xl p-3 inline-block mb-4">
+                    <img src="/logo.jpg" alt="Go LineLess" className="h-10 w-auto" />
                   </div>
-                  <p className="text-white/60 text-sm">UnLimit &amp; LineLess Assistant</p>
-                  <p className="text-white/40 text-xs mt-1">Aapka Kaam, Hamara Runner</p>
+                  <p className="text-white/60 text-sm">Life Without Waiting</p>
+                  <p className="text-white/40 text-xs mt-1">India's trusted offline assistance network</p>
+                  <p className="text-white/30 text-xs mt-2">GoLineLess.com · GoLineLess.in</p>
                 </div>
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-8 text-sm">
                   <div>
-                    <h4 className="font-semibold mb-3">Services</h4>
+                    <h4 className="font-semibold text-white mb-3">Services</h4>
                     <ul className="space-y-2 text-white/60">
                       <li>Hospital Queue</li>
                       <li>Govt Office</li>
@@ -355,7 +504,7 @@ export default function Landing() {
                     </ul>
                   </div>
                   <div>
-                    <h4 className="font-semibold mb-3">Company</h4>
+                    <h4 className="font-semibold text-white mb-3">Company</h4>
                     <ul className="space-y-2 text-white/60">
                       <li>About Us</li>
                       <li>Careers</li>
@@ -364,9 +513,9 @@ export default function Landing() {
                     </ul>
                   </div>
                   <div>
-                    <h4 className="font-semibold mb-3">Support</h4>
+                    <h4 className="font-semibold text-white mb-3">Support</h4>
                     <ul className="space-y-2 text-white/60">
-                      <li>support@qbuddy.in</li>
+                      <li>support@golineless.in</li>
                       <li>Privacy Policy</li>
                       <li>Terms of Service</li>
                     </ul>
@@ -376,6 +525,7 @@ export default function Landing() {
               <div className="border-t border-white/10 pt-6 text-center">
                 <p className="text-white/40 text-xs">Powered by IBNAY IFTRIBE PRIVATE LIMITED</p>
                 <p className="text-white/30 text-xs mt-1">© 2025 IBNAY IFTRIBE PRIVATE LIMITED. All rights reserved. | Registered Office: Ahmedabad, Gujarat, India</p>
+                <p className="text-white/20 text-xs mt-1">Go LineLess assists with queue, pickup, submission and support tasks only. We do not guarantee government approvals, medical decisions or bank outcomes.</p>
               </div>
             </div>
           </footer>

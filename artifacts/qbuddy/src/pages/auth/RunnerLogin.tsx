@@ -2,9 +2,11 @@ import { useState } from "react";
 import { useLocation } from "wouter";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
-import { PersonStanding } from "lucide-react";
 import { useSendOtp, useVerifyOtp } from "@workspace/api-client-react";
 import { useAuth } from "@/contexts/AuthContext";
+
+const NAVY_GRAD = "linear-gradient(135deg, #0F2557, #1D3D7C)";
+const GOLD_GRAD = "linear-gradient(135deg, #C9A84C, #D4B870)";
 
 export default function RunnerLogin() {
   const [step, setStep] = useState<"phone" | "otp">("phone");
@@ -50,14 +52,12 @@ export default function RunnerLogin() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4"
-      style={{ background: "linear-gradient(135deg, #1A1A2E 0%, #2D1B69 100%)" }}>
+    <div className="min-h-screen flex items-center justify-center px-4" style={{ background: NAVY_GRAD }}>
       <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-sm">
         <div className="bg-white/10 backdrop-blur-md rounded-3xl p-8 border border-white/20">
           <div className="text-center mb-8">
-            <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4"
-              style={{ background: "linear-gradient(135deg, #FF6B35, #FF8C42)" }}>
-              <PersonStanding className="text-white" size={28} />
+            <div className="bg-white rounded-2xl p-3 inline-block mb-4 shadow-lg">
+              <img src="/logo.jpg" alt="Go LineLess" className="h-14 w-auto" />
             </div>
             <h1 className="text-2xl font-black text-white">Runner Portal</h1>
             <p className="text-white/60 text-sm mt-1">Earn up to Rs 1,500 daily</p>
@@ -67,7 +67,7 @@ export default function RunnerLogin() {
             <form onSubmit={handleSend} className="space-y-4">
               <div>
                 <label className="text-sm font-medium text-white/80 mb-1 block">Mobile Number</label>
-                <div className="flex border border-white/20 rounded-xl overflow-hidden focus-within:ring-2 focus-within:ring-[#FF6B35] bg-white/5">
+                <div className="flex border border-white/20 rounded-xl overflow-hidden bg-white/5">
                   <span className="px-3 py-3 text-white/60 border-r border-white/20 font-medium">+91</span>
                   <input
                     type="tel"
@@ -83,13 +83,13 @@ export default function RunnerLogin() {
                 type="submit"
                 disabled={sendOtp.isPending}
                 className="w-full py-4 rounded-2xl text-white font-bold text-lg"
-                style={{ background: "linear-gradient(135deg, #FF6B35, #FF8C42)" }}
+                style={{ background: GOLD_GRAD }}
               >
                 {sendOtp.isPending ? "Sending..." : "Get OTP"}
               </button>
               <p className="text-center text-sm text-white/60">
                 Looking to hire?{" "}
-                <button type="button" onClick={() => navigate("/login")} className="text-[#FF6B35] font-semibold">
+                <button type="button" onClick={() => navigate("/login")} className="font-semibold" style={{ color: "#C9A84C" }}>
                   Book a runner
                 </button>
               </p>
@@ -111,7 +111,8 @@ export default function RunnerLogin() {
                     value={digit}
                     onChange={(e) => handleOtpChange(e.target.value, idx)}
                     onKeyDown={(e) => { if (e.key === "Backspace" && !digit && idx > 0) document.getElementById(`otp-r-${idx - 1}`)?.focus(); }}
-                    className="w-11 h-14 bg-white/10 border-2 border-white/20 rounded-xl text-center text-2xl font-bold text-[#FF6B35] focus:border-[#FF6B35] focus:outline-none"
+                    className="w-11 h-14 bg-white/10 border-2 border-white/20 rounded-xl text-center text-2xl font-bold focus:outline-none transition-colors"
+                    style={{ color: "#C9A84C", borderColor: digit ? "#C9A84C" : "" }}
                   />
                 ))}
               </div>
@@ -119,7 +120,7 @@ export default function RunnerLogin() {
                 type="submit"
                 disabled={verifyOtp.isPending}
                 className="w-full py-4 rounded-2xl text-white font-bold text-lg"
-                style={{ background: "linear-gradient(135deg, #FF6B35, #FF8C42)" }}
+                style={{ background: GOLD_GRAD }}
               >
                 {verifyOtp.isPending ? "Verifying..." : "Start Earning!"}
               </button>

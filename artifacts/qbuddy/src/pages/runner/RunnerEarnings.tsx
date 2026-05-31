@@ -1,10 +1,15 @@
 import { motion } from "framer-motion";
 import { toast } from "sonner";
-import { CheckCircle2, Star, ClipboardList } from "lucide-react";
+import { CheckCircle2, Star, ClipboardList, TrendingUp } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 import { useGetRunnerEarnings, useGetRunnerDailyEarnings, useListTasks } from "@workspace/api-client-react";
 import { RunnerBottomNav } from "@/components/BottomNav";
 import { CATEGORY_NAMES, formatCurrency } from "@/lib/utils";
+
+const GOLD = "#C9A84C";
+const GOLD_GRAD = "linear-gradient(135deg, #C9A84C, #D4B870)";
+const NAVY_GRAD = "linear-gradient(135deg, #0F2557, #1D3D7C)";
+const BG = "#080E1E";
 
 export default function RunnerEarnings() {
   const { data: earnings } = useGetRunnerEarnings();
@@ -16,13 +21,18 @@ export default function RunnerEarnings() {
   const completedTasks = (tasks as any[]) ?? [];
 
   return (
-    <div className="min-h-screen pb-24" style={{ background: "#0F0F1A" }}>
+    <div className="min-h-screen pb-24" style={{ background: BG }}>
       <div className="px-4 pt-5 pb-4 border-b border-white/10">
         <h1 className="text-xl font-black text-white">Earnings</h1>
+        <p className="text-white/40 text-xs mt-0.5">Your runner dashboard</p>
       </div>
 
-      <div className="mx-4 mt-4 rounded-2xl p-6 text-white" style={{ background: "linear-gradient(135deg, #6C3FD4, #9B6FF7)" }}>
-        <p className="text-white/70 text-xs mb-1">This Week</p>
+      <div className="mx-4 mt-4 rounded-2xl p-6 text-[#0A1628] relative overflow-hidden" style={{ background: GOLD_GRAD }}>
+        <div className="absolute top-0 right-0 w-32 h-32 rounded-full opacity-20" style={{ background: "radial-gradient(circle, white, transparent)", transform: "translate(20%, -20%)" }} />
+        <div className="flex items-center gap-2 mb-1">
+          <TrendingUp size={14} />
+          <p className="text-[#0A1628]/70 text-xs font-semibold">This Week</p>
+        </div>
         <motion.div initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} className="text-4xl font-black mb-4">
           {e ? formatCurrency(e.thisWeek ?? 0) : "Rs 0"}
         </motion.div>
@@ -32,9 +42,9 @@ export default function RunnerEarnings() {
             { label: "Month", val: e?.thisMonth ?? 0 },
             { label: "Lifetime", val: e?.lifetime ?? 0 },
           ].map((s) => (
-            <div key={s.label} className="text-center">
-              <div className="text-white font-bold">{formatCurrency(s.val)}</div>
-              <div className="text-white/50 text-xs">{s.label}</div>
+            <div key={s.label} className="text-center bg-white/20 rounded-xl p-2">
+              <div className="text-[#0A1628] font-bold text-sm">{formatCurrency(s.val)}</div>
+              <div className="text-[#0A1628]/60 text-xs">{s.label}</div>
             </div>
           ))}
         </div>
@@ -44,7 +54,7 @@ export default function RunnerEarnings() {
         <button
           onClick={() => toast.info("Coming soon! Payouts every Monday.")}
           className="w-full py-3.5 rounded-xl text-white font-bold"
-          style={{ background: "linear-gradient(135deg, #FF6B35, #FF8C42)" }}
+          style={{ background: NAVY_GRAD }}
         >
           Withdraw Earnings
         </button>
@@ -58,10 +68,10 @@ export default function RunnerEarnings() {
               <XAxis dataKey="date" tick={{ fontSize: 9, fill: "rgba(255,255,255,0.4)" }} tickFormatter={(v) => v.slice(5)} />
               <YAxis tick={{ fontSize: 9, fill: "rgba(255,255,255,0.4)" }} />
               <Tooltip
-                contentStyle={{ background: "#1A1A2E", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 12, color: "white", fontSize: 12 }}
+                contentStyle={{ background: "#0F2557", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 12, color: "white", fontSize: 12 }}
                 formatter={(v: any) => [`Rs ${v}`, "Earned"]}
               />
-              <Bar dataKey="amount" fill="#FF6B35" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="amount" fill={GOLD} radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </div>
@@ -71,7 +81,7 @@ export default function RunnerEarnings() {
         <div className="mx-4 mt-4 grid grid-cols-2 gap-3">
           {[
             { Icon: CheckCircle2, label: "Tasks Done", val: e.totalTasks ?? 0, color: "#22C55E" },
-            { Icon: Star, label: "Avg Rating", val: e.avgRating ? Number(e.avgRating).toFixed(1) : "N/A", color: "#FF6B35" },
+            { Icon: Star, label: "Avg Rating", val: e.avgRating ? Number(e.avgRating).toFixed(1) : "N/A", color: GOLD },
           ].map((s) => (
             <div key={s.label} className="bg-white/8 border border-white/10 rounded-2xl p-4 text-center">
               <s.Icon size={22} className="mx-auto mb-1" style={{ color: s.color }} />
@@ -97,7 +107,7 @@ export default function RunnerEarnings() {
                   <p className="text-white font-medium text-sm">{CATEGORY_NAMES[task.category] ?? task.category}</p>
                   <p className="text-white/40 text-xs">{task.completedAt ? new Date(task.completedAt).toLocaleDateString("en-IN") : ""}</p>
                 </div>
-                <span className="text-[#FF6B35] font-bold">{formatCurrency(task.runnerEarning ?? 0)}</span>
+                <span className="font-bold" style={{ color: GOLD }}>{formatCurrency(task.runnerEarning ?? 0)}</span>
               </div>
             ))}
           </div>

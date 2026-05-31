@@ -3,7 +3,6 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "sonner";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 
-// Pages
 import Landing from "@/pages/landing/Landing";
 import UserLogin from "@/pages/auth/UserLogin";
 import RunnerLogin from "@/pages/auth/RunnerLogin";
@@ -34,30 +33,21 @@ const queryClient = new QueryClient({
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { token, role } = useAuth();
   const [, navigate] = useLocation();
-  if (!token || role !== "user") {
-    navigate("/login");
-    return null;
-  }
+  if (!token || role !== "user") { navigate("/login"); return null; }
   return <>{children}</>;
 }
 
 function RunnerProtectedRoute({ children }: { children: React.ReactNode }) {
   const { token, role } = useAuth();
   const [, navigate] = useLocation();
-  if (!token || role !== "runner") {
-    navigate("/runner/login");
-    return null;
-  }
+  if (!token || role !== "runner") { navigate("/runner/login"); return null; }
   return <>{children}</>;
 }
 
 function AdminProtectedRoute({ children }: { children: React.ReactNode }) {
   const adminToken = localStorage.getItem("qbuddy_admin_token");
   const [, navigate] = useLocation();
-  if (!adminToken) {
-    navigate("/admin/login");
-    return null;
-  }
+  if (!adminToken) { navigate("/admin/login"); return null; }
   return <>{children}</>;
 }
 
@@ -68,63 +58,27 @@ function Router() {
       <Route path="/login" component={UserLogin} />
       <Route path="/runner/login" component={RunnerLogin} />
 
-      <Route path="/app/home">
-        <ProtectedRoute><UserHome /></ProtectedRoute>
-      </Route>
-      <Route path="/app/book">
-        <ProtectedRoute><BookTask /></ProtectedRoute>
-      </Route>
-      <Route path="/app/tasks">
-        <ProtectedRoute><MyTasks /></ProtectedRoute>
-      </Route>
-      <Route path="/app/tasks/:id">
-        {(params) => <ProtectedRoute><TaskDetail id={params.id} /></ProtectedRoute>}
-      </Route>
-      <Route path="/app/senior">
-        <ProtectedRoute><SeniorCare /></ProtectedRoute>
-      </Route>
-      <Route path="/app/profile">
-        <ProtectedRoute><UserProfile /></ProtectedRoute>
-      </Route>
+      <Route path="/app/home"><ProtectedRoute><UserHome /></ProtectedRoute></Route>
+      <Route path="/app/book"><ProtectedRoute><BookTask /></ProtectedRoute></Route>
+      <Route path="/app/tasks"><ProtectedRoute><MyTasks /></ProtectedRoute></Route>
+      <Route path="/app/tasks/:id">{(params) => <ProtectedRoute><TaskDetail id={params.id} /></ProtectedRoute>}</Route>
+      <Route path="/app/senior"><ProtectedRoute><SeniorCare /></ProtectedRoute></Route>
+      <Route path="/app/profile"><ProtectedRoute><UserProfile /></ProtectedRoute></Route>
 
-      <Route path="/runner/feed">
-        <RunnerProtectedRoute><RunnerFeed /></RunnerProtectedRoute>
-      </Route>
-      <Route path="/runner/active">
-        <RunnerProtectedRoute><ActiveTask /></RunnerProtectedRoute>
-      </Route>
-      <Route path="/runner/earnings">
-        <RunnerProtectedRoute><RunnerEarnings /></RunnerProtectedRoute>
-      </Route>
-      <Route path="/runner/profile">
-        <RunnerProtectedRoute><RunnerProfile /></RunnerProtectedRoute>
-      </Route>
+      <Route path="/runner/feed"><RunnerProtectedRoute><RunnerFeed /></RunnerProtectedRoute></Route>
+      <Route path="/runner/active"><RunnerProtectedRoute><ActiveTask /></RunnerProtectedRoute></Route>
+      <Route path="/runner/earnings"><RunnerProtectedRoute><RunnerEarnings /></RunnerProtectedRoute></Route>
+      <Route path="/runner/profile"><RunnerProtectedRoute><RunnerProfile /></RunnerProtectedRoute></Route>
 
       <Route path="/admin/login" component={AdminLoginPage} />
-      <Route path="/admin">
-        <AdminProtectedRoute><AdminDashboard /></AdminProtectedRoute>
-      </Route>
-      <Route path="/admin/map">
-        <AdminProtectedRoute><AdminMap /></AdminProtectedRoute>
-      </Route>
-      <Route path="/admin/tasks">
-        <AdminProtectedRoute><AdminTasks /></AdminProtectedRoute>
-      </Route>
-      <Route path="/admin/runners">
-        <AdminProtectedRoute><AdminRunners /></AdminProtectedRoute>
-      </Route>
-      <Route path="/admin/users">
-        <AdminProtectedRoute><AdminUsers /></AdminProtectedRoute>
-      </Route>
-      <Route path="/admin/subscriptions">
-        <AdminProtectedRoute><AdminSubscriptions /></AdminProtectedRoute>
-      </Route>
-      <Route path="/admin/analytics">
-        <AdminProtectedRoute><AdminAnalytics /></AdminProtectedRoute>
-      </Route>
-      <Route path="/admin/settings">
-        <AdminProtectedRoute><AdminSettings /></AdminProtectedRoute>
-      </Route>
+      <Route path="/admin"><AdminProtectedRoute><AdminDashboard /></AdminProtectedRoute></Route>
+      <Route path="/admin/map"><AdminProtectedRoute><AdminMap /></AdminProtectedRoute></Route>
+      <Route path="/admin/tasks"><AdminProtectedRoute><AdminTasks /></AdminProtectedRoute></Route>
+      <Route path="/admin/runners"><AdminProtectedRoute><AdminRunners /></AdminProtectedRoute></Route>
+      <Route path="/admin/users"><AdminProtectedRoute><AdminUsers /></AdminProtectedRoute></Route>
+      <Route path="/admin/subscriptions"><AdminProtectedRoute><AdminSubscriptions /></AdminProtectedRoute></Route>
+      <Route path="/admin/analytics"><AdminProtectedRoute><AdminAnalytics /></AdminProtectedRoute></Route>
+      <Route path="/admin/settings"><AdminProtectedRoute><AdminSettings /></AdminProtectedRoute></Route>
 
       <Route component={NotFound} />
     </Switch>
@@ -134,6 +88,9 @@ function Router() {
 import { useState } from "react";
 import { useAdminLogin } from "@workspace/api-client-react";
 import { toast } from "sonner";
+
+const NAVY_GRAD = "linear-gradient(135deg, #0F2557, #1D3D7C)";
+const GOLD_GRAD = "linear-gradient(135deg, #C9A84C, #D4B870)";
 
 function AdminLoginPage() {
   const [password, setPassword] = useState("");
@@ -152,14 +109,14 @@ function AdminLoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#6C3FD4] to-[#9B6FF7]">
+    <div className="min-h-screen flex items-center justify-center px-4" style={{ background: NAVY_GRAD }}>
       <div className="bg-white rounded-2xl p-8 shadow-2xl w-full max-w-sm">
         <div className="text-center mb-6">
-          <div className="w-16 h-16 bg-[#6C3FD4] rounded-full flex items-center justify-center mx-auto mb-3">
-            <span className="text-white font-bold text-2xl">Q</span>
+          <div className="bg-white rounded-xl p-3 inline-block mb-4 border border-gray-100 shadow-sm">
+            <img src="/logo.jpg" alt="Go LineLess" className="h-14 w-auto" />
           </div>
-          <h1 className="text-2xl font-bold text-[#1A1A2E]">Admin Panel</h1>
-          <p className="text-gray-500 text-sm mt-1">QBuddy Command Center</p>
+          <h1 className="text-2xl font-black text-[#0A1628]">Admin Panel</h1>
+          <p className="text-gray-500 text-sm mt-1">Go LineLess Command Center</p>
         </div>
         <form onSubmit={handleSubmit} className="space-y-4">
           <input
@@ -167,13 +124,14 @@ function AdminLoginPage() {
             placeholder="Admin password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-[#6C3FD4] text-gray-800"
+            className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 text-gray-800"
+            style={{ "--tw-ring-color": "#0F2557" } as any}
           />
           <button
             type="submit"
             disabled={mutation.isPending}
             className="w-full py-3 rounded-xl font-semibold text-white"
-            style={{ background: "linear-gradient(135deg, #6C3FD4, #9B6FF7)" }}
+            style={{ background: GOLD_GRAD }}
           >
             {mutation.isPending ? "Verifying..." : "Enter Admin Panel"}
           </button>

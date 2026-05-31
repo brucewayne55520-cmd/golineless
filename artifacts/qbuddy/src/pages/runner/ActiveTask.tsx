@@ -9,6 +9,12 @@ import { RunnerBottomNav } from "@/components/BottomNav";
 import { CategoryIcon } from "@/components/CategoryIcon";
 import { CATEGORY_NAMES, formatCurrency } from "@/lib/utils";
 
+const NAVY = "#0F2557";
+const NAVY_GRAD = "linear-gradient(135deg, #0F2557, #1D3D7C)";
+const GOLD = "#C9A84C";
+const GOLD_GRAD = "linear-gradient(135deg, #C9A84C, #D4B870)";
+const BG = "#080E1E";
+
 export default function ActiveTask() {
   const [, navigate] = useLocation();
   const { data: runner } = useGetRunnerMe();
@@ -58,7 +64,7 @@ export default function ActiveTask() {
       onSuccess: (data: any) => {
         setCompleted(true);
         setTimerActive(false);
-        confetti({ particleCount: 150, spread: 100, origin: { y: 0.5 }, colors: ["#6C3FD4", "#FF6B35", "#9B6FF7", "#22C55E"] });
+        confetti({ particleCount: 150, spread: 100, origin: { y: 0.5 }, colors: [NAVY, GOLD, "#1D3D7C", "#22C55E"] });
         toast.success(`Task Complete! You earned ${formatCurrency(data.runnerEarning ?? task.runnerEarning)}`);
       },
       onError: () => toast.error("Invalid OTP"),
@@ -66,20 +72,20 @@ export default function ActiveTask() {
   };
 
   if (isLoading) return (
-    <div className="min-h-screen flex items-center justify-center" style={{ background: "#0F0F1A" }}>
+    <div className="min-h-screen flex items-center justify-center" style={{ background: BG }}>
       <div className="text-center">
-        <div className="w-12 h-12 border-4 border-[#FF6B35] border-t-transparent rounded-full animate-spin mx-auto mb-3" />
+        <div className="w-12 h-12 border-4 border-t-transparent rounded-full animate-spin mx-auto mb-3" style={{ borderColor: GOLD, borderTopColor: "transparent" }} />
         <p className="text-white/50">Loading active task...</p>
       </div>
     </div>
   );
 
   if (!task) return (
-    <div className="min-h-screen flex flex-col items-center justify-center pb-20" style={{ background: "#0F0F1A" }}>
+    <div className="min-h-screen flex flex-col items-center justify-center pb-20" style={{ background: BG }}>
       <Moon size={48} className="text-white/20 mb-4" />
       <h3 className="text-white font-bold text-lg">No active task</h3>
       <p className="text-white/50 text-sm mt-1 mb-5">Go to Tasks tab to find new tasks</p>
-      <button onClick={() => navigate("/runner/feed")} className="px-6 py-3 rounded-xl text-white font-semibold" style={{ background: "linear-gradient(135deg, #FF6B35, #FF8C42)" }}>
+      <button onClick={() => navigate("/runner/feed")} className="px-6 py-3 rounded-xl text-[#0A1628] font-semibold" style={{ background: GOLD_GRAD }}>
         Find Tasks
       </button>
       <RunnerBottomNav />
@@ -87,7 +93,7 @@ export default function ActiveTask() {
   );
 
   return (
-    <div className="min-h-screen pb-24" style={{ background: "#0F0F1A" }}>
+    <div className="min-h-screen pb-24" style={{ background: BG }}>
       <div className="px-4 pt-4 pb-3 border-b border-white/10">
         <div className="flex items-center justify-between">
           <div>
@@ -95,8 +101,8 @@ export default function ActiveTask() {
             <p className="text-white/50 text-xs">Task #{task.id}</p>
           </div>
           {timerActive && (
-            <div className="bg-[#FF6B35] px-3 py-1.5 rounded-xl">
-              <span className="text-white font-black text-lg font-mono">{formatTime(elapsed)}</span>
+            <div className="px-3 py-1.5 rounded-xl" style={{ background: GOLD_GRAD }}>
+              <span className="text-[#0A1628] font-black text-lg font-mono">{formatTime(elapsed)}</span>
             </div>
           )}
         </div>
@@ -115,12 +121,14 @@ export default function ActiveTask() {
               </p>
             )}
           </div>
-          <span className="ml-auto text-[#FF6B35] font-black text-lg">{formatCurrency(task.runnerEarning ?? 0)}</span>
+          <span className="ml-auto font-black text-lg" style={{ color: GOLD }}>{formatCurrency(task.runnerEarning ?? 0)}</span>
         </div>
         <p className="text-white/60 text-sm">{task.description}</p>
         {task.user && (
           <div className="mt-3 pt-3 border-t border-white/10 flex items-center gap-2">
-            <div className="w-7 h-7 bg-[#6C3FD4] rounded-full flex items-center justify-center text-white text-xs font-bold">{task.user.name?.[0] ?? "U"}</div>
+            <div className="w-7 h-7 rounded-full flex items-center justify-center text-white text-xs font-bold" style={{ background: NAVY_GRAD }}>
+              {task.user.name?.[0] ?? "U"}
+            </div>
             <span className="text-white/60 text-xs">{task.user.name ?? "Customer"}</span>
           </div>
         )}
@@ -139,7 +147,7 @@ export default function ActiveTask() {
             onClick={() => handleStatus("at_location")}
             disabled={updateStatus.isPending}
             className="w-full py-4 rounded-2xl text-white font-bold text-base flex items-center justify-center gap-2"
-            style={{ background: "linear-gradient(135deg, #6C3FD4, #9B6FF7)" }}
+            style={{ background: NAVY_GRAD }}
           >
             <MapPin size={18} /> I've Reached the Location
           </button>
@@ -149,8 +157,8 @@ export default function ActiveTask() {
           <button
             onClick={() => handleStatus("in_progress")}
             disabled={updateStatus.isPending}
-            className="w-full py-4 rounded-2xl text-white font-bold text-base"
-            style={{ background: "linear-gradient(135deg, #FF6B35, #FF8C42)" }}
+            className="w-full py-4 rounded-2xl text-[#0A1628] font-bold text-base"
+            style={{ background: GOLD_GRAD }}
           >
             Start Task Now
           </button>
@@ -178,7 +186,7 @@ export default function ActiveTask() {
                 {uploadedPhoto ? (
                   <div>
                     <img src={uploadedPhoto} alt="proof" className="w-24 h-24 object-cover rounded-xl mx-auto mb-2" />
-                    <p className="text-green-400 text-sm font-semibold">Photo uploaded</p>
+                    <p className="text-green-400 text-sm font-semibold">✓ Photo uploaded</p>
                   </div>
                 ) : (
                   <div>
@@ -207,7 +215,8 @@ export default function ActiveTask() {
                   value={d}
                   onChange={(e) => handleOtpChange(e.target.value, i)}
                   onKeyDown={(e) => { if (e.key === "Backspace" && !d && i > 0) document.getElementById(`otp-active-${i - 1}`)?.focus(); }}
-                  className="w-11 h-14 bg-white/10 border-2 border-white/20 rounded-xl text-center text-2xl font-black text-[#FF6B35] focus:border-[#FF6B35] focus:outline-none"
+                  className="w-11 h-14 bg-white/10 border-2 border-white/20 rounded-xl text-center text-2xl font-black focus:outline-none transition-colors"
+                  style={{ color: GOLD, borderColor: d ? GOLD : "" }}
                 />
               ))}
             </div>
@@ -217,7 +226,7 @@ export default function ActiveTask() {
               className="w-full py-3.5 rounded-xl text-white font-bold"
               style={{ background: "linear-gradient(135deg, #22C55E, #16A34A)" }}
             >
-              {verifyOtp.isPending ? "Verifying..." : completed ? "Task Complete!" : "Complete Task"}
+              {verifyOtp.isPending ? "Verifying..." : completed ? "Task Complete! ✓" : "Complete Task"}
             </button>
           </div>
         )}
@@ -231,9 +240,9 @@ export default function ActiveTask() {
             >
               <Sparkles size={40} className="text-green-400 mx-auto mb-3" />
               <h3 className="text-white font-black text-xl mb-1">Task Complete!</h3>
-              <p className="text-green-400 font-bold text-2xl">{formatCurrency(task.runnerEarning ?? 0)}</p>
-              <p className="text-white/50 text-xs mt-1">Earned</p>
-              <button onClick={() => navigate("/runner/feed")} className="mt-4 px-6 py-3 rounded-xl text-white font-semibold" style={{ background: "linear-gradient(135deg, #FF6B35, #FF8C42)" }}>
+              <p className="font-bold text-2xl" style={{ color: GOLD }}>{formatCurrency(task.runnerEarning ?? 0)}</p>
+              <p className="text-white/50 text-xs mt-1">Added to your earnings</p>
+              <button onClick={() => navigate("/runner/feed")} className="mt-4 px-6 py-3 rounded-xl text-[#0A1628] font-semibold" style={{ background: GOLD_GRAD }}>
                 Find Next Task
               </button>
             </motion.div>
