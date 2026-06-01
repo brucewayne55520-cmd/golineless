@@ -3,3 +3,16 @@
 
 # No need to store the pnpm store twice.
 .local
+
+# Git history — not needed in deployed images or downloads
+.git
+
+# Dependencies are installed fresh at build time
+node_modules
+artifacts/api-server/node_modules
+artifacts/qbuddy/node_modules
+artifacts/mockup-sandbox/node_modules
+
+# Build artefacts regenerated at build time
+dist
+*.tsbuildinfo
