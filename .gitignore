@@ -48,7 +48,43 @@ Thumbs.db
 .cache/
 .local/
 
+# Environment files (contain secrets — never commit)
+.env
+.env.*
+.env.local
+.env.*.local
+
+# Also ignore .env in subdirectories
+**/.env
+**/.env.*
+**/.env.local
+**/.env.*.local
+
 # Large uploaded/temp files
 *.zip
 *.tar.gz
 attached_assets/
+
+# Deploy build artifacts (rebuild from source)
+cpanel-deploy/
+deploy/golineless-api/
+golineless-cpanel/
+golineless-final-deploy/
+golineless-root/
+golineless.com/
+deploy-staging/
+deploy-verify/
+
+# Logs
+*.log
+stderr.log
+stderr (1).log
+
+# OS files
+.npmrc
+.replit
+.replitignore
+
+# Compiled output in any subdirectory
+**/dist/
+**/tmp/
