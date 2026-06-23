@@ -88,3 +88,6 @@ stderr (1).log
 # Compiled output in any subdirectory
 **/dist/
 **/tmp/
+
+.vercel
+nul

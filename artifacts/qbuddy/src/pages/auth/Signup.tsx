@@ -8,16 +8,17 @@ import { NAVY, NAVY_GRAD } from "@/lib/theme";
 
 const API_BASE = import.meta.env.VITE_API_URL || "";
 
-export default function UserLogin() {
+export default function Signup() {
   const [, navigate] = useLocation();
   const { login } = useAuth();
+  const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
 
   const handleGoogleSuccess = async (credentialResponse: CredentialResponse) => {
     if (!credentialResponse.credential) {
-      toast.error("Google sign-in failed. Please try again.");
+      toast.error("Google sign-up failed. Please try again.");
       return;
     }
     try {
@@ -28,7 +29,7 @@ export default function UserLogin() {
       });
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
-        toast.error(err.error || "Sign-in failed. Please try again.");
+        toast.error(err.error || "Sign-up failed. Please try again.");
         return;
       }
       const data = await res.json();
@@ -41,23 +42,24 @@ export default function UserLogin() {
   };
 
   const handleGoogleError = () => {
-    toast.error("Google sign-in was cancelled or failed.");
+    toast.error("Google sign-up was cancelled or failed.");
   };
 
-  const handleEmailLogin = async (e: React.FormEvent) => {
+  const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email || !password) { toast.error("Email and password are required"); return; }
+    if (!name.trim() || !email || !password) { toast.error("All fields are required"); return; }
+    if (password.length < 6) { toast.error("Password must be at least 6 characters"); return; }
     setLoading(true);
     try {
-      const res = await fetch(`${API_BASE}/api/auth/login`, {
+      const res = await fetch(`${API_BASE}/api/auth/signup`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password, role: "user" }),
+        body: JSON.stringify({ name: name.trim(), email, password, role: "user" }),
       });
       const data = await res.json();
-      if (!res.ok) { toast.error(data.error || "Invalid credentials"); setLoading(false); return; }
+      if (!res.ok) { toast.error(data.error || "Signup failed"); setLoading(false); return; }
       login(data.token, "user", data.user);
-      toast.success("Welcome back!");
+      toast.success("Account created! Welcome to Go LineLess!");
       navigate("/app/home");
     } catch {
       toast.error("Network error. Please try again.");
@@ -74,21 +76,20 @@ export default function UserLogin() {
             <div className="inline-block bg-white border border-gray-100 rounded-2xl p-3 shadow-sm mb-4">
               <img src="/logo.jpg" alt="Go LineLess" className="h-14 w-auto" />
             </div>
-            <h1 className="text-2xl font-black text-[#0A1628]">Welcome Back</h1>
-            <p className="text-gray-500 text-sm mt-1">Life Without Waiting</p>
+            <h1 className="text-2xl font-black text-[#0A1628]">Create Account</h1>
+            <p className="text-gray-500 text-sm mt-1">Get started with Go LineLess</p>
           </div>
 
-          {/* Google Sign-In */}
+          {/* Google Sign-Up */}
           <div className="flex justify-center mb-5">
             <GoogleLogin
               onSuccess={handleGoogleSuccess}
               onError={handleGoogleError}
-              useOneTap
               theme="outline"
               size="large"
               shape="rectangular"
               width="300"
-              text="signin_with"
+              text="signup_with"
               logo_alignment="center"
             />
           </div>
@@ -100,8 +101,19 @@ export default function UserLogin() {
             <div className="flex-1 h-px bg-gray-200" />
           </div>
 
-          {/* Email + Password Form */}
-          <form onSubmit={handleEmailLogin} className="space-y-3">
+          {/* Email + Password Signup Form */}
+          <form onSubmit={handleSignup} className="space-y-3">
+            <div>
+              <label className="text-sm font-medium text-gray-700 mb-1 block">Full name</label>
+              <input
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Your name"
+                className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#0F2557]/30 focus:border-[#0F2557] transition"
+                required
+              />
+            </div>
             <div>
               <label className="text-sm font-medium text-gray-700 mb-1 block">Email address</label>
               <input
@@ -124,11 +136,7 @@ export default function UserLogin() {
                 required
                 minLength={6}
               />
-            </div>
-            <div className="flex justify-end">
-              <button type="button" onClick={() => navigate("/forgot-password")} className="text-xs font-medium text-gray-400 hover:text-[#0F2557] transition">
-                Forgot password?
-              </button>
+              <p className="text-xs text-gray-400 mt-1">At least 6 characters</p>
             </div>
             <button
               type="submit"
@@ -136,15 +144,15 @@ export default function UserLogin() {
               className="w-full py-3.5 rounded-xl text-white font-bold text-sm transition-opacity disabled:opacity-60"
               style={{ background: NAVY_GRAD }}
             >
-              {loading ? "Signing in..." : "Sign In"}
+              {loading ? "Creating account..." : "Create Account"}
             </button>
           </form>
 
-          {/* Sign Up Link */}
+          {/* Login Link */}
           <p className="text-center text-sm text-gray-500 mt-5">
-            Don't have an account?{" "}
-            <button type="button" onClick={() => navigate("/signup")} className="font-semibold" style={{ color: NAVY }}>
-              Create one
+            Already have an account?{" "}
+            <button type="button" onClick={() => navigate("/login")} className="font-semibold" style={{ color: NAVY }}>
+              Sign in
             </button>
           </p>
 
@@ -157,16 +165,7 @@ export default function UserLogin() {
           </p>
         </div>
 
-        {/* Trust Badges */}
-        <div className="flex justify-center gap-6 mt-5">
-          {[{ icon: "🔒", label: "Secure" }, { icon: "⚡", label: "Instant" }, { icon: "🛡️", label: "Trusted" }].map(({ icon, label }) => (
-            <div key={label} className="flex flex-col items-center gap-1">
-              <span className="text-xl">{icon}</span>
-              <span className="text-xs text-gray-400 font-medium">{label}</span>
-            </div>
-          ))}
-        </div>
-        <p className="text-center text-xs text-gray-400 mt-4">By continuing, you agree to our Terms &amp; Privacy Policy</p>
+        <p className="text-center text-xs text-gray-400 mt-4">By creating an account, you agree to our Terms &amp; Privacy Policy</p>
       </motion.div>
     </div>
   );

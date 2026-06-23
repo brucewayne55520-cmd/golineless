@@ -25,7 +25,7 @@
   "rewrites": [
     {
       "source": "/api/:path*",
-      "destination": "https://golineless.com/api/:path*"
+      "destination": "https://golineless-api.onrender.com/api/:path*"
     },
     {
       "source": "/((?!assets/|favicon\\.svg|logo\\.jpg|opengraph\\.jpg|robots\\.txt|favicon\\.ico|manifest\\.json|sw\\.js|workbox-.*\\.js).*)",

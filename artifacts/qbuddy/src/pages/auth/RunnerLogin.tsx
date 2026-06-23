@@ -4,14 +4,22 @@ import { motion } from "framer-motion";
 import { toast } from "sonner";
 import { useSendOtp, useVerifyOtp } from "@workspace/api-client-react";
 import { useAuth } from "@/contexts/AuthContext";
+import { NAVY_GRAD, GOLD_GRAD } from "@/lib/theme";
+import { requestMagicLink } from "@/lib/neon-auth";
 
-const NAVY_GRAD = "linear-gradient(135deg, #0F2557, #1D3D7C)";
-const GOLD_GRAD = "linear-gradient(135deg, #C9A84C, #D4B870)";
+const API_BASE = import.meta.env.VITE_API_URL || "";
 
 export default function RunnerLogin() {
-  const [step, setStep] = useState<"phone" | "otp">("phone");
+  const [step, setStep] = useState<"phone" | "otp" | "email" | "password">("phone");
   const [phone, setPhone] = useState("");
   const [otp, setOtp] = useState(["", "", "", "", "", ""]);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [name, setName] = useState("");
+  const [isSigningUp, setIsSigningUp] = useState(false);
+  const [sendingLink, setSendingLink] = useState(false);
+  const [magicLinkSent, setMagicLinkSent] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [, navigate] = useLocation();
   const { login } = useAuth();
   const sendOtp = useSendOtp();
@@ -23,7 +31,7 @@ export default function RunnerLogin() {
     sendOtp.mutate({ data: { phone: `+91${phone}`, role: "runner" } }, {
       onSuccess: (data) => {
         toast.success("OTP sent!");
-        if ((data as any).otp) toast.info(`Dev OTP: ${(data as any).otp}`, { duration: 10000 });
+        if (data.otp) toast.info(`Dev OTP: ${data.otp}`, { duration: 10000 });
         setStep("otp");
       },
       onError: () => toast.error("Failed to send OTP"),
@@ -36,7 +44,7 @@ export default function RunnerLogin() {
     if (otpStr.length !== 6) { toast.error("Enter 6-digit OTP"); return; }
     verifyOtp.mutate({ data: { phone: `+91${phone}`, otp: otpStr, role: "runner" } }, {
       onSuccess: (data) => {
-        login(data.token, "runner", undefined, (data as any).runner);
+        login(data.token, "runner", undefined, data.runner);
         toast.success("Welcome, Runner!");
         navigate("/runner/feed");
       },
@@ -63,7 +71,69 @@ export default function RunnerLogin() {
             <p className="text-white/60 text-sm mt-1">Earn up to Rs 1,500 daily</p>
           </div>
 
-          {step === "phone" ? (
+          {magicLinkSent ? (
+            /* ---- Magic link sent confirmation ---- */
+            <div className="text-center py-6">
+              <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-green-500/20 mb-4">
+                <svg className="w-8 h-8 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
+              </div>
+              <h2 className="text-lg font-bold text-white mb-2">Check your email</h2>
+              <p className="text-white/60 text-sm mb-1">We sent a magic link to</p>
+              <p className="font-semibold text-white text-sm">{email}</p>
+              <p className="text-white/40 text-xs mt-3">Click the link in the email to sign in. No password needed!</p>
+              <button
+                type="button"
+                onClick={() => { setMagicLinkSent(false); setEmail(""); setStep("phone"); }}
+                className="mt-4 text-sm font-medium underline"
+                style={{ color: "#C9A84C" }}
+              >
+                Use a different method
+              </button>
+            </div>
+          ) : step === "email" ? (
+            /* ---- Email magic link form ---- */
+            <form
+              onSubmit={async (e) => {
+                e.preventDefault();
+                if (!email || !email.includes("@")) { toast.error("Enter a valid email"); return; }
+                setSendingLink(true);
+                const result = await requestMagicLink(email, `${window.location.origin}/auth/magic-link/callback?role=runner`);
+                setSendingLink(false);
+                if (result.success) {
+                  setMagicLinkSent(true);
+                  toast.success("Magic link sent!");
+                } else {
+                  toast.error(result.error || "Failed to send magic link");
+                }
+              }}
+              className="space-y-4"
+            >
+              <div>
+                <label className="text-sm font-medium text-white/80 mb-1 block">Email address</label>
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="you@example.com"
+                  className="w-full px-4 py-3 rounded-xl bg-white/10 border border-white/20 text-white text-sm placeholder:text-white/30 focus:outline-none focus:ring-2 focus:ring-white/30"
+                  required
+                />
+              </div>
+              <button
+                type="submit"
+                disabled={sendingLink}
+                className="w-full py-4 rounded-2xl text-white font-bold text-lg disabled:opacity-60"
+                style={{ background: GOLD_GRAD }}
+              >
+                {sendingLink ? "Sending..." : "Send magic link"}
+              </button>
+              <p className="text-center text-sm text-white/60">
+                <button type="button" onClick={() => setStep("phone")} className="font-semibold" style={{ color: "#C9A84C" }}>
+                  Use phone instead
+                </button>
+              </p>
+            </form>
+          ) : step === "phone" ? (
             <form onSubmit={handleSend} className="space-y-4">
               <div>
                 <label className="text-sm font-medium text-white/80 mb-1 block">Mobile Number</label>
@@ -87,10 +157,91 @@ export default function RunnerLogin() {
               >
                 {sendOtp.isPending ? "Sending..." : "Get OTP"}
               </button>
+              <div className="flex items-center gap-3">
+                <div className="flex-1 h-px bg-white/20" />
+                <span className="text-xs text-white/40">OR</span>
+                <div className="flex-1 h-px bg-white/20" />
+              </div>
+              <button
+                type="button"
+                onClick={() => setStep("email")}
+                className="w-full py-3 rounded-2xl border border-white/20 text-white font-semibold text-sm bg-white/5 hover:bg-white/10 transition"
+              >
+                Sign in with email instead
+              </button>
+              <button
+                type="button"
+                onClick={() => setStep("password")}
+                className="w-full py-3 rounded-2xl border border-white/20 text-white font-semibold text-sm bg-white/5 hover:bg-white/10 transition"
+              >
+                Sign in with email + password
+              </button>
               <p className="text-center text-sm text-white/60">
                 Looking to hire?{" "}
                 <button type="button" onClick={() => navigate("/login")} className="font-semibold" style={{ color: "#C9A84C" }}>
                   Book a runner
+                </button>
+              </p>
+            </form>
+          ) : step === "password" ? (
+            /* ---- Email + Password form ---- */
+            <form
+              onSubmit={async (e) => {
+                e.preventDefault();
+                if (!email || !password) { toast.error("Email and password required"); return; }
+                setLoading(true);
+                try {
+                  const endpoint = isSigningUp ? "/api/auth/signup" : "/api/auth/login";
+                  const body: Record<string, string> = { email, password, role: "runner" };
+                  if (isSigningUp && name) body.name = name;
+                  const res = await fetch(`${API_BASE}${endpoint}`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(body),
+                  });
+                  const data = await res.json();
+                  if (!res.ok) { toast.error(data.error || "Invalid credentials"); setLoading(false); return; }
+                  login(data.token, "runner", undefined, data.runner);
+                  toast.success(isSigningUp ? "Account created!" : "Welcome, Runner!");
+                  navigate("/runner/feed");
+                } catch { toast.error("Network error"); }
+                setLoading(false);
+              }}
+              className="space-y-4"
+            >
+              {isSigningUp && (
+                <div>
+                  <label className="text-sm font-medium text-white/80 mb-1 block">Name</label>
+                  <input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="Your name" className="w-full px-4 py-3 rounded-xl bg-white/10 border border-white/20 text-white text-sm placeholder:text-white/30 focus:outline-none focus:ring-2 focus:ring-white/30" />
+                </div>
+              )}
+              <div>
+                <label className="text-sm font-medium text-white/80 mb-1 block">Email address</label>
+                <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" className="w-full px-4 py-3 rounded-xl bg-white/10 border border-white/20 text-white text-sm placeholder:text-white/30 focus:outline-none focus:ring-2 focus:ring-white/30" required />
+              </div>
+              <div>
+                <label className="text-sm font-medium text-white/80 mb-1 block">Password</label>
+                <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" className="w-full px-4 py-3 rounded-xl bg-white/10 border border-white/20 text-white text-sm placeholder:text-white/30 focus:outline-none focus:ring-2 focus:ring-white/30" required minLength={6} />
+              </div>
+              <button type="submit" disabled={loading} className="w-full py-4 rounded-2xl text-white font-bold text-lg disabled:opacity-60" style={{ background: GOLD_GRAD }}>
+                {loading ? "Please wait..." : isSigningUp ? "Create Account" : "Sign In"}
+              </button>
+              {!isSigningUp && (
+                <p className="text-center">
+                  <button type="button" onClick={() => navigate("/forgot-password")} className="text-xs font-medium text-white/50 hover:text-white/80 transition">
+                    Forgot password?
+                  </button>
+                </p>
+              )}
+              <p className="text-center text-sm text-white/60">
+                {isSigningUp ? "Already have an account?" : "Don't have an account?"}{" "}
+                <button type="button" onClick={() => setIsSigningUp(!isSigningUp)} className="font-semibold" style={{ color: "#C9A84C" }}>
+                  {isSigningUp ? "Sign in" : "Create one"}
+                </button>
+              </p>
+              <p className="text-center text-sm text-white/60">
+                <button type="button" onClick={() => setStep("phone")} className="font-semibold" style={{ color: "#C9A84C" }}>
+                  Use phone instead
                 </button>
               </p>
             </form>
