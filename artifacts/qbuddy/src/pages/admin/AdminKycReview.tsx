@@ -143,12 +143,12 @@ export default function AdminKycReview() {
     : undefined;
 
   return (
-    <div className="flex min-h-screen bg-gray-50">
+    <div className="flex min-h-screen bg-gray-50 dark:bg-gray-900" role="main" aria-label="KYC Review">
       <AdminSidebar />
       <main className="flex-1 overflow-y-auto p-6">
         <div className="mb-5">
-          <h1 className="text-2xl font-black text-[#1A1A2E] flex items-center gap-2">
-            <Shield size={24} /> KYC Review
+          <h1 className="text-xl sm:text-2xl font-black text-[#1A1A2E] flex items-center gap-2">
+            <Shield size={24} aria-hidden="true" /> KYC Review
           </h1>
           <p className="text-gray-500 text-sm mt-1">Review and approve identity verification for users and comrades</p>
         </div>
@@ -176,11 +176,13 @@ export default function AdminKycReview() {
         {/* Search Bar */}
         <div className="mb-4">
           <div className="relative max-w-md">
+            <label htmlFor="kyc-search" className="sr-only">Search KYC submissions</label>
             <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
             <input
               type="text"
               value={searchQuery}
               onChange={e => { setSearchQuery(e.target.value); setPage(0); }}
+              id="kyc-search"
               placeholder="Search by name, phone, ID, or city..."
               className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#6C3FD4]/20 focus:border-[#6C3FD4] transition-all"
             />
@@ -188,11 +190,13 @@ export default function AdminKycReview() {
         </div>
 
         {/* Status Filter */}
-        <div className="flex gap-1.5 mb-5 bg-white p-1 rounded-xl border border-gray-200 w-fit">
+        <div className="flex gap-1.5 mb-5 bg-white p-1 rounded-xl border border-gray-200 w-fit overflow-x-auto" role="tablist" aria-label="KYC status filter">
           {STATUS_TABS.map(s => (
             <button
               key={s.key}
               onClick={() => { setStatusFilter(s.key); setPage(0); }}
+              role="tab"
+              aria-selected={statusFilter === s.key}
               className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${statusFilter === s.key ? "bg-[#1A1A2E] text-white" : "text-gray-500 hover:bg-gray-100"}`}
             >
               {s.label}

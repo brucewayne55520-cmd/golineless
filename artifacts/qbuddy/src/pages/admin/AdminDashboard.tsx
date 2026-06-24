@@ -112,13 +112,12 @@ export default function AdminDashboard() {
   const now = new Date();
 
   return (
-    <div className="flex min-h-screen" style={{ background: "#F0F2F8" }}>
+    <div className="flex min-h-screen dark:bg-gray-900" style={{ background: "#F0F2F8" }} role="main" aria-label="Admin Dashboard">
       <AdminSidebar />
       <main className="flex-1 overflow-y-auto">
-        {/* Top bar */}
-        <div className="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between sticky top-0 z-10 shadow-sm">
+        {/* Top bar */}          <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 sm:px-6 py-4 flex items-center justify-between sticky top-0 z-10 shadow-sm">
           <div>
-            <h1 className="text-xl font-black text-[#0A1628]">Command Center</h1>
+            <h1 className="text-lg sm:text-xl font-black text-[#0A1628] dark:text-white">Command Center</h1>
             <p className="text-gray-400 text-xs mt-0.5">
               Go LineLess Operations · {now.toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "long" })}
             </p>
@@ -225,7 +224,7 @@ export default function AdminDashboard() {
                   View All →
                 </button>
               </div>
-              <div className="grid grid-cols-5 gap-3">
+              <div className="grid grid-cols-3 sm:grid-cols-5 gap-3">
                 <div className="bg-amber-50 rounded-xl p-3 text-center">
                   <p className="text-2xl font-black text-amber-600">{kycMetrics.pending}</p>
                   <p className="text-xs text-amber-700 font-semibold">Pending</p>

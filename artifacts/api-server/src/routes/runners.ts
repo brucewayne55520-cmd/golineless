@@ -135,6 +135,26 @@ router.post("/runners/kyc", requireRunner, async (req, res): Promise<void> => {
   res.json(safe);
 });
 
+// PATCH /runners/me/avatar — upload profile photo
+router.patch("/runners/me/avatar", requireRunner, async (req, res): Promise<void> => {
+  const runner = req.runner!;
+  const { avatar } = req.body; // base64 data URL or URL string
+  if (!avatar) {
+    res.status(400).json({ error: "No avatar provided" }); return;
+  }
+  const avatarUrl = await uploadDataUrl(avatar, "avatars/runners");
+  if (!avatarUrl) {
+    res.status(500).json({ error: "Failed to upload avatar" }); return;
+  }
+  const [updated] = await db
+    .update(runnersTable)
+    .set({ avatar: avatarUrl })
+    .where(eq(runnersTable.id, runner.id))
+    .returning();
+  const { otp, otpExpiresAt, aadhaarNumber, ...safe } = updated;
+  res.json({ avatar: safe.avatar });
+});
+
 // POST /runners/toggle-online
 router.post("/runners/toggle-online", requireRunner, async (req, res): Promise<void> => {
   const runner = req.runner!;

@@ -132,6 +132,25 @@ router.post("/users/me/kyc", requireUser, async (req, res): Promise<void> => {
   res.json({ kycStatus: "pending", message: "KYC submitted. Under review — typically within 24 hours." });
 });
 
+// PATCH /users/me/avatar — upload profile photo
+router.patch("/users/me/avatar", requireUser, async (req, res): Promise<void> => {
+  const user = req.user!;
+  const { avatar } = req.body; // base64 data URL or URL string
+  if (!avatar) {
+    res.status(400).json({ error: "No avatar provided" }); return;
+  }
+  const avatarUrl = await uploadDataUrl(avatar, "avatars/users");
+  if (!avatarUrl) {
+    res.status(500).json({ error: "Failed to upload avatar" }); return;
+  }
+  const [updated] = await db
+    .update(usersTable)
+    .set({ avatar: avatarUrl })
+    .where(eq(usersTable.id, user.id))
+    .returning();
+  res.json({ avatar: updated.avatar });
+});
+
 // GET /users/me/stats
 router.get("/users/me/stats", requireUser, async (req, res): Promise<void> => {
   const user = req.user!;

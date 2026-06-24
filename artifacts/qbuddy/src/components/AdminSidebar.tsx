@@ -1,5 +1,6 @@
+import { useState } from "react";
 import { useLocation } from "wouter";
-import { LayoutDashboard, Map, ClipboardList, PersonStanding, Users, Crown, TrendingUp, Settings, LogOut, UserPlus, BookOpen, Star, Ticket, ShieldAlert, Shield, MapPin, Zap, Activity, Award, Clock } from "lucide-react";
+import { LayoutDashboard, Map, ClipboardList, PersonStanding, Users, Crown, TrendingUp, Settings, LogOut, UserPlus, BookOpen, Star, Ticket, ShieldAlert, Shield, MapPin, Zap, Activity, Award, Clock, Menu, X } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import type { LucideIcon } from "lucide-react";
@@ -34,17 +35,15 @@ const navItems: { path: string; icon: LucideIcon; label: string; exact?: boolean
 
 export default function AdminSidebar() {
   const [location, navigate] = useLocation();
+  const [mobileOpen, setMobileOpen] = useState(false);
 
   const handleLogout = () => {
     localStorage.removeItem("golineless_admin_token");
     navigate("/admin/login");
   };
 
-  return (
-    <aside
-      className="w-56 flex-shrink-0 flex flex-col min-h-screen border-r border-white/10"
-      style={{ background: `linear-gradient(180deg, ${NAVY} 0%, ${NAVY_DARK} 100%)` }}
-    >
+  const SidebarContent = () => (
+    <>
       <div className="p-5 border-b border-white/10">
         <div className="flex items-center gap-2">
           <img src="/logo.jpg" alt="Go LineLess" className="h-8 w-auto rounded-sm" />
@@ -54,21 +53,22 @@ export default function AdminSidebar() {
         </div>
       </div>
 
-      <nav className="flex-1 py-3">
+      <nav className="flex-1 py-3 overflow-y-auto" aria-label="Admin navigation">
         {navItems.map((item) => {
           const active = item.exact ? location === item.path : location.startsWith(item.path);
           const Icon = item.icon;
           return (
             <button
               key={item.path}
-              onClick={() => navigate(item.path)}
+              onClick={() => { navigate(item.path); setMobileOpen(false); }}
+              aria-current={active ? "page" : undefined}
               className={cn(
                 "w-full flex items-center gap-3 px-4 py-3 text-sm font-medium transition-all text-left",
                 active ? "bg-white/20 text-white" : "text-white/60 hover:bg-white/10 hover:text-white"
               )}
             >
-              <Icon size={16} />
-              {item.label}
+              <Icon size={16} aria-hidden="true" />
+              <span>{item.label}</span>
               {active && <div className="ml-auto w-1.5 h-5 rounded-full" style={{ background: "#C9A84C" }} />}
             </button>
           );
@@ -76,10 +76,57 @@ export default function AdminSidebar() {
       </nav>
 
       <div className="p-4 border-t border-white/10">
-        <button onClick={handleLogout} className="w-full flex items-center gap-2 text-white/50 hover:text-white text-sm transition-colors">
-          <LogOut size={15} /> Logout
+        <button onClick={handleLogout} aria-label="Logout from admin panel" className="w-full flex items-center gap-2 text-white/50 hover:text-white text-sm transition-colors">
+          <LogOut size={15} aria-hidden="true" /> Logout
         </button>
       </div>
-    </aside>
+    </>
+  );
+
+  return (
+    <>
+      {/* Mobile hamburger button */}
+      <button
+        onClick={() => setMobileOpen(true)}
+        className="lg:hidden fixed top-4 left-4 z-50 w-10 h-10 rounded-xl flex items-center justify-center shadow-lg"
+        style={{ background: NAVY }}
+        aria-label="Open navigation menu"
+      >
+        <Menu size={20} className="text-white" />
+      </button>
+
+      {/* Mobile overlay */}
+      {mobileOpen && (
+        <div className="lg:hidden fixed inset-0 bg-black/50 z-40" onClick={() => setMobileOpen(false)} />
+      )}
+
+      {/* Desktop sidebar */}
+      <aside
+        className="hidden lg:flex w-56 flex-shrink-0 flex-col min-h-screen border-r border-white/10"
+        style={{ background: `linear-gradient(180deg, ${NAVY} 0%, ${NAVY_DARK} 100%)` }}
+        role="navigation"
+        aria-label="Admin sidebar"
+      >
+        <SidebarContent />
+      </aside>
+
+      {/* Mobile sidebar */}
+      <aside
+        className={cn(
+          "lg:hidden fixed inset-y-0 left-0 z-50 w-56 flex flex-col border-r border-white/10 transition-transform duration-200",
+          mobileOpen ? "translate-x-0" : "-translate-x-full"
+        )}
+        style={{ background: `linear-gradient(180deg, ${NAVY} 0%, ${NAVY_DARK} 100%)` }}
+        role="navigation"
+        aria-label="Admin sidebar (mobile)"
+      >
+        <div className="flex justify-end p-3">
+          <button onClick={() => setMobileOpen(false)} aria-label="Close navigation menu" className="text-white/60 hover:text-white">
+            <X size={20} />
+          </button>
+        </div>
+        <SidebarContent />
+      </aside>
+    </>
   );
 }

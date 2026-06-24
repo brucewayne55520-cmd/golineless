@@ -6,8 +6,8 @@ import { validateEnv, getFeatureStatus } from "./lib/env-check";
 import { initSentry, getSentryErrorHandler } from "./lib/sentry";
 import { setIo } from "./lib/socket";
 import { getUserFromToken, getRunnerFromToken, getAdminFromToken } from "./lib/auth";
-import { db, runnerLocationsTable, runnersTable, userSessionsTable, runnerSessionsTable, adminSessionsTable, notificationsTable } from "@workspace/db";
-import { eq, lt } from "drizzle-orm";
+import { db, runnerLocationsTable, runnersTable, usersTable, userSessionsTable, runnerSessionsTable, adminSessionsTable, notificationsTable } from "@workspace/db";
+import { eq, lt, and } from "drizzle-orm";
 
 type SocketIdentity = { type: "user" | "runner" | "admin"; id: number };
 
@@ -93,6 +93,65 @@ function startDataRetentionCron() {
   logger.info("Data retention cron started (every 24h)");
 }
 startDataRetentionCron();
+
+// Fix #U3: KYC Deadline Reminder — notify users/runners with pending KYC > 7 days
+function startKycReminderCron() {
+  const REMINDER_INTERVAL_MS = 12 * 60 * 60 * 1000; // every 12 hours
+  async function sendKycReminders() {
+    try {
+      const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+      // Find users with pending KYC older than 7 days
+      const staleUsers = await db
+        .select({ id: usersTable.id, name: usersTable.name, phone: usersTable.phone, email: usersTable.email })
+        .from(usersTable)
+        .where(and(
+          eq(usersTable.kycStatus, "pending"),
+          lt(usersTable.updatedAt, sevenDaysAgo),
+        ));
+
+      // Find runners with pending KYC older than 7 days
+      const staleRunners = await db
+        .select({ id: runnersTable.id, name: runnersTable.name, phone: runnersTable.phone, email: runnersTable.email })
+        .from(runnersTable)
+        .where(and(
+          eq(runnersTable.kycStatus, "pending"),
+          lt(runnersTable.updatedAt, sevenDaysAgo),
+        ));
+
+      // Create in-app notifications for each stale submission
+      const notifValues: { userId?: number; runnerId?: number; title: string; message: string; type: string; isRead: boolean }[] = [];
+      for (const u of staleUsers) {
+        notifValues.push({
+          userId: u.id,
+          title: "KYC Pending — Action Needed",
+          message: `Hi ${u.name || 'there'}, your KYC verification has been pending for over 7 days. Please check your submission or contact support.`,
+          type: "kyc_reminder",
+          isRead: false,
+        });
+      }
+      for (const r of staleRunners) {
+        notifValues.push({
+          runnerId: r.id,
+          title: "KYC Pending — Action Needed",
+          message: `Hi ${r.name || 'there'}, your KYC verification has been pending for over 7 days. Please check your submission or contact support.`,
+          type: "kyc_reminder",
+          isRead: false,
+        });
+      }
+
+      if (notifValues.length > 0) {
+        await db.insert(notificationsTable).values(notifValues);
+        logger.info({ users: staleUsers.length, runners: staleRunners.length }, "KYC reminder notifications sent");
+      }
+    } catch (err) {
+      logger.error({ err }, "KYC reminder cron failed");
+    }
+  }
+  sendKycReminders();
+  setInterval(sendKycReminders, REMINDER_INTERVAL_MS);
+  logger.info("KYC reminder cron started (every 12h)");
+}
+startKycReminderCron();
 
 const rawPort = process.env["PORT"];
 
