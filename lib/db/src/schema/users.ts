@@ -5,17 +5,22 @@ import { z } from "zod/v4";
 export const usersTable = pgTable("users", {
   id: serial("id").primaryKey(),
   name: text("name"),
-  phone: text("phone").notNull().unique(),
-  email: text("email"),
+  phone: text("phone").unique(),
+  email: text("email").unique(),
+  googleId: text("google_id").unique(),
+  passwordHash: text("password_hash"),
   city: text("city"),
   area: text("area"),
   avatar: text("avatar"),
   language: text("language").notNull().default("en"),
   otp: text("otp"),
   otpExpiresAt: timestamp("otp_expires_at", { withTimezone: true }),
+  passwordResetToken: text("password_reset_token"),
+  passwordResetExpiresAt: timestamp("password_reset_expires_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 });
+
 
 export const insertUserSchema = createInsertSchema(usersTable).omit({ id: true, createdAt: true, updatedAt: true });
 export type InsertUser = z.infer<typeof insertUserSchema>;

@@ -1,0 +1,86 @@
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  typecheck:
+    name: TypeScript Typecheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v2
+        with:
+          version: 9
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install
+      - run: pnpm run --recursive --parallel typecheck
+        env:
+          NODE_ENV: test
+
+  test:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: golineless_test
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v2
+        with:
+          version: 9
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install
+      - run: pnpm --filter @workspace/api-server run test
+        env:
+          DATABASE_URL: postgres://postgres:postgres@localhost:5432/golineless_test
+          NODE_ENV: test
+
+  lint:
+    name: TypeScript & Lint Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v2
+        with:
+          version: 9
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install
+      - run: pnpm run --recursive --parallel typecheck
+        env:
+          NODE_ENV: test
+      - name: Check for console.log in backend source
+        run: |
+          if grep -rn "console\.\(log\|warn\|error\)" artifacts/api-server/src/lib/ artifacts/api-server/src/routes/ --include="*.ts" 2>/dev/null | grep -v ".test.ts" | grep -v "node_modules" | grep .; then
+            echo "❌ Found console.log in backend source (use logger instead)"
+            exit 1
+          else
+            echo "No console.log found ✅"
+          fi

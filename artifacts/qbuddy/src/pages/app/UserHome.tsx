@@ -1,29 +1,28 @@
 import { useLocation } from "wouter";
 import { motion } from "framer-motion";
-import { MapPin, Bell, PersonStanding, Zap, Shield, Smartphone, CheckCircle2, HeartHandshake, Camera, KeyRound, Star } from "lucide-react";
+import { MapPin, Bell, PersonStanding, Shield, Smartphone, CheckCircle2, HeartHandshake, Camera, KeyRound, Star, Wallet, CreditCard } from "lucide-react";
 import { useListTasks, useListNotifications } from "@workspace/api-client-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { UserBottomNav } from "@/components/BottomNav";
-import { CategoryIcon, CATEGORY_KEYS } from "@/components/CategoryIcon";
-import { CATEGORY_NAMES, CATEGORY_HINDI, CATEGORY_PRICES, STATUS_COLORS, STATUS_LABELS, formatCurrency } from "@/lib/utils";
+import { CategoryIcon } from "@/components/CategoryIcon";
+import { StatusBadge } from "@/components/StatusBadge";
+import { PaymentBadge } from "@/components/PaymentBadge";
+import { PayButton } from "@/components/PayButton";
+import { CATEGORY_NAMES, formatCurrency } from "@/lib/utils";
+import { NAVY, NAVY_GRAD, GOLD, GOLD_GRAD } from "@/lib/theme";
+import { LoadingSkeleton } from "@/components/LoadingSkeleton";
 
-const NAVY = "#0F2557";
-const NAVY_GRAD = "linear-gradient(135deg, #0F2557, #1D3D7C)";
-const GOLD = "#C9A84C";
-const GOLD_GRAD = "linear-gradient(135deg, #C9A84C, #D4B870)";
-
-const LIFE_SITUATIONS: Record<string, string> = {
-  hospital: "Hospital Help",
-  bank: "Banking Help",
-  government: "Govt. Help",
-  medicine: "Medicine",
-  senior: "Senior Care",
-  errands: "Errands",
-  documentation: "Documents",
-  emergency: "Emergency",
+const SERVICE_HUBS: Record<string, { name: string; desc: string; icon: string; categories: string[]; color: string }> = {
+  healthcare: { name: "Healthcare Assistance", desc: "Hospital visits, OPD, reports, pharmacy, medicine", icon: "🏥", categories: ["hospital","medicine"], color: "#0EA5E9" },
+  documentation: { name: "Documentation Help", desc: "Form filling, attestation, document pickup/submission", icon: "📄", categories: ["document","govt_office"], color: "#8B5CF6" },
+  banking: { name: "Banking Assistance", desc: "Account work, cheque deposits, bank visits", icon: "🏦", categories: ["bank"], color: "#10B981" },
+  senior: { name: "Senior Care", desc: "Companion, escort, errands, subscription plans", icon: "💙", categories: ["senior_care","errand"], color: "#F43F5E" },
+  emergency: { name: "Emergency Assistance", desc: "Urgent help, immediate response", icon: "⚡", categories: ["emergency"], color: "#EF4444" },
 };
 
-function getGreeting(name?: string) {
+const HUB_KEYS = Object.keys(SERVICE_HUBS);
+
+function getGreeting(name?: string | null) {
   const hour = new Date().getHours();
   const prefix = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
   return name ? `${prefix}, ${name.split(" ")[0]}` : prefix;
@@ -32,9 +31,9 @@ function getGreeting(name?: string) {
 export default function UserHome() {
   const [, navigate] = useLocation();
   const { user } = useAuth();
-  const { data: tasks, isLoading } = useListTasks({ params: { limit: "3" } });
-  const { data: notifs } = useListNotifications();
-  const unreadCount = notifs?.filter((n: any) => !n.isRead).length ?? 0;
+  const { data: tasks, isLoading } = useListTasks({ limit: 3 });
+  const { data: notifs, isLoading: notifsLoading } = useListNotifications();
+  const unreadCount = notifs?.filter((n: Required<import("@workspace/api-client-react").Notification>) => !n.isRead).length ?? 0;
 
   const trustStrip = [
     { Icon: Shield, text: "KYC Verified" },
@@ -45,7 +44,7 @@ export default function UserHome() {
 
   const howItWorks = [
     { Icon: Smartphone, label: "Book in 60s", sub: "Select & describe" },
-    { Icon: PersonStanding, label: "Runner assigned", sub: "KYC verified local" },
+    { Icon: PersonStanding, label: "Comrade assigned", sub: "KYC verified local" },
     { Icon: CheckCircle2, label: "Task done", sub: "With proof & OTP" },
   ];
 
@@ -94,6 +93,57 @@ export default function UserHome() {
         </motion.div>
       </div>
 
+      {/* Notifications section */}
+      <div className="px-4 mt-4">
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="font-black text-[#0A1628] text-base">Notifications</h3>
+          {(notifs?.length ?? 0) > 0 && (
+            <span className="text-[10px] text-gray-400">{unreadCount} unread</span>
+          )}
+        </div>
+        {notifsLoading ? (
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+            <LoadingSkeleton variant="notification" count={3} />
+          </div>
+        ) : notifs && notifs.length > 0 ? (
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+            {notifs.slice(0, 5).map((n: Required<import("@workspace/api-client-react").Notification>, i: number) => (
+              <div
+                key={n.id}
+                className={`px-4 py-3 flex items-start gap-3 ${i > 0 ? "border-t border-gray-50" : ""} ${!n.isRead ? "bg-blue-50/50" : ""}`}
+              >
+                <div
+                  className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 text-xs font-bold ${
+                    n.type === "kyc_approved" ? "bg-green-100 text-green-600" :
+                    n.type === "task_completed" ? "bg-blue-100 text-blue-600" :
+                    n.type === "payment_received" ? "bg-amber-100 text-amber-600" :
+                    "bg-gray-100 text-gray-500"
+                  }`}
+                >
+                  {n.type === "kyc_approved" ? "✓" : n.type === "task_completed" ? "📋" : n.type === "payment_received" ? "₹" : "ℹ"}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className={`text-xs ${!n.isRead ? "font-bold text-[#0A1628]" : "text-gray-600"}`}>{n.title}</p>
+                  <p className="text-[10px] text-gray-400 mt-0.5 line-clamp-1">{n.message}</p>
+                  <p className="text-[9px] text-gray-300 mt-0.5">
+                    {new Date(n.createdAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
+                  </p>
+                </div>
+                {!n.isRead && (
+                  <div className="w-2 h-2 rounded-full bg-blue-500 flex-shrink-0 mt-1" />
+                )}
+              </div>
+            ))}
+          </div>
+        ) : null}
+        <button
+          onClick={() => navigate("/app/profile")}
+          className="w-full mt-2 py-2.5 rounded-xl border border-gray-200 text-xs font-semibold text-gray-500 hover:bg-gray-50 transition-colors"
+        >
+          View All Notifications
+        </button>
+      </div>
+
       {/* Trust micro-strip */}
       <div className="px-4 mt-3">
         <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
@@ -106,29 +156,43 @@ export default function UserHome() {
         </div>
       </div>
 
-      {/* Category grid */}
+      {/* Service Hubs */}
       <div className="px-4 mt-5">
         <div className="flex items-center justify-between mb-3">
           <h3 className="font-black text-[#0A1628] text-base">How can we help?</h3>
           <span className="text-[10px] font-semibold text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">Ahmedabad Pilot</span>
         </div>
-        <div className="grid grid-cols-4 gap-2.5">
-          {CATEGORY_KEYS.map((cat, i) => (
-            <motion.button
-              key={cat}
-              initial={{ opacity: 0, scale: 0.85 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: i * 0.04, type: "spring", stiffness: 200 }}
-              onClick={() => navigate(`/app/book?category=${cat}`)}
-              className="bg-white rounded-2xl p-3 flex flex-col items-center gap-1.5 shadow-sm border border-gray-100 hover:shadow-md hover:border-blue-100 transition-all active:scale-95"
-            >
-              <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: "linear-gradient(135deg, #EEF2FA, #D9E3F5)", color: NAVY }}>
-                <CategoryIcon category={cat} size={20} />
-              </div>
-              <span className="text-[9px] font-bold text-[#0A1628] text-center leading-tight">{LIFE_SITUATIONS[cat] ?? CATEGORY_NAMES[cat]}</span>
-              <span className="text-[8px] text-gray-400">from {formatCurrency(CATEGORY_PRICES[cat] ?? 149)}</span>
-            </motion.button>
-          ))}
+        <div className="grid grid-cols-2 gap-3">
+          {HUB_KEYS.map((hubKey, i) => {
+            const hub = SERVICE_HUBS[hubKey];
+            return (
+              <motion.button
+                key={hubKey}
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: i * 0.06, type: "spring", stiffness: 200 }}
+                onClick={() => navigate(`/app/book?hub=${hubKey}`)}
+                className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 hover:shadow-md transition-all active:scale-[0.98] text-left"
+              >
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="w-11 h-11 rounded-xl flex items-center justify-center text-xl" style={{ background: `${hub.color}12` }}>
+                    {hub.icon}
+                  </div>
+                  <div className="flex-1">
+                    <h4 className="font-black text-sm text-[#0A1628]">{hub.name}</h4>
+                    <p className="text-[10px] text-gray-400 mt-0.5">{hub.desc}</p>
+                  </div>
+                </div>
+                <div className="flex gap-1.5 flex-wrap">
+                  {hub.categories.map(c => (
+                    <span key={c} className="text-[9px] font-semibold px-2 py-0.5 rounded-full" style={{ background: `${hub.color}10`, color: hub.color }}>
+                      {CATEGORY_NAMES[c]}
+                    </span>
+                  ))}
+                </div>
+              </motion.button>
+            );
+          })}
         </div>
       </div>
 
@@ -158,14 +222,14 @@ export default function UserHome() {
         <div className="px-4 mt-6 space-y-2">
           {[1, 2].map(i => <div key={i} className="h-20 bg-gray-100 rounded-2xl animate-pulse" />)}
         </div>
-      ) : tasks && (tasks as any[]).length > 0 ? (
+      ) : tasks && tasks.length > 0 ? (
         <div className="px-4 mt-6">
           <div className="flex justify-between items-center mb-3">
             <h3 className="font-black text-[#0A1628] text-base">Recent Requests</h3>
             <button onClick={() => navigate("/app/tasks")} className="text-xs font-bold px-2 py-1 rounded-lg" style={{ color: NAVY, background: "#EEF2FA" }}>See all</button>
           </div>
           <div className="flex gap-3 overflow-x-auto pb-1">
-            {(tasks as any[]).slice(0, 3).map((task: any) => (
+            {tasks.slice(0, 3).map((task: Required<import("@workspace/api-client-react").Task>) => (
               <motion.div
                 key={task.id}
                 initial={{ opacity: 0, x: 16 }}
@@ -178,14 +242,20 @@ export default function UserHome() {
                     <CategoryIcon category={task.category} size={18} />
                   </div>
                   <div>
-                    <div className="text-sm font-bold text-[#0A1628] leading-tight">{CATEGORY_NAMES[task.category]}</div>
-                    <span className={`text-[10px] px-2 py-0.5 rounded-full border ${STATUS_COLORS[task.status] ?? "bg-gray-100 text-gray-600 border-gray-200"}`}>
-                      {STATUS_LABELS[task.status] ?? task.status}
-                    </span>
+                    <div className="text-sm font-bold text-[#0A1628] leading-tight">            {CATEGORY_NAMES[task.category]}</div>
+                    <div className="flex items-center gap-1.5 flex-wrap mt-1">
+                      <StatusBadge status={task.status ?? ""} />
+                      <PaymentBadge paymentStatus={task.paymentStatus} taskStatus={task.status} paymentMethod={task.paymentMethod} />
+                    </div>
                   </div>
                 </div>
                 <p className="text-xs text-gray-500 line-clamp-2 leading-relaxed">{task.description}</p>
-                <p className="text-xs font-black mt-2" style={{ color: GOLD }}>{formatCurrency(task.price)}</p>
+                <div className="flex items-center justify-between mt-2">
+                  <p className="text-xs font-black" style={{ color: GOLD }}>{formatCurrency(task.price)}</p>
+                  {task.paymentStatus !== "paid" && !["completed","cancelled"].includes(task.status) && (
+                    <PayButton taskId={task.id} variant="gold" paymentMethod={task.paymentMethod} />
+                  )}
+                </div>
               </motion.div>
             ))}
           </div>
@@ -222,6 +292,60 @@ export default function UserHome() {
           </button>
         </motion.div>
       </div>
+
+      {/* Payment History */}
+      {tasks && tasks.length > 0 && (
+        <div className="px-4 mt-6">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="font-black text-[#0A1628] text-base">Payment History</h3>
+            <button onClick={() => navigate("/app/tasks")} className="text-xs font-bold px-2 py-1 rounded-lg" style={{ color: NAVY, background: "#EEF2FA" }}>See all</button>
+          </div>
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+            {tasks.filter((t: Required<import("@workspace/api-client-react").Task>) => t.paymentStatus === "paid" || t.status === "completed").slice(0, 3).map((task: Required<import("@workspace/api-client-react").Task>, i: number) => (
+              <div
+                key={task.id}
+                onClick={() => navigate(`/app/tasks/${task.id}`)}
+                className={`px-4 py-3 flex items-center gap-3 cursor-pointer hover:bg-gray-50 transition-colors ${i > 0 ? "border-t border-gray-50" : ""}`}
+              >
+                <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: task.paymentStatus === "paid" ? "#F0FDF4" : "#EEF2FA" }}>
+                  {task.paymentStatus === "paid" ? (
+                    <CheckCircle2 size={18} className="text-green-600" />
+                  ) : (
+                    <Wallet size={18} style={{ color: NAVY }} />
+                  )}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm font-bold text-[#0A1628] truncate">{CATEGORY_NAMES[task.category]}</p>
+                    <p className="text-sm font-black ml-2" style={{ color: task.paymentStatus === "paid" ? "#16A34A" : GOLD }}>
+                      {formatCurrency(task.price)}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2 mt-0.5">
+                    <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${task.paymentStatus === "paid" ? "bg-green-100 text-green-700" : task.paymentStatus === "pending" ? "bg-amber-100 text-amber-700" : "bg-gray-100 text-gray-500"}`}>
+                      {task.paymentStatus === "paid" ? "Paid" : task.paymentStatus === "pending" ? "Pending" : "Unpaid"}
+                    </span>
+                    {task.paymentMethod && (
+                      <span className="text-[10px] text-gray-400 flex items-center gap-0.5">
+                        <CreditCard size={9} /> {task.paymentMethod === "cash" ? "Cash" : task.paymentMethod === "online" ? "Online" : task.paymentMethod}
+                      </span>
+                    )}
+                    <span className="text-[9px] text-gray-300">
+                      {task.completedAt ? new Date(task.completedAt).toLocaleDateString("en-IN", { day: "numeric", month: "short" }) : ""}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            ))}
+            {tasks.filter((t: Required<import("@workspace/api-client-react").Task>) => t.paymentStatus === "paid" || t.status === "completed").length === 0 && (
+              <div className="px-4 py-6 text-center">
+                <Wallet size={24} className="text-gray-300 mx-auto mb-2" />
+                <p className="text-xs text-gray-400">No payments yet</p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Pilot badge */}
       <div className="px-4 mb-6">

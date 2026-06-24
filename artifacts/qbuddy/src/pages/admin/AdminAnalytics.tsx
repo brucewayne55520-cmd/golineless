@@ -7,8 +7,8 @@ import { CATEGORY_NAMES, formatCurrency } from "@/lib/utils";
 
 export default function AdminAnalytics() {
   const [days, setDays] = useState("30");
-  const { data, isLoading } = useGetAnalytics({ params: { days } } as any);
-  const d = data as any;
+  const { data, isLoading } = useGetAnalytics({ days: Number(days) });
+  const d = data as Exclude<typeof data, undefined>;
 
   return (
     <div className="flex min-h-screen bg-gray-50">
@@ -48,7 +48,7 @@ export default function AdminAnalytics() {
             <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
               <h3 className="font-bold text-[#1A1A2E] mb-4">Tasks by Category</h3>
               <ResponsiveContainer width="100%" height={200}>
-                <BarChart data={(d?.categoryBreakdown ?? []).map((c: any) => ({ ...c, name: CATEGORY_NAMES[c.category] ?? c.category }))} layout="vertical">
+                <BarChart data={(d?.categoryBreakdown ?? []).map((c: import("@workspace/api-client-react").CategoryStat) => ({ ...c, name: CATEGORY_NAMES[c.category] ?? c.category }))} layout="vertical">
                   <XAxis type="number" tick={{ fontSize: 10 }} />
                   <YAxis dataKey="name" type="category" tick={{ fontSize: 9 }} width={80} />
                   <Tooltip contentStyle={{ borderRadius: 12, fontSize: 12 }} />
@@ -89,7 +89,7 @@ export default function AdminAnalytics() {
                 <div className="overflow-x-auto">
                   <table className="w-full text-xs">
                     <thead><tr className="border-b border-gray-100">{["Runner", "Tasks", "Earnings", "Rating"].map(h => <th key={h} className="text-left pb-2 text-gray-500">{h}</th>)}</tr></thead>
-                    <tbody>{d.runnerPerformance.map((r: any) => (
+                    <tbody>{d.runnerPerformance.map((r: import("@workspace/api-client-react").RunnerPerformance) => (
                       <tr key={r.runnerId} className="border-b border-gray-50">
                         <td className="py-2 font-medium">{r.name}</td>
                         <td className="py-2">{r.tasks}</td>

@@ -9,11 +9,7 @@ import {
 import { useAuth } from "@/contexts/AuthContext";
 import { CategoryIcon, CATEGORY_KEYS } from "@/components/CategoryIcon";
 import { CATEGORY_NAMES, CATEGORY_PRICES, CATEGORY_HINDI } from "@/lib/utils";
-
-const NAVY = "#0F2557";
-const NAVY_GRAD = "linear-gradient(135deg, #0F2557, #1D3D7C)";
-const GOLD = "#C9A84C";
-const GOLD_GRAD = "linear-gradient(135deg, #C9A84C, #D4B870)";
+import { NAVY, NAVY_GRAD, GOLD, GOLD_GRAD } from "@/lib/theme";
 
 function Splash({ onDone }: { onDone: () => void }) {
   useEffect(() => {
@@ -63,7 +59,7 @@ function Splash({ onDone }: { onDone: () => void }) {
           transition={{ delay: 1.4 }}
           className="text-white/50 text-xs mt-3"
         >
-          India's trusted offline assistance network
+          India's offline assistance network
         </motion.p>
       </motion.div>
     </motion.div>
@@ -72,29 +68,29 @@ function Splash({ onDone }: { onDone: () => void }) {
 
 const steps = [
   { Icon: Smartphone, title: "Book in 60 seconds", desc: "Select category, describe your task, set date & time" },
-  { Icon: PersonStanding, title: "Runner assigned instantly", desc: "KYC-verified local runner picks up your task" },
+  { Icon: PersonStanding, title: "Comrade assigned instantly", desc: "KYC-verified local Comrade picks up your task" },
   { Icon: CheckCircle2, title: "Track live. Task done.", desc: "Photo proof + OTP completion — no guesswork" },
 ];
 
 const trustFeatures = [
-  { Icon: ShieldCheck, title: "KYC Verified Runners", desc: "Every runner passes Aadhaar & selfie verification before going live" },
-  { Icon: MapPin, title: "Live GPS Tracking", desc: "See your runner on the map in real time" },
-  { Icon: Camera, title: "Photo Proof", desc: "Runners upload visual proof on task completion" },
+  { Icon: ShieldCheck, title: "KYC Verified Comrades", desc: "Every Comrade passes Aadhaar & selfie verification before going live" },
+  { Icon: MapPin, title: "Live GPS Tracking", desc: "See your Comrade on the map in real time" },
+  { Icon: Camera, title: "Photo Proof", desc: "Comrades upload visual proof on task completion" },
   { Icon: KeyRound, title: "OTP Completion", desc: "6-digit OTP ensures only you can mark a task done" },
-  { Icon: CreditCard, title: "Secure Payments", desc: "Pay online or cash on completion — your choice" },
-  { Icon: HeartHandshake, title: "Senior Care Support", desc: "Specialist runners trained to assist elderly with patience" },
+  { Icon: CreditCard, title: "Secure Payments", desc: "Pay cash on completion — simple and transparent" },
+  { Icon: HeartHandshake, title: "Senior Care Support", desc: "Specialist Comrades trained to assist elderly with patience" },
 ];
 
 const testimonials = [
-  { name: "Priya Sharma", city: "Ahmedabad", text: "Saved me 4 hours at the passport office. The runner was incredibly professional — exactly what I needed.", rating: 5 },
-  { name: "Ankit Patel", city: "USA → Ahmedabad", text: "My parents are in Ahmedabad, I'm in the US. Go LineLess handles all their errands. Absolute peace of mind.", rating: 5 },
-  { name: "Sunita Mehta", city: "Ahmedabad", text: "Used it for bank work three times now. Always on time, always reliable. I recommend it to everyone.", rating: 5 },
+  { name: "Priya", city: "Ahmedabad", text: "Saved me hours at the passport office. The runner was incredibly professional — exactly what I needed.", rating: 5 },
+  { name: "Ankit", city: "USA → Ahmedabad", text: "My parents are in Ahmedabad, I'm in the US. Go LineLess handles all their errands. Absolute peace of mind.", rating: 5 },
+  { name: "Sunita", city: "Ahmedabad", text: "Used it for bank work multiple times now. Always on time, always reliable.", rating: 5 },
 ];
 
 const faqs = [
   { q: "How does Go LineLess work?", a: "You book a task in under 60 seconds, a verified runner is assigned, they complete the task, upload photo proof, and you confirm with a 6-digit OTP. Simple." },
-  { q: "Are the runners trustworthy?", a: "Every runner undergoes Aadhaar verification, selfie check, and background screening before they can accept tasks. You also see their rating and reviews." },
-  { q: "What if the runner cannot complete the task?", a: "Go LineLess assists with queue, pickup, submission and support tasks. We do not guarantee government approvals, medical decisions, or bank decisions. If a task cannot be completed, you are refunded." },
+  { q: "Are the Comrades trustworthy?", a: "Every Comrade undergoes Aadhaar verification, selfie check, and background screening before they can accept tasks. You also see their rating and reviews." },
+  { q: "What if the Comrade cannot complete the task?", a: "Go LineLess assists with queue, pickup, submission and support tasks. We do not guarantee government approvals, medical decisions, or bank decisions. If a task cannot be completed, you are refunded." },
   { q: "Is Go LineLess available outside Ahmedabad?", a: "We're currently in a pilot launch phase in Ahmedabad and actively expanding. Sign up to get notified when we reach your city." },
   { q: "Can I schedule a task for later?", a: "Yes. Pick any future date and time when booking. Great for early morning hospital queues or same-day bank visits." },
   { q: "How much does it cost?", a: "Pricing starts from Rs 89 for errands and goes up by category, distance band, and urgency. You see the full breakdown before confirming." },
@@ -166,14 +162,14 @@ export default function Landing() {
                     className="px-8 py-4 rounded-2xl text-white font-bold text-lg shadow-lg hover:shadow-xl transition-all hover:scale-105"
                     style={{ background: GOLD_GRAD }}
                   >
-                    Book a Runner
-                  </button>
-                  <button
-                    onClick={() => navigate("/runner/login")}
-                    className="px-8 py-4 rounded-2xl font-bold text-lg border-2 hover:bg-[#0F2557]/5 transition-all"
-                    style={{ borderColor: NAVY, color: NAVY }}
-                  >
-                    Become a Runner
+                Book a Comrade
+              </button>
+              <button
+                onClick={() => navigate("/runner/login")}
+                className="px-8 py-4 rounded-2xl font-bold text-lg border-2 hover:bg-[#0F2557]/5 transition-all"
+                style={{ borderColor: NAVY, color: NAVY }}
+              >
+                Become a Comrade
                   </button>
                 </div>
                 <p className="mt-5 text-xs text-gray-400 max-w-sm">
@@ -256,6 +252,10 @@ export default function Landing() {
                     viewport={{ once: true }}
                     transition={{ delay: i * 0.07 }}
                     onClick={() => navigate(`/login?category=${cat}`)}
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') navigate(`/login?category=${cat}`); }}
+                    aria-label={`Book a ${CATEGORY_NAMES[cat]} task — from Rs ${CATEGORY_PRICES[cat]}`}
                     className="cursor-pointer bg-white hover:shadow-lg rounded-2xl p-5 text-center transition-all hover:-translate-y-1 border border-gray-100"
                   >
                     <div className="flex justify-center mb-3" style={{ color: NAVY }}>
@@ -313,7 +313,7 @@ export default function Landing() {
                   <HeartHandshake size={48} className="mx-auto mb-5 opacity-90" style={{ color: GOLD }} />
                   <h2 className="text-3xl font-black mb-3">Senior Care Plans</h2>
                   <p className="text-white/80 mb-1">Premium subscription plans for elderly assistance.</p>
-                  <p className="text-white/60 text-sm mb-8">Trusted by NRI families in USA, UK, UAE & Middle East</p>
+                  <p className="text-white/60 text-sm mb-8">Preferred by NRI families in USA, UK, UAE & beyond</p>
                   <div className="grid md:grid-cols-3 gap-4 mb-8">
                     {[
                       { plan: "Basic Care", features: ["4 tasks/month", "Hospital companion", "Medicine pickup"] },
@@ -376,8 +376,8 @@ export default function Landing() {
           <section className="py-20 px-6" style={{ background: "linear-gradient(135deg, #F8F9FC, #EEF2FA)" }}>
             <div className="max-w-4xl mx-auto">
               <motion.div initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="text-center">
-                <h2 className="text-3xl font-black text-[#0A1628] mb-3">Earn Rs 500–1,500 Daily</h2>
-                <p className="text-gray-500 mb-8 max-w-md mx-auto">Be your own boss. Set your hours. Go LineLess runners earn more than most gig jobs — with meaningful work that helps real people.</p>
+                <h2 className="text-3xl font-black text-[#0A1628] mb-3">Earn competitive earnings</h2>
+                <p className="text-gray-500 mb-8 max-w-md mx-auto">Be your own boss. Set your hours. Go LineLess Comrades earn competitive earnings — with meaningful work that helps real people. Actual earnings vary based on tasks completed, distance, and hours online during pilot.</p>
                 <div className="grid md:grid-cols-3 gap-4 mb-10 max-w-2xl mx-auto">
                   {[
                     { Icon: Clock, title: "Flexible Hours", desc: "Go online when you want" },
@@ -396,7 +396,7 @@ export default function Landing() {
                   className="px-8 py-4 rounded-2xl text-white font-bold text-lg shadow-lg hover:shadow-xl transition-all hover:scale-105"
                   style={{ background: NAVY_GRAD }}
                 >
-                  Join as a Runner
+                  Join as a Comrade
                 </button>
               </motion.div>
             </div>
@@ -406,7 +406,8 @@ export default function Landing() {
           <section className="py-20 px-6 bg-white">
             <div className="max-w-4xl mx-auto">
               <motion.div initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="text-center mb-12">
-                <h2 className="text-3xl font-black text-[#0A1628]">What our users say</h2>
+                <h2 className="text-3xl font-black text-[#0A1628]">What pilot users say</h2>
+                <p className="text-gray-400 text-xs mt-2">Early pilot feedback from our Ahmedabad community.</p>
               </motion.div>
               <div className="grid md:grid-cols-3 gap-6">
                 {testimonials.map((t, i) => (
@@ -457,6 +458,7 @@ export default function Landing() {
                   >
                     <button
                       onClick={() => setOpenFaq(openFaq === i ? null : i)}
+                      aria-expanded={openFaq === i}
                       className="w-full flex items-center justify-between px-6 py-4 text-left"
                     >
                       <span className="font-semibold text-[#0A1628] text-sm">{faq.q}</span>
@@ -490,7 +492,7 @@ export default function Landing() {
                     <img src="/logo.jpg" alt="Go LineLess" className="h-10 w-auto" />
                   </div>
                   <p className="text-white/60 text-sm">Life Without Waiting</p>
-                  <p className="text-white/40 text-xs mt-1">India's trusted offline assistance network</p>
+                  <p className="text-white/40 text-xs mt-1">India's offline assistance network</p>
                   <p className="text-white/30 text-xs mt-2">GoLineLess.com · GoLineLess.in</p>
                 </div>
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-8 text-sm">

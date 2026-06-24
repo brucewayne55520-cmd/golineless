@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
-import { PersonStanding, MapPin, Star, CheckCircle2, XCircle, X } from "lucide-react";
+import { PersonStanding, MapPin, Star, CheckCircle2, XCircle, X, Wifi } from "lucide-react";
 import { useListAdminRunners, useReviewRunnerKyc } from "@workspace/api-client-react";
+import type { Runner } from "@workspace/api-client-react";
 import AdminSidebar from "@/components/AdminSidebar";
 import { getInitials } from "@/lib/utils";
 
@@ -11,17 +12,18 @@ const TAB_LABELS: Record<string, string> = { pending: "Pending KYC", verified: "
 
 export default function AdminRunners() {
   const [tab, setTab] = useState("pending");
-  const [selected, setSelected] = useState<any | null>(null);
+  type RunnerWithDocs = Runner & { bankAccount?: string; bankIfsc?: string; bankAccountHolder?: string; aadhaarFront?: string; aadhaarBack?: string };
+  const [selected, setSelected] = useState<RunnerWithDocs | null>(null);
   const [rejReason, setRejReason] = useState("");
-  const { data: runners, isLoading, refetch } = useListAdminRunners({ params: { kyc_status: tab } } as any);
+  const { data: runners, isLoading, refetch } = useListAdminRunners({ kyc_status: tab as import("@workspace/api-client-react").ListAdminRunnersKycStatus });
   const reviewKyc = useReviewRunnerKyc();
 
-  const list = (runners as any[]) ?? [];
+  const list = (runners ?? []) as Required<import("@workspace/api-client-react").Runner>[];
 
   const handleReview = (action: "approve" | "reject") => {
     if (!selected) return;
-    reviewKyc.mutate({ id: String(selected.id), data: { action, rejectionReason: rejReason || undefined } } as any, {
-      onSuccess: () => { toast.success(action === "approve" ? "Runner approved!" : "Runner rejected"); setSelected(null); refetch(); },
+    reviewKyc.mutate({ id: Number(selected.id), data: { action, rejectionReason: rejReason || undefined } as import("@workspace/api-client-react").KycReviewInput }, {
+      onSuccess: () => { toast.success(action === "approve" ? "Comrade approved!" : "Runner rejected"); setSelected(null); refetch(); },
       onError: () => toast.error("Action failed"),
     });
   };
@@ -31,7 +33,7 @@ export default function AdminRunners() {
       <AdminSidebar />
       <main className="flex-1 overflow-y-auto p-6">
         <div className="mb-5">
-          <h1 className="text-2xl font-black text-[#1A1A2E]">Runners</h1>
+          <h1 className="text-2xl font-black text-[#1A1A2E]">Comrades</h1>
         </div>
 
         <div className="flex gap-2 mb-5">
@@ -57,7 +59,7 @@ export default function AdminRunners() {
           </div>
         ) : (
           <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-            {list.map((runner: any) => (
+            {list.map((runner: Required<import("@workspace/api-client-react").Runner>) => (
               <div key={runner.id} className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
                 <div className="flex items-center gap-3 mb-3">
                   <div className="w-12 h-12 bg-[#6C3FD4] rounded-full flex items-center justify-center text-white font-bold text-lg">
@@ -74,12 +76,44 @@ export default function AdminRunners() {
                       <MapPin size={11} /> {runner.city}, {runner.area}
                     </p>
                   )}
+                  {runner.trustScore != null && (
+                    <p className="flex items-center gap-1">
+                      <span className={`w-1.5 h-1.5 rounded-full ${
+                        runner.trustScore >= 95 ? "bg-yellow-400" :
+                        runner.trustScore >= 90 ? "bg-green-400" :
+                        runner.trustScore >= 80 ? "bg-blue-400" :
+                        runner.trustScore >= 70 ? "bg-gray-400" :
+                        "bg-red-400"
+                      }`} />
+                      <span className="font-bold">{runner.trustScore}</span> Trust Score
+                      {runner.trustBadge && runner.trustBadge !== "improving" && (
+                        <span className={`text-[10px] px-1.5 py-0.5 rounded ${
+                          runner.trustBadge === "elite" ? "bg-yellow-100 text-yellow-700" :
+                          runner.trustBadge === "trusted" ? "bg-green-100 text-green-700" :
+                          runner.trustBadge === "verified" ? "bg-blue-100 text-blue-700" :
+                          "bg-gray-100 text-gray-700"
+                        }`}>{runner.trustBadge}</span>
+                      )}
+                    </p>
+                  )}
                   {runner.rating && (
                     <p className="flex items-center gap-1">
                       <Star size={11} className="text-yellow-400" /> {Number(runner.rating).toFixed(1)} · {runner.totalTasks} tasks
                     </p>
                   )}
+                  {runner.tasksCompleted != null && (
+                    <p className="text-gray-400">{runner.tasksCompleted}/{runner.tasksAccepted ?? 0} completed</p>
+                  )}
                   <p>Joined: {new Date(runner.createdAt).toLocaleDateString("en-IN")}</p>
+                  {/* Phase 6.1: Dispatch Allowed badge */}
+                  {runner.dispatchAllowed && runner.kycStatus === "pending" && (
+                    <p className="flex items-center gap-1 text-amber-600">
+                      <Wifi size={11} /> Dispatch enabled (temp)
+                    </p>
+                  )}
+                  {runner.onboardingCompleted && (
+                    <p className="text-gray-400 text-[10px]">Onboarding ✓</p>
+                  )}
                 </div>
                 <button
                   onClick={() => { setSelected(runner); setRejReason(""); }}
@@ -93,8 +127,7 @@ export default function AdminRunners() {
           </div>
         )}
 
-        <AnimatePresence>
-          {selected && (
+        <AnimatePresence>            {selected != null && (
             <>
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-black/50 z-40" onClick={() => setSelected(null)} />
               <motion.div
@@ -163,6 +196,29 @@ export default function AdminRunners() {
                 <div className="p-6 border-t border-gray-100 space-y-4">
                   {tab === "pending" && (
                     <>
+                      {/* Phase 6.1: Temporary dispatch approval */}
+                      {selected.kycStatus === "pending" && !selected.dispatchAllowed && (
+                        <button
+                          onClick={() => {
+                            reviewKyc.mutate({ id: Number(selected.id), data: { dispatchAllowed: true } as import("@workspace/api-client-react").KycReviewInput }, {
+                              onSuccess: () => { toast.success("Dispatch allowed! Runner can now receive tasks while KYC is pending."); setSelected(null); refetch(); },
+                              onError: () => toast.error("Failed to update"),
+                            });
+                          }}
+                          disabled={reviewKyc.isPending}
+                          className="w-full py-3 rounded-xl text-white font-bold flex items-center justify-center gap-2"
+                          style={{ background: "linear-gradient(135deg, #C9A84C, #D4B870)" }}
+                        >
+                          <Wifi size={16} /> Quick Approve — Allow Dispatch (KYC Pending)
+                        </button>
+                      )}
+                      {selected.dispatchAllowed && selected.kycStatus === "pending" && (
+                        <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 flex items-center gap-2">
+                          <Wifi size={16} className="text-amber-600" />
+                          <span className="text-amber-700 text-sm font-semibold">Dispatch already enabled. Runner can receive tasks.</span>
+                        </div>
+                      )}
+
                       <input
                         value={rejReason}
                         onChange={e => setRejReason(e.target.value)}
@@ -176,7 +232,7 @@ export default function AdminRunners() {
                           className="flex-1 py-3 rounded-xl text-white font-bold flex items-center justify-center gap-2"
                           style={{ background: "linear-gradient(135deg, #22C55E, #16A34A)" }}
                         >
-                          <CheckCircle2 size={16} /> Approve
+                          <CheckCircle2 size={16} /> Full Approve (KYC Verified)
                         </button>
                         <button
                           onClick={() => handleReview("reject")}

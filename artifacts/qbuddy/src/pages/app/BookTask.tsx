@@ -1,20 +1,34 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 import confetti from "canvas-confetti";
-import { Clock, Zap, MapPin, CreditCard, Banknote, Sparkles, ArrowLeft, Shield, CheckCircle2, ChevronDown } from "lucide-react";
-import { useCreateTask } from "@workspace/api-client-react";
+import { Clock, Zap, MapPin, Sparkles, ArrowLeft, Shield, CheckCircle2, ChevronDown } from "lucide-react";
+import { useCreateTask, useListAvailableRunners, usePricingPreview, type PricingResponse, type TaskInput, type PricingInput, type Task } from "@workspace/api-client-react";
 import { CategoryIcon, CATEGORY_KEYS } from "@/components/CategoryIcon";
-import { CATEGORY_NAMES, CATEGORY_PRICES, formatCurrency } from "@/lib/utils";
-
-const NAVY = "#0F2557";
-const NAVY_GRAD = "linear-gradient(135deg, #0F2557, #1D3D7C)";
-const GOLD = "#C9A84C";
-const GOLD_GRAD = "linear-gradient(135deg, #C9A84C, #D4B870)";
+import { CATEGORY_NAMES, formatCurrency } from "@/lib/utils";
+// [OFFLINE MODE] Online payment disabled for pilot — uncomment to re-enable Razorpay
+// import { openRazorpayCheckout } from "@/lib/razorpay-checkout";
+import { NAVY, NAVY_GRAD, GOLD, GOLD_GRAD } from "@/lib/theme";
 
 const DISTANCE_CHARGES: Record<string, number> = { "0-2": 0, "2-5": 20, "5+": 50 };
 const DISTANCE_LABELS: Record<string, string> = { "0-2": "0–2 km", "2-5": "2–5 km", "5+": "5+ km" };
+
+const HUB_CATEGORIES: Record<string, string[]> = {
+  healthcare: ["hospital","medicine"],
+  documentation: ["document","govt_office"],
+  banking: ["bank"],
+  senior: ["senior_care","errand"],
+  emergency: ["emergency"],
+};
+
+const HUB_NAMES: Record<string, string> = {
+  healthcare: "Healthcare Assistance",
+  documentation: "Documentation Help",
+  banking: "Banking Assistance",
+  senior: "Senior Care",
+  emergency: "Emergency",
+};
 
 const LIFE_SITUATIONS: Record<string, { label: string; desc: string }> = {
   hospital: { label: "Healthcare Help", desc: "Hospital visits, OPD, reports, pharmacy" },
@@ -33,7 +47,14 @@ export default function BookTask() {
   const [step, setStep] = useState(1);
   const [, navigate] = useLocation();
   const [params] = useState(() => new URLSearchParams(window.location.search));
-  const [category, setCategory] = useState(params.get("category") ?? "hospital");
+  const initialCategory = (() => {
+    const cat = params.get("category");
+    if (cat && CATEGORY_KEYS.includes(cat)) return cat;
+    const hub = params.get("hub");
+    if (hub && HUB_CATEGORIES[hub]?.length) return HUB_CATEGORIES[hub][0];
+    return "hospital";
+  })();
+  const [category, setCategory] = useState(initialCategory);
   const [showCategoryPicker, setShowCategoryPicker] = useState(false);
   const [description, setDescription] = useState("");
   const [seniorInvolved, setSeniorInvolved] = useState(false);
@@ -44,25 +65,68 @@ export default function BookTask() {
   const [locationName, setLocationName] = useState("");
   const [locationArea, setLocationArea] = useState("");
   const [distanceBand, setDistanceBand] = useState("0-2");
-  const [paymentMethod, setPaymentMethod] = useState("online");
+  // New dispatch fields
+  const [pickupRequired, setPickupRequired] = useState(false);
+  const [pickupAddress, setPickupAddress] = useState("");
+  const [pickupArea, setPickupArea] = useState("");
+  const [fromArea, setFromArea] = useState("");
+  const [toArea, setToArea] = useState("");
+  const [estimatedDurationMinutes, setEstimatedDurationMinutes] = useState(30);
+  // Phase 7: Queue Intelligence V2 — expected token
+  const [expectedTokenNumber, setExpectedTokenNumber] = useState("");
+  const availableRunnersQuery = useListAvailableRunners({ query: { queryKey: ["availableRunners"], refetchInterval: 30000 } });
+  const nearbyComrades = (availableRunnersQuery.data ?? []).slice(0, 5).map((r: Required<import("@workspace/api-client-react").AvailableRunner>) => ({ ...r, distanceKm: null }));
+  // [OFFLINE MODE] All tasks default to cash — change to "online" to re-enable Razorpay
+  const paymentMethod = "cash";
   const [coupon, setCoupon] = useState("");
   const [couponApplied, setCouponApplied] = useState(false);
   const [terms, setTerms] = useState(false);
-  const [bookedTask, setBookedTask] = useState<any>(null);
+  const [bookedTask, setBookedTask] = useState<import("@workspace/api-client-react").Task | null>(null);
 
-  const createTask = useCreateTask();
+  const createTask = useCreateTask({
+    request: {
+      headers: {
+        Authorization: `Bearer ${localStorage.getItem("golineless_user_token") || ""}`,
+      },
+    },
+  });
 
-  const basePrice = CATEGORY_PRICES[category] ?? 149;
-  const distanceCharge = DISTANCE_CHARGES[distanceBand] ?? 0;
-  const urgencyCharge = urgency === "urgent" ? 50 : 0;
-  const platformFee = 20;
-  let subtotal = basePrice + distanceCharge + urgencyCharge + platformFee;
-  const discountAmount = couponApplied ? Math.round(subtotal * 0.1) : 0;
-  const total = subtotal - discountAmount;
-  const runnerEarning = Math.round((total - platformFee) * 0.7);
+  // [OFFLINE MODE] Razorpay checkout state — uncomment to re-enable online payments
+  // const [paymentOrderInfo, setPaymentOrderInfo] = useState<{orderId: string; amount: number; currency: string; keyId: string} | null>(null);
+  // const [paymentResult, setPaymentResult] = useState<"processing" | "success" | "failed" | "dismissed" | null>(null);
+
+  // Phase 7.2: Pricing Authority — use backend as single source of truth
+  const [backendPrice, setBackendPrice] = useState<{
+    price: number;
+    originalPrice: number;
+    discountAmount: number;
+    breakdown: { basePrice: number; distanceCharge: number; urgencyCharge: number; priorityFee: number; runnerEarning: number; platformFee: number };
+  } | null>(null);
+  const pricingPreview = usePricingPreview();
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      pricingPreview.mutate({
+        data: {
+          category,
+          distanceBand,
+          urgency,
+          priorityLevel: "normal",
+          couponCode: couponApplied ? coupon : undefined,
+        } as PricingInput,
+      }, {          onSuccess: (data: PricingResponse) => setBackendPrice(data as unknown as NonNullable<typeof backendPrice>),
+        onError: () => setBackendPrice(null),
+      });
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [category, distanceBand, urgency, couponApplied, coupon]);
+
+  // C5: ONLY use authoritative backend price. Backend already returns final price (after discount).
+  const displayTotal = backendPrice != null ? backendPrice.price : null;
+  const displayRunnerEarning = backendPrice?.breakdown?.runnerEarning ?? null;
 
   const handleApplyCoupon = () => {
-    if (coupon.toUpperCase() === "QBUDDY10" || coupon.toUpperCase() === "GOLINELESS10") {
+    if (coupon.toUpperCase() === "GOLINELESS10") {
       setCouponApplied(true);
       toast.success("Coupon applied — 10% off!");
     } else {
@@ -70,21 +134,70 @@ export default function BookTask() {
     }
   };
 
+  // [OFFLINE MODE] Online payment processing — uncomment to re-enable Razorpay checkout
+  // const processPayment = async (paymentOrder?: { orderId: string; amount: number; currency: string; keyId: string }) => {
+  //   const po = paymentOrder ?? paymentOrderInfo;
+  //   if (!po) return;
+  //   if (paymentOrder) setPaymentOrderInfo({ orderId: po.orderId, amount: po.amount, currency: po.currency, keyId: po.keyId });
+  //   setPaymentResult("processing");
+  //   try {
+  //     const result = await openRazorpayCheckout({
+  //       orderId: po.orderId,
+  //       amount: po.amount,
+  //       currency: po.currency || "INR",
+  //       keyId: po.keyId,
+  //       description: `${category} task`,
+  //       phone: localStorage.getItem("golineless_user_phone") || undefined,
+  //     });
+  //     if (result.status === "success") {
+  //       setPaymentResult("success");
+  //       confetti({ particleCount: 120, spread: 80, origin: { y: 0.6 }, colors: [NAVY, GOLD, "#1D3D7C"] });
+  //     } else if (result.status === "failed") {
+  //       setPaymentResult("failed");
+  //       toast.error(`Payment failed: ${result.error.description}`);
+  //     } else {
+  //       setPaymentResult("dismissed");
+  //       if (!paymentOrder) toast.message("Payment window closed. You can retry or pay later when the task is completed.");
+  //     }
+  //   } catch (err) {
+  //     setPaymentResult("failed");
+  //     toast.error(err instanceof Error ? err.message : "Payment processing error. Please try again.");
+  //   }
+  // };
+
   const handleBook = () => {
     if (!terms) { toast.error("Please accept the terms to continue"); return; }
+    // Haptic feedback on confirm (#96)
+    if (navigator.vibrate) navigator.vibrate([50, 30, 50]);
     createTask.mutate({
       data: {
         category, description, urgency, locationName, locationArea, locationCity: "Ahmedabad",
         distanceBand, scheduledDate, scheduledTime, paymentMethod,
-        couponCode: couponApplied ? "QBUDDY10" : undefined,
+        couponCode: couponApplied ? coupon : undefined,
         seniorInvolved, specialInstructions,
-      } as any,
+        pickupRequired, pickupAddress, pickupArea,
+        fromArea, toArea, estimatedDurationMinutes,
+        expectedTokenNumber: expectedTokenNumber || undefined,
+      } as TaskInput,
     }, {
-      onSuccess: (data) => {
+      onSuccess: (data: Task & { paymentOrder?: { orderId: string; amount: number; currency: string; keyId: string } }) => {
         setBookedTask(data);
+        // [OFFLINE MODE] Skip Razorpay checkout — tasks are cash-on-completion
+        // Uncomment below to re-enable online payment flow:
+        // const po = data.paymentOrder;
+        // if (po?.orderId && po?.keyId) {
+        //   processPayment(po);
+        // } else {
         confetti({ particleCount: 120, spread: 80, origin: { y: 0.6 }, colors: [NAVY, GOLD, "#1D3D7C"] });
+        // }
       },
-      onError: () => toast.error("Booking failed. Please try again."),
+      onError: (err: unknown) => {
+        // ApiError stores parsed JSON body in err.data
+        const errAny = err as { data?: { detail?: string; error?: string }; message?: string };
+        const detail = errAny?.data?.detail || errAny?.data?.error || "";
+        const msg = detail ? `${detail}` : (errAny?.message || "Booking failed. Please try again.");
+        toast.error(msg);
+      },
     });
   };
 
@@ -172,7 +285,7 @@ export default function BookTask() {
                   rows={4}
                   placeholder="Describe your task in detail. E.g. 'Need someone to collect blood reports from Civil Hospital and bring them home by 2pm.'"
                   className={`${inputClass} resize-none`}
-                  style={{ "--tw-ring-color": NAVY } as any}
+                  style={{ "--tw-ring-color": NAVY } as React.CSSProperties}
                 />
                 <div className="flex justify-between mt-1.5">
                   <span className="text-xs text-gray-400">Be as specific as possible</span>
@@ -190,7 +303,7 @@ export default function BookTask() {
                   ].map((opt) => (
                     <button
                       key={opt.val}
-                      onClick={() => setUrgency(opt.val as any)}
+                      onClick={() => setUrgency(opt.val as "normal" | "urgent")}
                       className="p-4 rounded-xl border-2 text-left transition-all"
                       style={urgency === opt.val ? { borderColor: NAVY, background: "#EEF2FA" } : { borderColor: "#E5E7EB" }}
                     >
@@ -283,13 +396,78 @@ export default function BookTask() {
                     <input value={locationName} onChange={(e) => setLocationName(e.target.value)} placeholder="E.g. Civil Hospital, Sector 21 Gandhinagar..." className={inputClass} />
                   </div>
                   <div>
-                    <label className="text-xs font-semibold text-gray-500 mb-1.5 block">Area / Locality</label>
+                    <label className="text-xs font-semibold text-gray-500 mb-1.5 block">Task Area / Locality</label>
                     <input value={locationArea} onChange={(e) => setLocationArea(e.target.value)} placeholder="E.g. Navrangpura, Bopal, Satellite..." className={inputClass} />
                   </div>
                   <div>
                     <label className="text-xs font-semibold text-gray-500 mb-1.5 block">City</label>
                     <input value="Ahmedabad" readOnly className="w-full border border-gray-100 rounded-xl px-3.5 py-3 text-sm bg-gray-50 text-gray-400 cursor-not-allowed" />
                   </div>
+                </div>
+              </div>
+
+              {/* From/To Area */}
+              <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
+                <h3 className="font-black text-[#0A1628] mb-1">From → To</h3>
+                <p className="text-xs text-gray-400 mb-3">Help the Comrade know the route</p>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-xs font-semibold text-gray-500 mb-1.5 block">From Area</label>
+                    <input value={fromArea} onChange={(e) => setFromArea(e.target.value)} placeholder="E.g. Bopal, Satellite" className={inputClass} />
+                  </div>
+                  <div>
+                    <label className="text-xs font-semibold text-gray-500 mb-1.5 block">To Area</label>
+                    <input value={toArea} onChange={(e) => setToArea(e.target.value)} placeholder="E.g. SG Highway, Navrangpura" className={inputClass} />
+                  </div>
+                </div>
+              </div>
+
+              {/* Pickup Required */}
+              <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
+                <label className="flex items-center gap-3 cursor-pointer">
+                  <button
+                    onClick={() => setPickupRequired(!pickupRequired)}
+                    className="w-12 h-6 rounded-full transition-colors relative flex-shrink-0"
+                    style={{ background: pickupRequired ? NAVY : "#E5E7EB" }}
+                  >
+                    <div className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${pickupRequired ? "translate-x-6" : "translate-x-0.5"}`} />
+                  </button>
+                  <div>
+                    <span className="text-sm font-semibold text-gray-700">Pickup required?</span>
+                    <p className="text-xs text-gray-400 mt-0.5">Comrade should first go collect something from another location</p>
+                  </div>
+                </label>
+                {pickupRequired && (
+                  <div className="mt-3 space-y-3">
+                    <div>
+                      <label className="text-xs font-semibold text-gray-500 mb-1.5 block">Pickup Address</label>
+                      <input value={pickupAddress} onChange={(e) => setPickupAddress(e.target.value)} placeholder="Pickup location address..." className={inputClass} />
+                    </div>
+                    <div>
+                      <label className="text-xs font-semibold text-gray-500 mb-1.5 block">Pickup Area</label>
+                      <input value={pickupArea} onChange={(e) => setPickupArea(e.target.value)} placeholder="E.g. CG Road, Ashram Road..." className={inputClass} />
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Estimated Duration */}
+              <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
+                <h3 className="font-black text-[#0A1628] mb-1">Estimated Duration</h3>
+                <p className="text-xs text-gray-400 mb-3">How long do you think this task will take?</p>
+                <div className="flex gap-2">
+                  {[15, 30, 45, 60, 90, 120].map(mins => (
+                    <button
+                      key={mins}
+                      onClick={() => setEstimatedDurationMinutes(mins)}
+                      className={`py-2 px-3 rounded-xl border-2 text-xs font-bold transition-all`}
+                      style={estimatedDurationMinutes === mins
+                        ? { borderColor: NAVY, background: "#EEF2FA", color: NAVY }
+                        : { borderColor: "#E5E7EB", color: "#6B7280" }}
+                    >
+                      {mins < 60 ? `${mins} min` : `${Math.floor(mins / 60)}h`}
+                    </button>
+                  ))}
                 </div>
               </div>
 
@@ -324,7 +502,16 @@ export default function BookTask() {
               </div>
 
               <button
-                onClick={() => setStep(3)}
+                onClick={() => {
+                  // Fix #47: Validate location fields before proceeding
+                  if (!locationName.trim() && !locationArea.trim()) {
+                    toast.error("Please enter a location name or area so the Comrade knows where to go");
+                    return;
+                  }
+                  // Haptic feedback (#96)
+                  if (navigator.vibrate) navigator.vibrate(50);
+                  setStep(3);
+                }}
                 className="w-full py-4 rounded-2xl font-black text-base shadow-md hover:shadow-lg transition-all"
                 style={{ background: GOLD_GRAD, color: "#0A1628" }}
               >
@@ -348,14 +535,20 @@ export default function BookTask() {
                     <p className="text-xs text-gray-400 mt-0.5">{scheduledDate} · {scheduledTime} · {locationArea || "Ahmedabad"}</p>
                   </div>
                 </div>
-                <h3 className="font-bold text-[#0A1628] mb-3">Price Breakdown</h3>
+                <h3 className="font-bold text-[#0A1628] mb-3">Estimated Price</h3>
+                <p className="text-[10px] text-gray-400 mb-3">Final price confirmed after booking · May vary based on urgency &amp; priority</p>
+                {pricingPreview.isPending && (
+                  <div className="text-center py-2">
+                    <div className="inline-block w-4 h-4 border-2 border-t-transparent rounded-full animate-spin" style={{ borderColor: `${NAVY}40`, borderTopColor: NAVY }} />
+                  </div>
+                )}
                 <div className="space-y-2.5 text-sm">
-                  {[
-                    { label: `Base service fee`, val: basePrice },
-                    { label: `Distance (${DISTANCE_LABELS[distanceBand]})`, val: distanceCharge },
-                    { label: `${urgency === "urgent" ? "Urgent priority fee" : "Standard scheduling"}`, val: urgencyCharge },
-                    { label: "Platform fee", val: platformFee },
-                    ...(couponApplied ? [{ label: "Coupon discount (10%)", val: -discountAmount }] : []),
+                  {backendPrice?.breakdown ? [
+                    { label: `Base service fee`, val: backendPrice.breakdown.basePrice },
+                    { label: `Distance (${DISTANCE_LABELS[distanceBand]})`, val: backendPrice.breakdown.distanceCharge },
+                    { label: `${urgency === "urgent" ? "Urgent priority fee" : "Standard scheduling"}`, val: backendPrice.breakdown.urgencyCharge },
+                    { label: "Priority fee", val: backendPrice.breakdown.priorityFee },
+                    ...(backendPrice.discountAmount > 0 ? [{ label: "Coupon discount (10%)", val: -backendPrice.discountAmount }] : []),
                   ].map((row) => (
                     <div key={row.label} className="flex justify-between">
                       <span className="text-gray-500">{row.label}</span>
@@ -363,15 +556,22 @@ export default function BookTask() {
                         {row.val < 0 ? "−" : ""}Rs {Math.abs(row.val)}
                       </span>
                     </div>
-                  ))}
+                  )) : pricingPreview.isPending ? null : (
+                    <p className="text-xs text-gray-400 text-center py-2">Loading price from server...</p>
+                  )}
                   <div className="border-t border-gray-100 pt-3 flex justify-between font-black text-[#0A1628] text-lg">
-                    <span>Total</span>
-                    <span style={{ color: NAVY }}>{formatCurrency(total)}</span>
+                    <span>{displayTotal != null ? "Total" : ""}</span>
+                    <span style={{ color: NAVY }}>{displayTotal != null ? formatCurrency(displayTotal) : "—"}</span>
                   </div>
-                  <div className="flex justify-between text-xs text-gray-400">
-                    <span>Runner earns (70%)</span>
-                    <span className="font-semibold">{formatCurrency(runnerEarning)}</span>
-                  </div>
+                  {displayRunnerEarning != null && (
+                    <div className="flex justify-between text-xs text-gray-400">
+                      <span>Runner earns (70%)</span>
+                      <span className="font-semibold">{formatCurrency(displayRunnerEarning)}</span>
+                    </div>
+                  )}
+                  {backendPrice && (
+                    <p className="text-[9px] text-green-600 text-center mt-1">✓ Price confirmed by backend</p>
+                  )}
                 </div>
               </div>
 
@@ -389,29 +589,67 @@ export default function BookTask() {
                 ))}
               </div>
 
-              {/* Payment */}
+              {/* [OFFLINE MODE] Payment — cash on completion, no online payment needed */}
               <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
                 <h3 className="font-bold text-[#0A1628] mb-3">Payment Method</h3>
-                <div className="grid grid-cols-2 gap-3">
-                  {[
-                    { val: "online", label: "Pay Now", Icon: CreditCard, sub: "UPI / Cards / Net banking" },
-                    { val: "cash", label: "Pay on Completion", Icon: Banknote, sub: "Cash to runner" },
-                  ].map((opt) => (
-                    <button
-                      key={opt.val}
-                      onClick={() => setPaymentMethod(opt.val)}
-                      className="p-3.5 rounded-xl border-2 text-left transition-all"
-                      style={paymentMethod === opt.val
-                        ? { borderColor: NAVY, background: "#EEF2FA" }
-                        : { borderColor: "#E5E7EB" }}
-                    >
-                      <opt.Icon size={18} style={{ color: paymentMethod === opt.val ? NAVY : "#9CA3AF" }} />
-                      <div className="text-sm font-bold mt-1.5" style={{ color: paymentMethod === opt.val ? NAVY : "#374151" }}>{opt.label}</div>
-                      <div className="text-xs text-gray-400 mt-0.5">{opt.sub}</div>
-                    </button>
-                  ))}
+                <div className="p-4 rounded-xl border-2 bg-green-50/50" style={{ borderColor: "#22C55E40" }}>
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: "linear-gradient(135deg, #22C55E, #16A34A)" }}>
+                      <CheckCircle2 size={18} className="text-white" />
+                    </div>
+                    <div>
+                      <p className="font-bold text-sm" style={{ color: "#16A34A" }}>Pay Cash on Completion</p>
+                      <p className="text-xs text-gray-400 mt-0.5">No online payment needed — pay your Comrade directly</p>
+                    </div>
+                  </div>
                 </div>
               </div>
+
+              {/* Phase 7: Expected Token Number for Queue Categories */}
+              {["hospital","bank","govt_office"].includes(category) && (
+                <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
+                  <h3 className="font-bold text-[#0A1628] mb-1">Queue Information</h3>
+                  <p className="text-xs text-gray-400 mb-3">If you already know your token number, enter it to help your Comrade track queue progress</p>
+                  <input
+                    value={expectedTokenNumber}
+                    onChange={(e) => setExpectedTokenNumber(e.target.value)}
+                    placeholder="Expected token number (e.g. 42)"
+                    className="w-full border border-gray-200 rounded-xl px-3.5 py-3 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:border-transparent transition-all bg-white"
+                    inputMode="numeric"
+                  />
+                  {expectedTokenNumber && (
+                    <p className="text-xs text-green-600 mt-2 flex items-center gap-1">
+                      <CheckCircle2 size={12} /> Comrade will track queue and update progress automatically
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {/* Phase 7: Nearby Comrades Preview */}
+              {nearbyComrades.length > 0 && (
+                <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
+                  <h3 className="font-bold text-[#0A1628] mb-1 text-sm flex items-center gap-1"><MapPin size={14} /> Nearby Available Comrades</h3>
+                  <p className="text-xs text-gray-400 mb-3">These comrades are available near the task area</p>
+                  <div className="space-y-2">
+                    {(nearbyComrades ?? []).slice(0, 3).map((c: Required<import("@workspace/api-client-react").NearbyRunner>) => (
+                      <div key={c.id} className="flex items-center gap-3 bg-gray-50 rounded-xl p-3">
+                        <div className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold" style={{ background: `linear-gradient(135deg, ${NAVY}, #1D3D7C)` }}>
+                          {c.name?.[0] ?? "C"}
+                        </div>
+                        <div className="flex-1">
+                          <p className="text-sm font-bold text-[#0A1628]">{c.name}</p>
+                          <div className="flex items-center gap-2 text-[10px] text-gray-500">
+                            {c.rating && <span>★ {Number(c.rating).toFixed(1)}</span>}
+                            <span>Trust {c.trustScore}</span>
+                            {c.tasksCompleted > 0 && <span>{c.tasksCompleted} tasks</span>}
+                            {c.distanceKm != null && <span>📍 {c.distanceKm} km</span>}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {/* Coupon */}
               <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
@@ -445,18 +683,19 @@ export default function BookTask() {
 
               <button
                 onClick={handleBook}
-                disabled={createTask.isPending}
+                disabled={createTask.isPending || displayTotal == null}
                 className="w-full py-4 rounded-2xl text-white font-black text-base shadow-md hover:shadow-lg transition-all"
-                style={{ background: NAVY_GRAD }}
+                style={{ background: (createTask.isPending || displayTotal == null) ? "#6B7280" : NAVY_GRAD }}
               >
-                {createTask.isPending ? "Confirming..." : `Confirm & Book · ${formatCurrency(total)}`}
+                {createTask.isPending ? "Confirming..." : displayTotal == null ? "Calculating price..." : `Confirm & Book · ${formatCurrency(displayTotal)}`}
               </button>
             </motion.div>
           )}
         </AnimatePresence>
       </div>
 
-      {/* Success modal */}
+      {/* [OFFLINE MODE] Success modal — cash on completion, no Razorpay needed */}
+      {/* To re-enable online payment modal, uncomment the original version below */}
       <AnimatePresence>
         {bookedTask && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="fixed inset-0 bg-black/60 flex items-end z-50 backdrop-blur-sm">
@@ -471,24 +710,20 @@ export default function BookTask() {
                 <Sparkles size={32} className="text-white" />
               </motion.div>
               <h2 className="text-2xl font-black text-[#0A1628] mb-1">Request Confirmed!</h2>
-              <p className="text-gray-500 text-sm mb-6">Your runner will be assigned shortly. Share this OTP when the task is complete.</p>
-              <div className="rounded-2xl p-5 mb-5" style={{ background: "#EEF2FA" }}>
-                <p className="text-xs font-semibold text-gray-500 mb-3 uppercase tracking-wider">Your completion OTP</p>
-                <div className="flex gap-2 justify-center">
-                  {(bookedTask.otp ?? "------").split("").map((d: string, i: number) => (
-                    <div key={i} className="w-11 h-14 bg-white border-2 rounded-xl flex items-center justify-center text-xl font-black shadow-sm"
-                      style={{ borderColor: NAVY, color: NAVY }}>{d}</div>
-                  ))}
-                </div>
-                <p className="text-[10px] text-gray-400 mt-3">Share this only when the task is successfully completed</p>
+              <p className="text-gray-500 text-sm mb-6">
+                Your runner will be assigned shortly. You'll get the completion OTP from your runner when the task is done.
+                <br /><br />
+                <strong style={{ color: NAVY }}>Pay your Comrade directly — cash on completion.</strong>
+              </p>
+              <div className="space-y-3">
+                <button
+                  onClick={() => navigate(`/app/tasks/${bookedTask.id}`)}
+                  className="w-full py-3.5 rounded-2xl text-white font-bold shadow-md hover:shadow-lg transition-all"
+                  style={{ background: NAVY_GRAD }}
+                >
+                  Track your runner →
+                </button>
               </div>
-              <button
-                onClick={() => navigate(`/app/tasks/${bookedTask.id}`)}
-                className="w-full py-3.5 rounded-2xl text-white font-bold shadow-md"
-                style={{ background: NAVY_GRAD }}
-              >
-                Track your runner →
-              </button>
             </motion.div>
           </motion.div>
         )}

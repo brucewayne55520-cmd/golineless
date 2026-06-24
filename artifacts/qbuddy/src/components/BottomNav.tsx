@@ -2,9 +2,7 @@ import { useLocation } from "wouter";
 import { Home, ClipboardList, HeartHandshake, User, List, Play, Wallet } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { LucideIcon } from "lucide-react";
-
-const NAVY = "#0F2557";
-const GOLD = "#C9A84C";
+import { NAVY, GOLD } from "@/lib/theme";
 
 interface NavItem {
   path: string;

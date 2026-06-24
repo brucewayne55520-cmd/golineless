@@ -1,16 +1,29 @@
 import { useLocation } from "wouter";
-import { LayoutDashboard, Map, ClipboardList, PersonStanding, Users, Crown, TrendingUp, Settings, LogOut } from "lucide-react";
+import { LayoutDashboard, Map, ClipboardList, PersonStanding, Users, Crown, TrendingUp, Settings, LogOut, UserPlus, BookOpen, Star, Ticket, ShieldAlert, MapPin, Zap, Activity, Award } from "lucide-react";
+
 import { cn } from "@/lib/utils";
 import type { LucideIcon } from "lucide-react";
+import { NAVY } from "@/lib/theme";
 
-const NAVY = "#0F2557";
 const NAVY_DARK = "#080E1E";
 
 const navItems: { path: string; icon: LucideIcon; label: string; exact?: boolean }[] = [
   { path: "/admin", icon: LayoutDashboard, label: "Dashboard", exact: true },
+  { path: "/admin/pilot", icon: Zap, label: "Pilot Center" },
+  { path: "/admin/operations", icon: Activity, label: "Ops Center" },
+  { path: "/admin/leaderboard", icon: Award, label: "Leaderboard" },
+  { path: "/admin/areas", icon: MapPin, label: "Areas" },
+  { path: "/admin/founder", icon: TrendingUp, label: "Founder" },
+  { path: "/admin/incident-response", icon: ShieldAlert, label: "Incidents Ops" },
   { path: "/admin/map", icon: Map, label: "Live Map" },
   { path: "/admin/tasks", icon: ClipboardList, label: "Tasks" },
   { path: "/admin/runners", icon: PersonStanding, label: "Runners" },
+  { path: "/admin/recruitment", icon: UserPlus, label: "Recruitment" },
+  { path: "/admin/training", icon: BookOpen, label: "Training" },
+  { path: "/admin/quality", icon: Star, label: "Quality" },
+  { path: "/admin/support", icon: Ticket, label: "Support" },
+  { path: "/admin/incidents", icon: ShieldAlert, label: "Incidents" },
+  { path: "/admin/heatmap", icon: MapPin, label: "Heatmap" },
   { path: "/admin/users", icon: Users, label: "Users" },
   { path: "/admin/subscriptions", icon: Crown, label: "Subscriptions" },
   { path: "/admin/analytics", icon: TrendingUp, label: "Analytics" },
@@ -21,7 +34,7 @@ export default function AdminSidebar() {
   const [location, navigate] = useLocation();
 
   const handleLogout = () => {
-    localStorage.removeItem("qbuddy_admin_token");
+    localStorage.removeItem("golineless_admin_token");
     navigate("/admin/login");
   };
 

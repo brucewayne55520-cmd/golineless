@@ -6,9 +6,9 @@ import type { LucideIcon } from "lucide-react";
 
 export default function AdminSubscriptions() {
   const { data, isLoading } = useListAdminSubscriptions();
-  const subs = (data as any[]) ?? [];
+  const subs = (data ?? []) as import("@workspace/api-client-react").Subscription[];
   const active = subs.filter(s => s.status === "active").length;
-  const mrr = subs.filter(s => s.status === "active" && s.billingCycle === "monthly").reduce((sum: number, s: any) => sum + Number(s.amount), 0);
+  const mrr = subs.filter(s => s.status === "active" && s.billingCycle === "monthly").reduce((sum: number, s: import("@workspace/api-client-react").Subscription) => sum + Number(s.amount), 0);
 
   const cards: { label: string; val: number | string; Icon: LucideIcon; color: string }[] = [
     { label: "Active Subscriptions", val: active, Icon: CheckCircle2, color: "#22C55E" },
@@ -51,7 +51,7 @@ export default function AdminSubscriptions() {
               ) : subs.length === 0 ? (
                 <tr><td colSpan={7} className="text-center py-12 text-gray-400">No subscriptions yet</td></tr>
               ) : (
-                subs.map((sub: any) => (
+                subs.map((sub: import("@workspace/api-client-react").Subscription) => (
                   <tr key={sub.id} className="border-b border-gray-50 hover:bg-gray-50">
                     <td className="px-4 py-3">User #{sub.userId}</td>
                     <td className="px-4 py-3 font-medium text-[#6C3FD4]">{sub.planName}</td>

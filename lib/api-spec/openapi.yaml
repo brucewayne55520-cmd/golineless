@@ -1,9 +1,8 @@
 openapi: 3.1.0
 info:
-  # Do not change the title, if the title changes, the import paths will be broken
   title: Api
-  version: 0.1.0
-  description: QBuddy API specification
+  version: 0.2.0
+  description: Go LineLess API specification — Ahmedabad Pilot
 servers:
   - url: /api
     description: Base API path
@@ -12,6 +11,8 @@ tags:
     description: Health operations
   - name: auth
     description: Authentication operations
+  - name: pricing
+    description: Pricing operations
   - name: users
     description: User operations
   - name: tasks
@@ -24,12 +25,17 @@ tags:
     description: Notification operations
   - name: admin
     description: Admin operations
+  - name: operations
+    description: Operations center, recruitment, training, quality, support, incidents
+  - name: payments
+    description: Payment operations
   - name: reviews
     description: Review operations
   - name: locations
     description: Runner location operations
 
 paths:
+  # ─── HEALTH ─────────────────────────────────────────────────────────────────
   /healthz:
     get:
       operationId: healthCheck
@@ -48,7 +54,7 @@ paths:
     post:
       operationId: sendOtp
       tags: [auth]
-      summary: Send OTP to phone
+      summary: Send OTP to phone (user or runner)
       requestBody:
         required: true
         content:
@@ -57,11 +63,13 @@ paths:
               $ref: "#/components/schemas/SendOtpInput"
       responses:
         "200":
-          description: OTP sent
+          description: OTP sent (otp returned in dev)
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/OtpResponse"
+        "400":
+          $ref: "#/components/responses/ErrorResponse"
 
   /auth/verify-otp:
     post:
@@ -76,17 +84,21 @@ paths:
               $ref: "#/components/schemas/VerifyOtpInput"
       responses:
         "200":
-          description: Authenticated
+          description: Authenticated — returns token + user/runner profile
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/AuthResponse"
+        "401":
+          $ref: "#/components/responses/ErrorResponse"
 
   /auth/logout:
     post:
       operationId: logout
       tags: [auth]
-      summary: Logout user
+      summary: Logout (deletes session token)
+      security:
+        - bearerAuth: []
       responses:
         "200":
           description: Logged out
@@ -95,12 +107,57 @@ paths:
               schema:
                 $ref: "#/components/schemas/MessageResponse"
 
+  /admin/login:
+    post:
+      operationId: adminLogin
+      tags: [auth]
+      summary: Admin login with admin password
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AdminLoginInput"
+      responses:
+        "200":
+          description: Admin authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "401":
+          $ref: "#/components/responses/ErrorResponse"
+
+  # ─── PRICING ────────────────────────────────────────────────────────────────
+  /pricing/preview:
+    post:
+      operationId: pricingPreview
+      tags: [pricing]
+      summary: Get authoritative backend pricing for a task
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PricingInput"
+      responses:
+        "200":
+          description: Price breakdown (authoritative — frontend must not compute locally)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PricingResponse"
+        "500":
+          $ref: "#/components/responses/ErrorResponse"
+
   # ─── USERS ──────────────────────────────────────────────────────────────────
   /users/me:
     get:
       operationId: getMe
       tags: [users]
       summary: Get current user profile
+      security:
+        - bearerAuth: []
       responses:
         "200":
           description: User profile
@@ -108,10 +165,14 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/User"
+        "401":
+          $ref: "#/components/responses/ErrorResponse"
     patch:
       operationId: updateMe
       tags: [users]
       summary: Update current user profile
+      security:
+        - bearerAuth: []
       requestBody:
         required: true
         content:
@@ -131,6 +192,8 @@ paths:
       operationId: getUserStats
       tags: [users]
       summary: Get user stats (total tasks, hours saved, value saved)
+      security:
+        - bearerAuth: []
       responses:
         "200":
           description: User statistics
@@ -144,37 +207,47 @@ paths:
     get:
       operationId: listTasks
       tags: [tasks]
-      summary: List tasks for current user or runner
+      summary: List tasks for current user or runner (scoped by auth)
+      security:
+        - bearerAuth: []
       parameters:
         - name: status
           in: query
           schema:
             type: string
+          description: Filter by status (comma-separated for multiple)
         - name: role
           in: query
           schema:
             type: string
+            enum: [user, runner]
         - name: limit
           in: query
           schema:
             type: integer
+            default: 20
         - name: offset
           in: query
           schema:
             type: integer
+            default: 0
       responses:
         "200":
-          description: List of tasks
+          description: List of tasks with user/runner relations
           content:
             application/json:
               schema:
                 type: array
                 items:
                   $ref: "#/components/schemas/Task"
+        "401":
+          $ref: "#/components/responses/ErrorResponse"
     post:
       operationId: createTask
       tags: [tasks]
-      summary: Create a new task
+      summary: Create a new task (booking) — triggers smart dispatch
+      security:
+        - bearerAuth: []
       requestBody:
         required: true
         content:
@@ -183,20 +256,26 @@ paths:
               $ref: "#/components/schemas/TaskInput"
       responses:
         "201":
-          description: Task created
+          description: Task created with dispatch info
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/Task"
+        "403":
+          $ref: "#/components/responses/ErrorResponse"
+        "429":
+          $ref: "#/components/responses/ErrorResponse"
 
   /tasks/available:
     get:
       operationId: listAvailableTasks
       tags: [tasks]
-      summary: List available tasks for runners to accept
+      summary: List pending tasks for runners to accept
+      security:
+        - bearerAuth: []
       responses:
         "200":
-          description: Available tasks
+          description: Available tasks (pending, with user info stripped)
           content:
             application/json:
               schema:
@@ -208,7 +287,9 @@ paths:
     get:
       operationId: getTask
       tags: [tasks]
-      summary: Get task by ID
+      summary: Get task by ID (scoped by ownership)
+      security:
+        - bearerAuth: []
       parameters:
         - name: id
           in: path
@@ -217,17 +298,23 @@ paths:
             type: integer
       responses:
         "200":
-          description: Task
+          description: Task with user/runner relations
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/Task"
+        "403":
+          $ref: "#/components/responses/ErrorResponse"
+        "404":
+          $ref: "#/components/responses/ErrorResponse"
 
   /tasks/{id}/status:
     patch:
       operationId: updateTaskStatus
       tags: [tasks]
-      summary: Update task status
+      summary: Update task status (state machine enforced)
+      security:
+        - bearerAuth: []
       parameters:
         - name: id
           in: path
@@ -242,17 +329,21 @@ paths:
               $ref: "#/components/schemas/TaskStatusUpdate"
       responses:
         "200":
-          description: Updated task
+          description: Updated task with timeline
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/Task"
+        "400":
+          $ref: "#/components/responses/ErrorResponse"
 
   /tasks/{id}/accept:
     post:
       operationId: acceptTask
       tags: [tasks]
-      summary: Runner accepts a task
+      summary: Runner accepts a task (with duplicate acceptance protection)
+      security:
+        - bearerAuth: []
       parameters:
         - name: id
           in: path
@@ -266,12 +357,16 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Task"
+        "409":
+          $ref: "#/components/responses/ErrorResponse"
 
   /tasks/{id}/verify-otp:
     post:
       operationId: verifyTaskOtp
       tags: [tasks]
-      summary: Runner verifies task OTP to mark complete
+      summary: Verify task OTP to mark complete (with brute force protection)
+      security:
+        - bearerAuth: []
       parameters:
         - name: id
           in: path
@@ -291,12 +386,16 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Task"
+        "429":
+          $ref: "#/components/responses/ErrorResponse"
 
   /tasks/{id}/cancel:
     post:
       operationId: cancelTask
       tags: [tasks]
-      summary: Cancel a task
+      summary: Cancel a task (user, runner, or admin)
+      security:
+        - bearerAuth: []
       parameters:
         - name: id
           in: path
@@ -316,6 +415,8 @@ paths:
       operationId: submitReview
       tags: [reviews]
       summary: Submit a review for a completed task
+      security:
+        - bearerAuth: []
       parameters:
         - name: id
           in: path
@@ -336,12 +437,206 @@ paths:
               schema:
                 $ref: "#/components/schemas/Review"
 
+  /tasks/{id}/proof-photo:
+    post:
+      operationId: uploadProofPhoto
+      tags: [tasks]
+      summary: Upload proof photo (with GPS validation and duplicate detection)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProofPhotoInput"
+      responses:
+        "200":
+          description: Task with updated proof photos
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Task"
+        "400":
+          $ref: "#/components/responses/ErrorResponse"
+
+  /tasks/{id}/waiting/start:
+    post:
+      operationId: startWaiting
+      tags: [tasks]
+      summary: Start waiting timer for queue-based tasks
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Task with waiting timer started
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Task"
+
+  /tasks/{id}/waiting/pause:
+    post:
+      operationId: pauseWaiting
+      tags: [tasks]
+      summary: Pause waiting timer and calculate charge
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Task with waiting paused
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Task"
+
+  /tasks/{id}/waiting/end:
+    post:
+      operationId: endWaiting
+      tags: [tasks]
+      summary: End waiting timer (alias for pause with completion)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Task with waiting ended
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Task"
+
+  /tasks/{id}/queue/progress:
+    post:
+      operationId: updateQueueProgress
+      tags: [tasks]
+      summary: Update queue progress (token number, counter, ETA)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/QueueProgressInput"
+      responses:
+        "200":
+          description: Task with updated queue info
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Task"
+
+  /tasks/{id}/family-tracking:
+    post:
+      operationId: generateFamilyTrackingLink
+      tags: [tasks]
+      summary: Generate a shareable family tracking link for a task
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FamilyTrackingInput"
+      responses:
+        "200":
+          description: Family tracking token and share link
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FamilyTrackingResponse"
+
+  /tasks/{id}/timeline:
+    get:
+      operationId: getTaskTimeline
+      tags: [tasks]
+      summary: Get task timeline entries
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Array of timeline entries
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+
+  /family/track/{token}:
+    get:
+      operationId: familyTrackByToken
+      tags: [tasks]
+      summary: Public read-only family tracking (no auth required)
+      parameters:
+        - name: token
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Task and runner status for family
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FamilyTrackResponse"
+        "404":
+          $ref: "#/components/responses/ErrorResponse"
+        "410":
+          $ref: "#/components/responses/ErrorResponse"
+
   # ─── RUNNERS ────────────────────────────────────────────────────────────────
   /runners/me:
     get:
       operationId: getRunnerMe
       tags: [runners]
-      summary: Get current runner profile
+      summary: Get current runner profile (with trust/earnings fields)
+      security:
+        - bearerAuth: []
       responses:
         "200":
           description: Runner profile
@@ -353,6 +648,8 @@ paths:
       operationId: updateRunnerMe
       tags: [runners]
       summary: Update current runner profile
+      security:
+        - bearerAuth: []
       requestBody:
         required: true
         content:
@@ -372,6 +669,8 @@ paths:
       operationId: getRunnerEarnings
       tags: [runners]
       summary: Get runner earnings summary
+      security:
+        - bearerAuth: []
       responses:
         "200":
           description: Earnings summary
@@ -385,6 +684,8 @@ paths:
       operationId: getRunnerDailyEarnings
       tags: [runners]
       summary: Get daily earnings for last 7 days (chart data)
+      security:
+        - bearerAuth: []
       responses:
         "200":
           description: Daily earnings
@@ -400,6 +701,8 @@ paths:
       operationId: submitKyc
       tags: [runners]
       summary: Submit or update KYC documents
+      security:
+        - bearerAuth: []
       requestBody:
         required: true
         content:
@@ -419,6 +722,8 @@ paths:
       operationId: toggleOnlineStatus
       tags: [runners]
       summary: Toggle runner online/offline status
+      security:
+        - bearerAuth: []
       requestBody:
         required: true
         content:
@@ -433,11 +738,134 @@ paths:
               schema:
                 $ref: "#/components/schemas/Runner"
 
+  /runners/me/onboarding:
+    post:
+      operationId: saveOnboardingStep
+      tags: [runners]
+      summary: Save onboarding step data (step 1-6 wizard)
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OnboardingInput"
+      responses:
+        "200":
+          description: Updated runner
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Runner"
+
+  /runners/me/gps-check:
+    post:
+      operationId: gpsHealthCheck
+      tags: [runners]
+      summary: Save GPS health status (granted/denied/unavailable)
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GpsCheckInput"
+      responses:
+        "200":
+          description: Updated runner with trust score
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Runner"
+
+  /runners/me/active-tasks:
+    get:
+      operationId: getActiveTask
+      tags: [runners]
+      summary: Get runner's single active task (most recent)
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Active task with user info or null
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Task"
+
+  /runners/me/readiness:
+    get:
+      operationId: getRunnerReadiness
+      tags: [runners]
+      summary: Compute dispatch readiness score (0-100%)
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Readiness score and breakdown
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReadinessResponse"
+
+  /runners/playbook:
+    get:
+      operationId: getRunnerPlaybook
+      tags: [runners]
+      summary: Get operations playbook for runners
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Playbook sections and rules
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlaybookResponse"
+
+  /runners/available:
+    get:
+      operationId: listAvailableRunners
+      tags: [runners]
+      summary: List available online/verified runners for booking preview
+      responses:
+        "200":
+          description: Available runners
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AvailableRunner"
+
+  /runners/nearby/{taskId}:
+    get:
+      operationId: listNearbyRunners
+      tags: [runners]
+      summary: List nearby available runners for a task (with distance)
+      parameters:
+        - name: taskId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Nearby runners sorted by distance
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/NearbyRunner"
+
   /runners/{id}:
     get:
       operationId: getRunner
       tags: [runners]
-      summary: Get runner by ID
+      summary: Get runner by ID (public — phone/email/aadhaar redacted)
       parameters:
         - name: id
           in: path
@@ -446,11 +874,13 @@ paths:
             type: integer
       responses:
         "200":
-          description: Runner
+          description: Runner (sensitive fields stripped)
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/Runner"
+                $ref: "#/components/schemas/PublicRunner"
+        "404":
+          $ref: "#/components/responses/ErrorResponse"
 
   /runners/{id}/location/{taskId}:
     get:
@@ -497,6 +927,8 @@ paths:
       operationId: getMySubscription
       tags: [subscriptions]
       summary: Get current user's active subscription
+      security:
+        - bearerAuth: []
       responses:
         "200":
           description: Active subscription
@@ -509,7 +941,9 @@ paths:
     post:
       operationId: createSubscription
       tags: [subscriptions]
-      summary: Subscribe to a plan
+      summary: Subscribe to a plan (cancels existing active subscription)
+      security:
+        - bearerAuth: []
       requestBody:
         required: true
         content:
@@ -529,7 +963,9 @@ paths:
     get:
       operationId: listNotifications
       tags: [notifications]
-      summary: List notifications for current user
+      summary: List notifications for current user or runner
+      security:
+        - bearerAuth: []
       responses:
         "200":
           description: Notifications
@@ -544,7 +980,9 @@ paths:
     patch:
       operationId: markNotificationRead
       tags: [notifications]
-      summary: Mark notification as read
+      summary: Mark notification as read (with ownership check)
+      security:
+        - bearerAuth: []
       parameters:
         - name: id
           in: path
@@ -564,6 +1002,8 @@ paths:
       operationId: markAllNotificationsRead
       tags: [notifications]
       summary: Mark all notifications as read
+      security:
+        - bearerAuth: []
       responses:
         "200":
           description: Done
@@ -572,12 +1012,144 @@ paths:
               schema:
                 $ref: "#/components/schemas/MessageResponse"
 
+  # ─── PAYMENTS ──────────────────────────────────────────────────────────────
+  /payments/create-order:
+    post:
+      operationId: createPaymentOrder
+      tags: [payments]
+      summary: Create a Razorpay payment order for a task
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [taskId]
+              properties:
+                taskId:
+                  type: integer
+      responses:
+        "200":
+          description: Payment order created (or cash method info)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaymentOrderResponse"
+        "400":
+          $ref: "#/components/responses/ErrorResponse"
+        "403":
+          $ref: "#/components/responses/ErrorResponse"
+        "500":
+          $ref: "#/components/responses/ErrorResponse"
+
+  /subscriptions/create-order:
+    post:
+      operationId: createSubscriptionOrder
+      tags: [subscriptions]
+      summary: Create a Razorpay payment order for a subscription
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [planId]
+              properties:
+                planId:
+                  type: string
+                billingCycle:
+                  type: string
+                  enum: [monthly, yearly]
+                  default: monthly
+      responses:
+        "200":
+          description: Payment order created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaymentOrderResponse"
+        "400":
+          $ref: "#/components/responses/ErrorResponse"
+        "403":
+          $ref: "#/components/responses/ErrorResponse"
+        "404":
+          $ref: "#/components/responses/ErrorResponse"
+        "500":
+          $ref: "#/components/responses/ErrorResponse"
+
+  /payments/webhook:
+    post:
+      operationId: handlePaymentWebhook
+      tags: [payments]
+      summary: Receive Razorpay webhook events (payment.captured, payment.failed)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        "200":
+          description: Webhook acknowledged
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  received:
+                    type: boolean
+        "401":
+          $ref: "#/components/responses/ErrorResponse"
+
+  # ─── UPLOAD ─────────────────────────────────────────────────────────────────
+  /upload:
+    post:
+      operationId: uploadPhoto
+      tags: [tasks]
+      summary: Upload a photo file (multipart) — stored to B2 or local disk
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [photo]
+              properties:
+                photo:
+                  type: string
+                  format: binary
+                  description: Image file (max 10MB)
+      responses:
+        "200":
+          description: Photo uploaded
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  url:
+                    type: string
+                  key:
+                    type: string
+                  filename:
+                    type: string
+        "400":
+          $ref: "#/components/responses/ErrorResponse"
+
   # ─── ADMIN ──────────────────────────────────────────────────────────────────
+
+
   /admin/stats:
     get:
       operationId: getAdminStats
       tags: [admin]
-      summary: Get admin dashboard stats
+      summary: Get admin dashboard stats (hub, queue, trust, revenue, monitoring)
+      security:
+        - bearerAuth: []
       responses:
         "200":
           description: Dashboard stats
@@ -590,7 +1162,9 @@ paths:
     get:
       operationId: getAdminActivity
       tags: [admin]
-      summary: Get recent activity feed
+      summary: Get recent activity feed (from notifications)
+      security:
+        - bearerAuth: []
       responses:
         "200":
           description: Activity feed
@@ -605,7 +1179,9 @@ paths:
     get:
       operationId: listAdminTasks
       tags: [admin]
-      summary: List all tasks (admin)
+      summary: List all tasks with pagination and filtering
+      security:
+        - bearerAuth: []
       parameters:
         - name: status
           in: query
@@ -623,13 +1199,15 @@ paths:
           in: query
           schema:
             type: integer
+            default: 20
         - name: offset
           in: query
           schema:
             type: integer
+            default: 0
       responses:
         "200":
-          description: Tasks
+          description: Tasks with total count
           content:
             application/json:
               schema:
@@ -640,6 +1218,8 @@ paths:
       operationId: updateAdminTask
       tags: [admin]
       summary: Update a task (admin override)
+      security:
+        - bearerAuth: []
       parameters:
         - name: id
           in: path
@@ -654,30 +1234,65 @@ paths:
               $ref: "#/components/schemas/AdminTaskUpdate"
       responses:
         "200":
-          description: Updated task
+          description: Updated task with relations
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/Task"
 
+  /admin/tasks/dispatch-stats:
+    get:
+      operationId: getDispatchStats
+      tags: [admin]
+      summary: Get dispatch queue stats with stuck task detection
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Dispatch stats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DispatchStats"
+
+  /admin/fraud-flags:
+    get:
+      operationId: getFraudFlags
+      tags: [admin]
+      summary: Get all fraud flags from tasks
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Fraud flags
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FraudFlagList"
+
   /admin/runners:
     get:
       operationId: listAdminRunners
       tags: [admin]
-      summary: List all runners (admin)
+      summary: List all runners with KYC filter
+      security:
+        - bearerAuth: []
       parameters:
         - name: kyc_status
           in: query
           schema:
             type: string
+            enum: [pending, verified, rejected, suspended]
         - name: limit
           in: query
           schema:
             type: integer
+            default: 50
         - name: offset
           in: query
           schema:
             type: integer
+            default: 0
       responses:
         "200":
           description: Runners
@@ -692,7 +1307,9 @@ paths:
     patch:
       operationId: reviewRunnerKyc
       tags: [admin]
-      summary: Approve or reject runner KYC
+      summary: Approve or reject runner KYC (with dispatchAllowed toggle)
+      security:
+        - bearerAuth: []
       parameters:
         - name: id
           in: path
@@ -717,16 +1334,20 @@ paths:
     get:
       operationId: listAdminUsers
       tags: [admin]
-      summary: List all users (admin)
+      summary: List all users
+      security:
+        - bearerAuth: []
       parameters:
         - name: limit
           in: query
           schema:
             type: integer
+            default: 50
         - name: offset
           in: query
           schema:
             type: integer
+            default: 0
       responses:
         "200":
           description: Users
@@ -741,7 +1362,9 @@ paths:
     get:
       operationId: listAdminSubscriptions
       tags: [admin]
-      summary: List all subscriptions (admin)
+      summary: List all subscriptions
+      security:
+        - bearerAuth: []
       responses:
         "200":
           description: Subscriptions
@@ -756,12 +1379,15 @@ paths:
     get:
       operationId: getAnalytics
       tags: [admin]
-      summary: Get analytics data
+      summary: Get analytics (daily, category, hourly, runner, growth, MRR)
+      security:
+        - bearerAuth: []
       parameters:
         - name: days
           in: query
           schema:
             type: integer
+            default: 30
       responses:
         "200":
           description: Analytics
@@ -775,9 +1401,11 @@ paths:
       operationId: getActiveRunnerLocations
       tags: [admin]
       summary: Get all active runner locations for fleet map
+      security:
+        - bearerAuth: []
       responses:
         "200":
-          description: Active runner locations
+          description: Active runner markers
           content:
             application/json:
               schema:
@@ -789,7 +1417,9 @@ paths:
     get:
       operationId: getAdminSettings
       tags: [admin]
-      summary: Get platform settings
+      summary: Get platform settings (dispatch, pricing, queue config)
+      security:
+        - bearerAuth: []
       responses:
         "200":
           description: Settings
@@ -801,6 +1431,8 @@ paths:
       operationId: updateAdminSettings
       tags: [admin]
       summary: Update platform settings
+      security:
+        - bearerAuth: []
       requestBody:
         required: true
         content:
@@ -815,42 +1447,835 @@ paths:
               schema:
                 $ref: "#/components/schemas/AdminSettings"
 
-  /admin/login:
+  # ─── ADMIN: OPERATIONS CENTER ────────────────────────────────────────────────
+  /admin/operations-center:
+    get:
+      operationId: getOperationsCenter
+      tags: [operations]
+      summary: Realtime comrade operations stats
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Operations center data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OperationsCenter"
+
+  /admin/daily-ops:
+    get:
+      operationId: getDailyOps
+      tags: [operations]
+      summary: Daily operations dashboard
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Daily ops metrics
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DailyOps"
+
+  # ─── ADMIN: RECRUITMENT ────────────────────────────────────────────────────
+  /admin/recruitment:
+    get:
+      operationId: listRecruitments
+      tags: [operations]
+      summary: List all recruits (filterable by stage)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: stage
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+      responses:
+        "200":
+          description: Recruits
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Recruit"
     post:
-      operationId: adminLogin
-      tags: [admin]
-      summary: Admin login
+      operationId: createRecruit
+      tags: [operations]
+      summary: Add new recruit
+      security:
+        - bearerAuth: []
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/AdminLoginInput"
+              $ref: "#/components/schemas/RecruitInput"
       responses:
-        "200":
-          description: Admin authenticated
+        "201":
+          description: Recruit created
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/AuthResponse"
+                $ref: "#/components/schemas/Recruit"
+
+  /admin/recruitment/{id}:
+    patch:
+      operationId: updateRecruit
+      tags: [operations]
+      summary: Update recruit stage and details
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RecruitUpdate"
+      responses:
+        "200":
+          description: Updated recruit
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Recruit"
+
+  /admin/recruitment/funnel:
+    get:
+      operationId: getRecruitmentFunnel
+      tags: [operations]
+      summary: Get recruitment funnel stats by stage
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Funnel data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RecruitmentFunnel"
+
+  # ─── ADMIN: TRAINING ──────────────────────────────────────────────────────
+  /admin/training/modules:
+    get:
+      operationId: listTrainingModules
+      tags: [operations]
+      summary: List training modules
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Training modules
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/TrainingModule"
+    post:
+      operationId: createTrainingModule
+      tags: [operations]
+      summary: Create a training module
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TrainingModuleInput"
+      responses:
+        "201":
+          description: Module created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TrainingModule"
+
+  /admin/training/modules/{id}:
+    patch:
+      operationId: updateTrainingModule
+      tags: [operations]
+      summary: Update training module
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Updated module
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TrainingModule"
+
+  /admin/training/progress/{runnerId}:
+    get:
+      operationId: getRunnerTrainingProgress
+      tags: [operations]
+      summary: Get training progress for a runner
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: runnerId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Training progress
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TrainingProgress"
+
+  /admin/training/complete:
+    post:
+      operationId: completeTrainingModule
+      tags: [operations]
+      summary: Mark module as completed for a runner
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TrainingCompleteInput"
+      responses:
+        "200":
+          description: Training record
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RunnerTraining"
+
+  /admin/training/seed:
+    post:
+      operationId: seedDefaultTrainingModules
+      tags: [operations]
+      summary: Seed 8 default training modules
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Seeded modules
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  seeded:
+                    type: integer
+                  total:
+                    type: integer
+
+  # ─── ADMIN: QUALITY ──────────────────────────────────────────────────────
+  /admin/quality/submit:
+    post:
+      operationId: submitQualityReview
+      tags: [operations]
+      summary: Submit quality review for a task
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/QualityReviewInput"
+      responses:
+        "201":
+          description: Quality review created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QualityReview"
+
+  /admin/quality:
+    get:
+      operationId: listQualityReviews
+      tags: [operations]
+      summary: List quality reviews
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+      responses:
+        "200":
+          description: Quality reviews
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/QualityReview"
+
+  /admin/quality/stats:
+    get:
+      operationId: getQualityStats
+      tags: [operations]
+      summary: Get quality metrics (avg score, avg rating, grade distribution)
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Quality stats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QualityStats"
+
+  # ─── ADMIN: CUSTOMER FEEDBACK ─────────────────────────────────────────────
+  /admin/feedback:
+    post:
+      operationId: submitCustomerFeedback
+      tags: [operations]
+      summary: Submit post-task feedback (requires auth + task ownership)
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FeedbackInput"
+      responses:
+        "201":
+          description: Feedback submitted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Review"
+
+  /admin/feedback/stats:
+    get:
+      operationId: getFeedbackStats
+      tags: [operations]
+      summary: Get CSAT score and feedback history
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: CSAT score and recent feedback
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FeedbackStats"
+
+  # ─── ADMIN: SUPPORT ──────────────────────────────────────────────────────
+  /admin/support:
+    get:
+      operationId: listSupportTickets
+      tags: [operations]
+      summary: List support tickets (filterable by status/priority)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+        - name: priority
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+      responses:
+        "200":
+          description: Support tickets
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/SupportTicket"
+    post:
+      operationId: createSupportTicket
+      tags: [operations]
+      summary: Create a support ticket
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SupportTicketInput"
+      responses:
+        "201":
+          description: Ticket created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SupportTicket"
+
+  /admin/support/{id}:
+    patch:
+      operationId: updateSupportTicket
+      tags: [operations]
+      summary: Update support ticket (status, resolution, etc.)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SupportTicketUpdate"
+      responses:
+        "200":
+          description: Updated ticket
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SupportTicket"
+
+  /admin/support/stats:
+    get:
+      operationId: getSupportStats
+      tags: [operations]
+      summary: Get support metrics (open, resolved, avg resolution time)
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Support stats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SupportStats"
+
+  # ─── ADMIN: INCIDENTS ──────────────────────────────────────────────────────
+  /admin/incidents:
+    get:
+      operationId: listIncidents
+      tags: [operations]
+      summary: List incidents (filterable by status/type)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+        - name: type
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+      responses:
+        "200":
+          description: Incidents
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Incident"
+    post:
+      operationId: createIncident
+      tags: [operations]
+      summary: Create an incident
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/IncidentInput"
+      responses:
+        "201":
+          description: Incident created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Incident"
+
+  /admin/incidents/{id}:
+    patch:
+      operationId: updateIncident
+      tags: [operations]
+      summary: Update incident status
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/IncidentUpdate"
+      responses:
+        "200":
+          description: Updated incident
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Incident"
+
+  /admin/incidents/stats:
+    get:
+      operationId: getIncidentStats
+      tags: [operations]
+      summary: Get incident metrics by type and status
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Incident stats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/IncidentStats"
+
+  /admin/incident-response:
+    get:
+      operationId: getIncidentResponseCenter
+      tags: [operations]
+      summary: Incident response center overview
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Incident response data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/IncidentResponse"
+
+  # ─── ADMIN: SLA ────────────────────────────────────────────────────────────
+  /admin/sla:
+    get:
+      operationId: getSlaMonitoring
+      tags: [operations]
+      summary: SLA monitoring data for completed tasks
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: SLA data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SlaData"
+
+  # ─── ADMIN: HEATMAP ──────────────────────────────────────────────────────
+  /admin/heatmap:
+    get:
+      operationId: getHeatmap
+      tags: [operations]
+      summary: Task demand and comrade supply by Ahmedabad area
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Heatmap data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HeatmapData"
+
+  # ─── ADMIN: PILOT ──────────────────────────────────────────────────────
+  /admin/pilot:
+    get:
+      operationId: getPilotDashboard
+      tags: [operations]
+      summary: Pilot command center dashboard
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Pilot dashboard data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PilotDashboard"
+
+  /admin/pilot/mode:
+    get:
+      operationId: getPilotMode
+      tags: [operations]
+      summary: Get pilot mode config
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Pilot mode status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PilotMode"
+    patch:
+      operationId: updatePilotMode
+      tags: [operations]
+      summary: Toggle pilot mode and set allowed categories
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PilotModeUpdate"
+      responses:
+        "200":
+          description: Updated pilot mode
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PilotMode"
+
+  /admin/pilot/config:
+    get:
+      operationId: getPilotConfig
+      tags: [operations]
+      summary: Get pilot restrictions for frontend enforcement
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Pilot config
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  pilotMode:
+                    type: boolean
+                  allowedCategories:
+                    type: array
+                    items:
+                      type: string
+                  allowedZones:
+                    type: array
+                    items:
+                      type: string
+                  message:
+                    type: string
+
+  /admin/pilot/readiness:
+    get:
+      operationId: getPilotReadiness
+      tags: [operations]
+      summary: Pilot readiness audit (tech + ops score)
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Readiness audit
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PilotReadiness"
+
+  /admin/pilot/readiness-report:
+    get:
+      operationId: getPilotReadinessReport
+      tags: [operations]
+      summary: Comprehensive pilot readiness report
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Readiness report
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PilotReadinessReport"
+
+  # ─── ADMIN: LEADERBOARD, AREA, KPI, EXEC REPORTS, FOUNDER ──────────────────
+  /admin/leaderboard:
+    get:
+      operationId: getLeaderboard
+      tags: [operations]
+      summary: Comrade performance leaderboard
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: period
+          in: query
+          schema:
+            type: string
+            default: lifetime
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        "200":
+          description: Leaderboard
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Leaderboard"
+
+  /admin/area-performance:
+    get:
+      operationId: getAreaPerformance
+      tags: [operations]
+      summary: Per-area performance analytics
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Area performance
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AreaPerformance"
+
+  /admin/kpi-tracker:
+    get:
+      operationId: getKpiTracker
+      tags: [operations]
+      summary: Pilot KPI tracker (tasks, customers, comrades goals)
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: KPI tracker
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/KpiTracker"
+
+  /admin/executive-report:
+    get:
+      operationId: getExecutiveReport
+      tags: [operations]
+      summary: Executive report (daily/weekly/monthly)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: type
+          in: query
+          schema:
+            type: string
+            enum: [daily, weekly, monthly]
+            default: daily
+      responses:
+        "200":
+          description: Executive report
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ExecutiveReport"
+
+  /admin/founder:
+    get:
+      operationId: getFounderDashboard
+      tags: [operations]
+      summary: Founder command center overview
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Founder dashboard
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FounderDashboard"
 
 components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  responses:
+    ErrorResponse:
+      description: Error response
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [error]
+            properties:
+              error:
+                type: string
+              detail:
+                type: string
+              code:
+                type: string
+
   schemas:
     HealthStatus:
       type: object
+      required: [status]
       properties:
         status:
           type: string
-      required:
-        - status
 
     MessageResponse:
       type: object
+      required: [message]
       properties:
         message:
           type: string
-      required:
-        - message
 
     # ─── AUTH SCHEMAS ────────────────────────────────────────────────────────
     SendOtpInput:
@@ -871,6 +2296,10 @@ components:
           type: string
         otp:
           type: string
+          description: Returned only in dev mode
+        sent:
+          type: boolean
+          description: Whether the SMS was sent successfully
 
     VerifyOtpInput:
       type: object
@@ -904,6 +2333,72 @@ components:
         password:
           type: string
 
+    # ─── PRICING SCHEMAS ──────────────────────────────────────────────────────
+    PricingInput:
+      type: object
+      properties:
+        category:
+          type: string
+          enum: [hospital, govt_office, bank, document, medicine, senior_care, errand, emergency]
+          default: hospital
+        distanceBand:
+          type: string
+          enum: ["0-2", "2-5", "5+"]
+          default: "0-2"
+        urgency:
+          type: string
+          enum: [normal, urgent]
+          default: normal
+        priorityLevel:
+          type: string
+          default: normal
+        couponCode:
+          type: string
+
+    PricingResponse:
+      type: object
+      properties:
+        price:
+          type: number
+          description: Final price after discount
+        originalPrice:
+          type: number
+        discountAmount:
+          type: number
+        appliedCoupon:
+          type: string
+          nullable: true
+        breakdown:
+          type: object
+          properties:
+            basePrice:
+              type: number
+            distanceCharge:
+              type: number
+            urgencyCharge:
+              type: number
+            priorityFee:
+              type: number
+            urgencyMultiplier:
+              type: number
+            subtotalBeforeMultiplier:
+              type: number
+            subtotalAfterMultiplier:
+              type: number
+            runnerEarning:
+              type: number
+            platformFee:
+              type: number
+        meta:
+          type: object
+          properties:
+            calculatedAt:
+              type: string
+            authoritative:
+              type: boolean
+            note:
+              type: string
+
     # ─── USER SCHEMAS ────────────────────────────────────────────────────────
     User:
       type: object
@@ -912,17 +2407,22 @@ components:
         id:
           type: integer
         name:
-          type: ["string", "null"]
+          type: string
+          nullable: true
         phone:
           type: string
         email:
-          type: ["string", "null"]
+          type: string
+          nullable: true
         city:
-          type: ["string", "null"]
+          type: string
+          nullable: true
         area:
-          type: ["string", "null"]
+          type: string
+          nullable: true
         avatar:
-          type: ["string", "null"]
+          type: string
+          nullable: true
         language:
           type: string
         createdAt:
@@ -958,12 +2458,18 @@ components:
       type: object
       required: [id, category, status, price, createdAt]
       properties:
+        # Core
         id:
           type: integer
         userId:
           type: integer
+          nullable: true
         runnerId:
-          type: ["integer", "null"]
+          type: integer
+          nullable: true
+        activeRunnerId:
+          type: integer
+          nullable: true
         category:
           type: string
           enum: [hospital, govt_office, bank, document, medicine, senior_care, errand, emergency]
@@ -971,24 +2477,81 @@ components:
           type: string
         status:
           type: string
-          enum: [pending, assigned, on_the_way, at_location, in_progress, completed, cancelled]
+          enum: [pending, assigned, on_the_way, reached_pickup, reached_task_location, at_location, in_progress, waiting_started, completed, cancelled]
         urgency:
           type: string
           enum: [normal, urgent]
+        # Location
         locationName:
-          type: ["string", "null"]
+          type: string
+          nullable: true
         locationArea:
-          type: ["string", "null"]
+          type: string
+          nullable: true
         locationCity:
-          type: ["string", "null"]
+          type: string
+          nullable: true
         locationLat:
-          type: ["number", "null"]
+          type: number
+          nullable: true
         locationLng:
-          type: ["number", "null"]
+          type: number
+          nullable: true
         distanceBand:
-          type: ["string", "null"]
+          type: string
+          nullable: true
+        # Dispatch fields
+        pickupRequired:
+          type: boolean
+        pickupAddress:
+          type: string
+          nullable: true
+        pickupArea:
+          type: string
+          nullable: true
+        pickupLat:
+          type: number
+          nullable: true
+        pickupLng:
+          type: number
+          nullable: true
+        taskLat:
+          type: number
+          nullable: true
+        taskLng:
+          type: number
+          nullable: true
+        fromArea:
+          type: string
+          nullable: true
+        toArea:
+          type: string
+          nullable: true
+        estimatedDurationMinutes:
+          type: integer
+          nullable: true
+        # Timing
         scheduledAt:
-          type: ["string", "null"]
+          type: string
+          nullable: true
+        acceptedAt:
+          type: string
+          nullable: true
+        completedAt:
+          type: string
+          nullable: true
+        startedAt:
+          type: string
+          nullable: true
+        reachedPickupAt:
+          type: string
+          nullable: true
+        reachedTaskLocationAt:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+        # Pricing
         basePrice:
           type: number
         distanceCharge:
@@ -1001,6 +2564,10 @@ components:
           type: number
         platformFee:
           type: number
+        priorityLevel:
+          type: string
+        priorityFee:
+          type: number
         paymentMethod:
           type: string
           enum: [online, cash]
@@ -1008,29 +2575,124 @@ components:
           type: string
           enum: [pending, paid, refunded]
         couponCode:
-          type: ["string", "null"]
+          type: string
+          nullable: true
         discountAmount:
           type: number
+        invoiceNumber:
+          type: string
+          nullable: true
+        # OTP
         otp:
-          type: ["string", "null"]
+          type: string
+          nullable: true
         otpVerified:
           type: boolean
+        otpAttempts:
+          type: integer
+        otpLockedUntil:
+          type: string
+          nullable: true
+        # Meta
         seniorInvolved:
           type: boolean
         specialInstructions:
-          type: ["string", "null"]
+          type: string
+          nullable: true
+        cancelReason:
+          type: string
+          nullable: true
+        internalNotes:
+          type: string
+          nullable: true
+        timeToAcceptance:
+          type: integer
+          nullable: true
+        # Waiting
+        waitingStartedAt:
+          type: string
+          nullable: true
+        waitingEndedAt:
+          type: string
+          nullable: true
+        totalWaitingMinutes:
+          type: integer
+        waitingChargeAmount:
+          type: number
+        waitingEarnings:
+          type: number
+        bonusEarnings:
+          type: number
+        # Proof photos
         proofPhotos:
           type: array
           items:
             type: string
-        cancelReason:
-          type: ["string", "null"]
-        internalNotes:
-          type: ["string", "null"]
-        completedAt:
-          type: ["string", "null"]
-        createdAt:
+        gpsVerified:
+          type: boolean
+        gpsDistanceFromTask:
+          type: number
+          nullable: true
+        # Queue intelligence
+        queueType:
           type: string
+          nullable: true
+        tokenNumber:
+          type: string
+          nullable: true
+        currentToken:
+          type: string
+          nullable: true
+        counterNumber:
+          type: string
+          nullable: true
+        queueNotes:
+          type: string
+          nullable: true
+        queueGap:
+          type: integer
+          nullable: true
+        estimatedWaitMinutes:
+          type: integer
+          nullable: true
+        queueProgressPercent:
+          type: integer
+          nullable: true
+        expectedTokenNumber:
+          type: string
+          nullable: true
+        # Family tracking
+        familyContactName:
+          type: string
+          nullable: true
+        familyContactPhone:
+          type: string
+          nullable: true
+        familyTrackingToken:
+          type: string
+          nullable: true
+        familyTokenExpiresAt:
+          type: string
+          nullable: true
+        # Dispatch tracking
+        dispatchAttempts:
+          type: integer
+        dispatchRadiusUsed:
+          type: number
+          nullable: true
+        dispatchNotifiedCount:
+          type: integer
+        # Fraud
+        fraudFlags:
+          type: array
+          items:
+            type: string
+        # Timeline
+        taskTimeline:
+          type: array
+          items:
+            type: object
+        # Relations
         user:
           $ref: "#/components/schemas/User"
         runner:
@@ -1038,7 +2700,7 @@ components:
 
     TaskInput:
       type: object
-      required: [category, description, locationName, locationArea, locationCity, paymentMethod]
+      required: [category, description, locationName, locationArea, paymentMethod]
       properties:
         category:
           type: string
@@ -1048,12 +2710,14 @@ components:
         urgency:
           type: string
           enum: [normal, urgent]
+          default: normal
         locationName:
           type: string
         locationArea:
           type: string
         locationCity:
           type: string
+          default: Ahmedabad
         locationLat:
           type: number
         locationLng:
@@ -1061,6 +2725,7 @@ components:
         distanceBand:
           type: string
           enum: ["0-2", "2-5", "5+"]
+          default: "0-2"
         scheduledDate:
           type: string
         scheduledTime:
@@ -1068,11 +2733,40 @@ components:
         paymentMethod:
           type: string
           enum: [online, cash]
+          default: online
         couponCode:
           type: string
         seniorInvolved:
           type: boolean
+          default: false
         specialInstructions:
+          type: string
+        # Dispatch fields
+        pickupRequired:
+          type: boolean
+          default: false
+        pickupAddress:
+          type: string
+        pickupArea:
+          type: string
+        pickupLat:
+          type: number
+        pickupLng:
+          type: number
+        taskLat:
+          type: number
+        taskLng:
+          type: number
+        fromArea:
+          type: string
+        toArea:
+          type: string
+        estimatedDurationMinutes:
+          type: integer
+        priorityLevel:
+          type: string
+        # Queue intelligence
+        expectedTokenNumber:
           type: string
 
     TaskStatusUpdate:
@@ -1081,7 +2775,7 @@ components:
       properties:
         status:
           type: string
-          enum: [pending, assigned, on_the_way, at_location, in_progress, completed, cancelled]
+          enum: [assigned, on_the_way, reached_pickup, reached_task_location, at_location, in_progress, completed, cancelled, waiting_started]
 
     TaskOtpVerify:
       type: object
@@ -1089,6 +2783,193 @@ components:
       properties:
         otp:
           type: string
+
+    ProofPhotoInput:
+      type: object
+      required: [imageUrl]
+      properties:
+        imageUrl:
+          type: string
+        proofType:
+          type: string
+          enum: [reached_pickup, reached_task_location, in_progress, completed, general]
+        lat:
+          type: number
+        lng:
+          type: number
+        address:
+          type: string
+
+    QueueProgressInput:
+      type: object
+      properties:
+        currentToken:
+          type: string
+        counterNumber:
+          type: string
+        queueNotes:
+          type: string
+
+    FamilyTrackingInput:
+      type: object
+      required: [familyContactName, familyContactPhone]
+      properties:
+        familyContactName:
+          type: string
+        familyContactPhone:
+          type: string
+
+    FamilyTrackingResponse:
+      type: object
+      properties:
+        familyTrackingToken:
+          type: string
+        shareLink:
+          type: string
+        expiresAt:
+          type: string
+
+    FamilyTrackResponse:
+      type: object
+      properties:
+        task:
+          type: object
+          properties:
+            id:
+              type: integer
+            category:
+              type: string
+            description:
+              type: string
+            status:
+              type: string
+            clientName:
+              type: string
+            locationName:
+              type: string
+            locationArea:
+              type: string
+            locationLat:
+              type: number
+              nullable: true
+            locationLng:
+              type: number
+              nullable: true
+            taskLat:
+              type: number
+              nullable: true
+            taskLng:
+              type: number
+              nullable: true
+            proofPhotos:
+              type: array
+              items:
+                type: string
+            taskTimeline:
+              type: array
+              items:
+                type: object
+            pickupRequired:
+              type: boolean
+            fromArea:
+              type: string
+              nullable: true
+            toArea:
+              type: string
+              nullable: true
+            estimatedDurationMinutes:
+              type: integer
+              nullable: true
+            waitingStartedAt:
+              type: string
+              nullable: true
+            waitingEndedAt:
+              type: string
+              nullable: true
+            totalWaitingMinutes:
+              type: integer
+            waitingChargeAmount:
+              type: number
+            queueType:
+              type: string
+              nullable: true
+            tokenNumber:
+              type: string
+              nullable: true
+            currentToken:
+              type: string
+              nullable: true
+            counterNumber:
+              type: string
+              nullable: true
+            queueGap:
+              type: integer
+              nullable: true
+            estimatedWaitMinutes:
+              type: integer
+              nullable: true
+            queueProgressPercent:
+              type: integer
+              nullable: true
+            createdAt:
+              type: string
+            acceptedAt:
+              type: string
+              nullable: true
+            completedAt:
+              type: string
+              nullable: true
+            price:
+              type: number
+            runnerEarning:
+              type: number
+            seniorInvolved:
+              type: boolean
+            eta:
+              type: string
+              nullable: true
+            invoiceNumber:
+              type: string
+              nullable: true
+        clientName:
+          type: string
+        runner:
+          type: object
+          nullable: true
+          properties:
+            id:
+              type: integer
+            name:
+              type: string
+            rating:
+              type: number
+              nullable: true
+            trustScore:
+              type: integer
+            trustBadge:
+              type: string
+            tasksCompleted:
+              type: integer
+            avatar:
+              type: string
+              nullable: true
+        runnerLocation:
+          type: object
+          nullable: true
+          properties:
+            lat:
+              type: number
+            lng:
+              type: number
+            heading:
+              type: number
+              nullable: true
+            speed:
+              type: number
+              nullable: true
+            recordedAt:
+              type: string
+              nullable: true
 
     # ─── RUNNER SCHEMAS ──────────────────────────────────────────────────────
     Runner:
@@ -1098,38 +2979,126 @@ components:
         id:
           type: integer
         name:
-          type: ["string", "null"]
+          type: string
+          nullable: true
+        fullName:
+          type: string
+          nullable: true
         phone:
           type: string
         email:
-          type: ["string", "null"]
+          type: string
+          nullable: true
         city:
-          type: ["string", "null"]
+          type: string
+          nullable: true
         area:
-          type: ["string", "null"]
+          type: string
+          nullable: true
         avatar:
-          type: ["string", "null"]
+          type: string
+          nullable: true
         gender:
-          type: ["string", "null"]
+          type: string
+          nullable: true
         kycStatus:
           type: string
           enum: [pending, verified, rejected, suspended]
         kycRejectionReason:
-          type: ["string", "null"]
+          type: string
+          nullable: true
+        dispatchAllowed:
+          type: boolean
         isOnline:
           type: boolean
         rating:
-          type: ["number", "null"]
+          type: number
+          nullable: true
+        trustScore:
+          type: integer
+        trustBadge:
+          type: string
+        tasksCompleted:
+          type: integer
+        tasksAccepted:
+          type: integer
+        tasksCancelled:
+          type: integer
         totalTasks:
           type: integer
         totalEarnings:
-          type: ["number", "null"]
+          type: number
+          nullable: true
+        averageRating:
+          type: number
+          nullable: true
+        averageResponseTime:
+          type: number
+          nullable: true
         currentLat:
-          type: ["number", "null"]
+          type: number
+          nullable: true
         currentLng:
-          type: ["number", "null"]
+          type: number
+          nullable: true
+        gpsStatus:
+          type: string
+          nullable: true
+        gpsCheckedAt:
+          type: string
+          nullable: true
+        onboardingStep:
+          type: integer
+          nullable: true
+        onboardingCompleted:
+          type: boolean
+        selfie:
+          type: string
+          nullable: true
         createdAt:
           type: string
+
+    PublicRunner:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+          nullable: true
+        fullName:
+          type: string
+          nullable: true
+        rating:
+          type: number
+          nullable: true
+        trustScore:
+          type: integer
+        trustBadge:
+          type: string
+        tasksCompleted:
+          type: integer
+        isOnline:
+          type: boolean
+        kycStatus:
+          type: string
+        dispatchAllowed:
+          type: boolean
+        currentLat:
+          type: number
+          nullable: true
+        currentLng:
+          type: number
+          nullable: true
+        city:
+          type: string
+          nullable: true
+        area:
+          type: string
+          nullable: true
+        avatar:
+          type: string
+          nullable: true
 
     RunnerUpdate:
       type: object
@@ -1178,6 +3147,8 @@ components:
           enum: [approve, reject]
         rejectionReason:
           type: string
+        dispatchAllowed:
+          type: boolean
 
     OnlineStatusInput:
       type: object
@@ -1185,6 +3156,35 @@ components:
       properties:
         isOnline:
           type: boolean
+
+    OnboardingInput:
+      type: object
+      properties:
+        step:
+          type: integer
+        name:
+          type: string
+        fullName:
+          type: string
+        bankAccount:
+          type: string
+        bankIfsc:
+          type: string
+        bankAccountHolder:
+          type: string
+        selfie:
+          type: string
+
+    GpsCheckInput:
+      type: object
+      properties:
+        lat:
+          type: number
+        lng:
+          type: number
+        status:
+          type: string
+          enum: [granted, denied, unavailable]
 
     RunnerEarnings:
       type: object
@@ -1201,7 +3201,8 @@ components:
         totalTasks:
           type: integer
         avgRating:
-          type: ["number", "null"]
+          type: number
+          nullable: true
         pendingPayout:
           type: number
 
@@ -1216,6 +3217,94 @@ components:
         tasks:
           type: integer
 
+    AvailableRunner:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        rating:
+          type: number
+          nullable: true
+        trustScore:
+          type: integer
+        trustBadge:
+          type: string
+        tasksCompleted:
+          type: integer
+        isOnline:
+          type: boolean
+        kycStatus:
+          type: string
+
+    NearbyRunner:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        rating:
+          type: number
+          nullable: true
+        trustScore:
+          type: integer
+        trustBadge:
+          type: string
+        tasksCompleted:
+          type: integer
+        distanceKm:
+          type: number
+          nullable: true
+
+    ReadinessResponse:
+      type: object
+      properties:
+        score:
+          type: integer
+        breakdown:
+          type: object
+          properties:
+            kyc:
+              type: integer
+            gps:
+              type: integer
+            bank:
+              type: integer
+            online:
+              type: integer
+            selfie:
+              type: integer
+            name:
+              type: integer
+        status:
+          type: string
+          enum: [ready, partial, not_ready]
+        missingItems:
+          type: array
+          items:
+            type: string
+
+    PlaybookResponse:
+      type: object
+      properties:
+        sections:
+          type: array
+          items:
+            type: object
+            properties:
+              title:
+                type: string
+              rules:
+                type: array
+                items:
+                  type: string
+        version:
+          type: string
+        lastUpdated:
+          type: string
+
     RunnerLocation:
       type: object
       required: [runnerId, lat, lng]
@@ -1223,15 +3312,18 @@ components:
         runnerId:
           type: integer
         taskId:
-          type: ["integer", "null"]
+          type: integer
+          nullable: true
         lat:
           type: number
         lng:
           type: number
         heading:
-          type: ["number", "null"]
+          type: number
+          nullable: true
         speed:
-          type: ["number", "null"]
+          type: number
+          nullable: true
         recordedAt:
           type: string
 
@@ -1244,11 +3336,14 @@ components:
         name:
           type: string
         phone:
-          type: ["string", "null"]
+          type: string
+          nullable: true
         avatar:
-          type: ["string", "null"]
+          type: string
+          nullable: true
         rating:
-          type: ["number", "null"]
+          type: number
+          nullable: true
         lat:
           type: number
         lng:
@@ -1257,9 +3352,11 @@ components:
           type: string
           enum: [available, on_task, offline]
         currentTaskId:
-          type: ["integer", "null"]
+          type: integer
+          nullable: true
         currentTaskCategory:
-          type: ["string", "null"]
+          type: string
+          nullable: true
 
     # ─── SUBSCRIPTION SCHEMAS ─────────────────────────────────────────────────
     SubscriptionPlan:
@@ -1275,14 +3372,18 @@ components:
         priceYearly:
           type: number
         tasksPerMonth:
-          type: ["integer", "null"]
+          type: integer
+          nullable: true
         features:
           type: array
           items:
             type: string
         badge:
-          type: ["string", "null"]
+          type: string
+          nullable: true
         isPopular:
+          type: boolean
+        isActive:
           type: boolean
 
     Subscription:
@@ -1304,13 +3405,15 @@ components:
           type: string
           enum: [active, cancelled, expired]
         tasksPerMonth:
-          type: ["integer", "null"]
+          type: integer
+          nullable: true
         tasksUsed:
           type: integer
         startDate:
           type: string
         endDate:
-          type: ["string", "null"]
+          type: string
+          nullable: true
         amount:
           type: number
         createdAt:
@@ -1334,9 +3437,11 @@ components:
         id:
           type: integer
         userId:
-          type: ["integer", "null"]
+          type: integer
+          nullable: true
         runnerId:
-          type: ["integer", "null"]
+          type: integer
+          nullable: true
         type:
           type: string
         title:
@@ -1346,7 +3451,8 @@ components:
         isRead:
           type: boolean
         taskId:
-          type: ["integer", "null"]
+          type: integer
+          nullable: true
         createdAt:
           type: string
 
@@ -1377,14 +3483,20 @@ components:
         rating:
           type: integer
         review:
-          type: ["string", "null"]
+          type: string
+          nullable: true
+        feedback:
+          type: string
+          nullable: true
+        issueReport:
+          type: string
+          nullable: true
         createdAt:
           type: string
 
     # ─── ADMIN SCHEMAS ───────────────────────────────────────────────────────
     AdminStats:
       type: object
-      required: [totalTasksToday, activeNow, completedToday, cancelledToday, gmvToday, platformRevenue, runnerPayouts, pendingPayouts, kycPending, stuckTasks, newReviews, totalRunnersOnline, totalRunnersOnTask, totalRunnersOffline]
       properties:
         totalTasksToday:
           type: integer
@@ -1414,6 +3526,121 @@ components:
           type: integer
         totalRunnersOffline:
           type: integer
+        hubStats:
+          type: object
+          additionalProperties:
+            type: object
+            properties:
+              pending:
+                type: integer
+              active:
+                type: integer
+              completed:
+                type: integer
+              total:
+                type: integer
+        queueMetrics:
+          type: object
+          properties:
+            activeQueues:
+              type: integer
+            avgWaitTime:
+              type: integer
+            avgQueueGap:
+              type: integer
+            longestQueue:
+              type: integer
+            hospitalQueueTasks:
+              type: integer
+            bankQueueTasks:
+              type: integer
+            govtQueueTasks:
+              type: integer
+        trustMetrics:
+          type: object
+          properties:
+            avgTrustScore:
+              type: integer
+            riskComrades:
+              type: integer
+            topComrades:
+              type: array
+              items:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                  name:
+                    type: string
+                  trustScore:
+                    type: integer
+                  trustBadge:
+                    type: string
+                  tasksCompleted:
+                    type: integer
+            lowestTrust:
+              type: array
+              items:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                  name:
+                    type: string
+                  trustScore:
+                    type: integer
+                  trustBadge:
+                    type: string
+                  tasksCompleted:
+                    type: integer
+        revenueMetrics:
+          type: object
+          properties:
+            today:
+              type: number
+            thisWeek:
+              type: number
+            thisMonth:
+              type: number
+            taskRevenue:
+              type: number
+            waitingRevenue:
+              type: number
+            priorityRevenue:
+              type: number
+            subscriptionRevenue:
+              type: number
+            totalRevenue:
+              type: number
+        pilotMetrics:
+          type: object
+        monitoring:
+          type: object
+          properties:
+            successRate:
+              type: integer
+            acceptanceRate:
+              type: integer
+            completionRate:
+              type: integer
+            cancellationRate:
+              type: integer
+            avgWaitTimeAll:
+              type: integer
+            totalTasks:
+              type: integer
+            completedTasks:
+              type: integer
+            cancelledTasks:
+              type: integer
+            pendingTasks:
+              type: integer
+            activeTasks:
+              type: integer
+            uniqueUsers:
+              type: integer
+            uniqueComrades:
+              type: integer
 
     ActivityItem:
       type: object
@@ -1448,6 +3675,56 @@ components:
           type: integer
         internalNotes:
           type: string
+
+    DispatchStats:
+      type: object
+      properties:
+        tasks:
+          type: array
+          items:
+            $ref: "#/components/schemas/Task"
+        broadcastTasks:
+          type: integer
+        assignedTasks:
+          type: integer
+        inProgressTasks:
+          type: integer
+        stuckTasks:
+          type: integer
+        total:
+          type: integer
+
+    FraudFlagList:
+      type: object
+      properties:
+        flags:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+              type:
+                type: string
+              taskId:
+                type: integer
+              runnerId:
+                type: integer
+                nullable: true
+              timestamp:
+                type: string
+              severity:
+                type: string
+              reason:
+                type: string
+              meta:
+                type: object
+        total:
+          type: integer
+        highSeverity:
+          type: integer
+        mediumSeverity:
+          type: integer
 
     Analytics:
       type: object
@@ -1522,7 +3799,8 @@ components:
         earnings:
           type: number
         rating:
-          type: ["number", "null"]
+          type: number
+          nullable: true
 
     UserGrowthPoint:
       type: object
@@ -1565,6 +3843,40 @@ components:
           type: integer
         maintenanceMode:
           type: boolean
+        pilotMode:
+          type: boolean
+        pilotCategories:
+          type: array
+          items:
+            type: string
+        dispatchInitialRadius:
+          type: number
+        dispatchExpandDelay:
+          type: number
+        dispatchMaxRadius:
+          type: number
+        freeWaitingMinutes:
+          type: number
+        waitingChargePerMinute:
+          type: number
+        priorityFeeAmount:
+          type: number
+        emergencyFeeAmount:
+          type: number
+        urgencyNormalMultiplier:
+          type: number
+        urgencyUrgentMultiplier:
+          type: number
+        urgencyEmergencyMultiplier:
+          type: number
+        queueEtaMultiplierHospital:
+          type: number
+        queueEtaMultiplierBank:
+          type: number
+        queueEtaMultiplierGovt:
+          type: number
+        queueEtaMultiplierDefault:
+          type: number
 
     AdminSettingsUpdate:
       type: object
@@ -1589,3 +3901,1151 @@ components:
           type: integer
         maintenanceMode:
           type: boolean
+        pilotMode:
+          type: boolean
+        pilotCategories:
+          type: array
+          items:
+            type: string
+        dispatchInitialRadius:
+          type: number
+        dispatchExpandDelay:
+          type: number
+        dispatchMaxRadius:
+          type: number
+        freeWaitingMinutes:
+          type: number
+        waitingChargePerMinute:
+          type: number
+        priorityFeeAmount:
+          type: number
+        emergencyFeeAmount:
+          type: number
+        urgencyNormalMultiplier:
+          type: number
+        urgencyUrgentMultiplier:
+          type: number
+        urgencyEmergencyMultiplier:
+          type: number
+        queueEtaMultiplierHospital:
+          type: number
+        queueEtaMultiplierBank:
+          type: number
+        queueEtaMultiplierGovt:
+          type: number
+        queueEtaMultiplierDefault:
+          type: number
+
+    # ─── PAYMENT SCHEMAS ────────────────────────────────────────────────────
+    PaymentOrderResponse:
+      type: object
+      properties:
+        orderId:
+          type: string
+          nullable: true
+          description: Razorpay order ID (null for cash or mock orders)
+        amount:
+          type: integer
+          description: Amount in paise
+        currency:
+          type: string
+        receipt:
+          type: string
+          nullable: true
+        keyId:
+          type: string
+          nullable: true
+          description: Razorpay key ID for frontend checkout
+        mock:
+          type: boolean
+          description: True when Razorpay is not configured (dev mode)
+        method:
+          type: string
+          description: Payment method (online or cash)
+        price:
+          type: number
+          description: Original task price
+
+    # ─── OPERATIONS SCHEMAS ──────────────────────────────────────────────────
+    OperationsCenter:
+      type: object
+      properties:
+        total:
+          type: integer
+        online:
+          type: integer
+        verified:
+          type: integer
+        dispatchReady:
+          type: integer
+        trainingComplete:
+          type: integer
+        pilotActive:
+          type: integer
+        suspended:
+          type: integer
+        areaDist:
+          type: array
+          items:
+            type: object
+            properties:
+              area:
+                type: string
+              total:
+                type: integer
+              online:
+                type: integer
+              onTask:
+                type: integer
+
+    DailyOps:
+      type: object
+      properties:
+        tasksToday:
+          type: integer
+        completed:
+          type: integer
+        cancelled:
+          type: integer
+        revenueToday:
+          type: number
+        acceptanceRate:
+          type: integer
+        completionRate:
+          type: integer
+        cancellationRate:
+          type: integer
+        avgRating:
+          type: string
+        uniqueUsersToday:
+          type: integer
+        uniqueComradesToday:
+          type: integer
+        totalTasks:
+          type: integer
+        timestamp:
+          type: string
+
+    Recruit:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        phone:
+          type: string
+        area:
+          type: string
+        vehicleType:
+          type: string
+        languages:
+          type: array
+          items:
+            type: string
+        availability:
+          type: string
+        stage:
+          type: string
+        notes:
+          type: string
+          nullable: true
+        interviewDate:
+          type: string
+          nullable: true
+        trainingScore:
+          type: number
+          nullable: true
+        runnerId:
+          type: integer
+          nullable: true
+        createdAt:
+          type: string
+
+    RecruitInput:
+      type: object
+      required: [name, phone, area]
+      properties:
+        name:
+          type: string
+        phone:
+          type: string
+        area:
+          type: string
+        vehicleType:
+          type: string
+        languages:
+          type: array
+          items:
+            type: string
+        availability:
+          type: string
+
+    RecruitUpdate:
+      type: object
+      properties:
+        stage:
+          type: string
+        notes:
+          type: string
+        interviewDate:
+          type: string
+        trainingScore:
+          type: number
+        runnerId:
+          type: integer
+
+    RecruitmentFunnel:
+      type: object
+      properties:
+        funnel:
+          type: array
+          items:
+            type: object
+            properties:
+              stage:
+                type: string
+              count:
+                type: integer
+        total:
+          type: integer
+
+    TrainingModule:
+      type: object
+      properties:
+        id:
+          type: integer
+        topic:
+          type: string
+        description:
+          type: string
+        order:
+          type: integer
+        isRequired:
+          type: boolean
+        createdAt:
+          type: string
+
+    TrainingModuleInput:
+      type: object
+      required: [topic, description]
+      properties:
+        topic:
+          type: string
+        description:
+          type: string
+        order:
+          type: integer
+        isRequired:
+          type: boolean
+
+    TrainingProgress:
+      type: object
+      properties:
+        progress:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: integer
+              topic:
+                type: string
+              description:
+                type: string
+              order:
+                type: integer
+              isRequired:
+                type: boolean
+              completed:
+                type: boolean
+              score:
+                type: number
+                nullable: true
+              completedAt:
+                type: string
+                nullable: true
+        readiness:
+          type: integer
+        completedCount:
+          type: integer
+        totalModules:
+          type: integer
+
+    TrainingCompleteInput:
+      type: object
+      required: [runnerId, moduleId]
+      properties:
+        runnerId:
+          type: integer
+        moduleId:
+          type: integer
+        score:
+          type: number
+
+    RunnerTraining:
+      type: object
+      properties:
+        id:
+          type: integer
+        runnerId:
+          type: integer
+        moduleId:
+          type: integer
+        completed:
+          type: boolean
+        score:
+          type: number
+          nullable: true
+        completedAt:
+          type: string
+          nullable: true
+
+    QualityReview:
+      type: object
+      properties:
+        id:
+          type: integer
+        taskId:
+          type: integer
+        runnerId:
+          type: integer
+        customerRating:
+          type: integer
+          nullable: true
+        customerFeedback:
+          type: string
+          nullable: true
+        comradeFeedback:
+          type: string
+          nullable: true
+        taskQualityScore:
+          type: integer
+        slaGrade:
+          type: string
+        acceptanceTimeSeconds:
+          type: integer
+          nullable: true
+        arrivalTimeMinutes:
+          type: number
+          nullable: true
+        completionTimeMinutes:
+          type: number
+          nullable: true
+        createdAt:
+          type: string
+
+    QualityReviewInput:
+      type: object
+      required: [taskId, runnerId]
+      properties:
+        taskId:
+          type: integer
+        runnerId:
+          type: integer
+        customerRating:
+          type: integer
+          minimum: 1
+          maximum: 5
+        customerFeedback:
+          type: string
+        comradeFeedback:
+          type: string
+
+    QualityStats:
+      type: object
+      properties:
+        avgScore:
+          type: integer
+        avgRating:
+          type: string
+        gradeDist:
+          type: object
+          properties:
+            excellent:
+              type: integer
+            good:
+              type: integer
+            average:
+              type: integer
+            poor:
+              type: integer
+        total:
+          type: integer
+
+    FeedbackInput:
+      type: object
+      required: [taskId, rating]
+      properties:
+        taskId:
+          type: integer
+        rating:
+          type: integer
+          minimum: 1
+          maximum: 5
+        feedback:
+          type: string
+        issueReport:
+          type: string
+
+    FeedbackStats:
+      type: object
+      properties:
+        avgRating:
+          type: string
+        csatScore:
+          type: integer
+        responseRate:
+          type: integer
+        total:
+          type: integer
+        recent:
+          type: array
+          items:
+            $ref: "#/components/schemas/Review"
+
+    SupportTicket:
+      type: object
+      properties:
+        id:
+          type: integer
+        ticketId:
+          type: string
+        taskId:
+          type: integer
+          nullable: true
+        userId:
+          type: integer
+          nullable: true
+        runnerId:
+          type: integer
+          nullable: true
+        subject:
+          type: string
+        description:
+          type: string
+        category:
+          type: string
+        priority:
+          type: string
+        status:
+          type: string
+        assignedAdmin:
+          type: string
+          nullable: true
+        resolution:
+          type: string
+          nullable: true
+        refundAmount:
+          type: number
+          nullable: true
+        resolutionTimeMinutes:
+          type: integer
+          nullable: true
+        createdAt:
+          type: string
+
+    SupportTicketInput:
+      type: object
+      required: [subject, description]
+      properties:
+        taskId:
+          type: integer
+        userId:
+          type: integer
+        runnerId:
+          type: integer
+        subject:
+          type: string
+        description:
+          type: string
+        category:
+          type: string
+        priority:
+          type: string
+
+    SupportTicketUpdate:
+      type: object
+      properties:
+        status:
+          type: string
+        assignedAdmin:
+          type: string
+        resolution:
+          type: string
+        refundAmount:
+          type: number
+        priority:
+          type: string
+
+    SupportStats:
+      type: object
+      properties:
+        total:
+          type: integer
+        open:
+          type: integer
+        resolved:
+          type: integer
+        avgResolutionTime:
+          type: integer
+
+    Incident:
+      type: object
+      properties:
+        id:
+          type: integer
+        type:
+          type: string
+        taskId:
+          type: integer
+          nullable: true
+        runnerId:
+          type: integer
+          nullable: true
+        userId:
+          type: integer
+          nullable: true
+        title:
+          type: string
+        description:
+          type: string
+          nullable: true
+        severity:
+          type: string
+        status:
+          type: string
+        assignedAdmin:
+          type: string
+          nullable: true
+        resolution:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+        resolvedAt:
+          type: string
+          nullable: true
+
+    IncidentInput:
+      type: object
+      required: [type, title]
+      properties:
+        type:
+          type: string
+        taskId:
+          type: integer
+        runnerId:
+          type: integer
+        userId:
+          type: integer
+        title:
+          type: string
+        description:
+          type: string
+        severity:
+          type: string
+
+    IncidentUpdate:
+      type: object
+      properties:
+        status:
+          type: string
+        assignedAdmin:
+          type: string
+        resolution:
+          type: string
+
+    IncidentStats:
+      type: object
+      properties:
+        total:
+          type: integer
+        typeDist:
+          type: object
+          additionalProperties:
+            type: integer
+        statusDist:
+          type: object
+          additionalProperties:
+            type: integer
+        open:
+          type: integer
+
+    IncidentResponse:
+      type: object
+      properties:
+        open:
+          type: integer
+        critical:
+          type: integer
+        resolved:
+          type: integer
+        avgResolutionTime:
+          type: integer
+        total:
+          type: integer
+        typeDist:
+          type: object
+          additionalProperties:
+            type: integer
+        recent:
+          type: array
+          items:
+            $ref: "#/components/schemas/Incident"
+
+    SlaData:
+      type: object
+      properties:
+        slaData:
+          type: array
+          items:
+            type: object
+            properties:
+              taskId:
+                type: integer
+              acceptTime:
+                type: integer
+                nullable: true
+              completeTime:
+                type: integer
+                nullable: true
+              grade:
+                type: string
+              category:
+                type: string
+        gradeDist:
+          type: object
+          properties:
+            excellent:
+              type: integer
+            good:
+              type: integer
+            average:
+              type: integer
+            poor:
+              type: integer
+        avgAcceptanceTime:
+          type: integer
+        avgCompletionTime:
+          type: integer
+        total:
+          type: integer
+
+    HeatmapData:
+      type: object
+      properties:
+        areas:
+          type: array
+          items:
+            type: object
+            properties:
+              area:
+                type: string
+              demand:
+                type: integer
+              activeTasks:
+                type: integer
+              supply:
+                type: integer
+              onlineRunners:
+                type: integer
+              shortage:
+                type: integer
+        totalDemand:
+          type: integer
+        totalSupply:
+          type: integer
+        totalShortage:
+          type: integer
+
+    PilotDashboard:
+      type: object
+      properties:
+        activeUsers:
+          type: integer
+        activeComrades:
+          type: integer
+        tasksToday:
+          type: integer
+        acceptanceRate:
+          type: integer
+        completedRate:
+          type: integer
+        revenueToday:
+          type: number
+        avgRating:
+          type: string
+        avgWaitSaved:
+          type: integer
+        qualityTotal:
+          type: integer
+        openIncidents:
+          type: integer
+        openTickets:
+          type: integer
+        totalUsers:
+          type: integer
+        totalComrades:
+          type: integer
+        pendingKyc:
+          type: integer
+        onlineComrades:
+          type: integer
+        timestamp:
+          type: string
+
+    PilotMode:
+      type: object
+      properties:
+        pilotMode:
+          type: boolean
+        pilotCategories:
+          type: array
+          items:
+            type: string
+
+    PilotModeUpdate:
+      type: object
+      properties:
+        pilotMode:
+          type: boolean
+        pilotCategories:
+          type: array
+          items:
+            type: string
+
+    PilotReadiness:
+      type: object
+      properties:
+        technology:
+          type: object
+          properties:
+            score:
+              type: integer
+            tasks:
+              type: integer
+            users:
+              type: integer
+            comrades:
+              type: integer
+            completed:
+              type: integer
+        operations:
+          type: object
+          properties:
+            score:
+              type: integer
+            recruits:
+              type: integer
+            activeRecruits:
+              type: integer
+            qualityReviews:
+              type: integer
+            incidents:
+              type: integer
+            tickets:
+              type: integer
+        overall:
+          type: object
+          properties:
+            score:
+              type: integer
+            techScore:
+              type: integer
+            opsScore:
+              type: integer
+        verdict:
+          type: string
+        timestamp:
+          type: string
+
+    PilotReadinessReport:
+      type: object
+      properties:
+        scores:
+          type: object
+          properties:
+            technology:
+              type: object
+              properties:
+                score:
+                  type: integer
+                max:
+                  type: integer
+            operational:
+              type: object
+              properties:
+                score:
+                  type: integer
+                max:
+                  type: integer
+            market:
+              type: object
+              properties:
+                score:
+                  type: integer
+                max:
+                  type: integer
+            overall:
+              type: object
+              properties:
+                score:
+                  type: integer
+                max:
+                  type: integer
+        verdict:
+          type: string
+        risks:
+          type: object
+          properties:
+            remaining:
+              type: array
+              items:
+                type: string
+            operational:
+              type: array
+              items:
+                type: string
+            scaling:
+              type: array
+              items:
+                type: string
+        metrics:
+          type: object
+          properties:
+            tasks:
+              type: object
+              properties:
+                total:
+                  type: integer
+                completed:
+                  type: integer
+                today:
+                  type: integer
+                completedToday:
+                  type: integer
+            users:
+              type: object
+              properties:
+                total:
+                  type: integer
+                unique:
+                  type: integer
+            comrades:
+              type: object
+              properties:
+                total:
+                  type: integer
+                verified:
+                  type: integer
+                online:
+                  type: integer
+                activeRecruits:
+                  type: integer
+            quality:
+              type: object
+              properties:
+                reviews:
+                  type: integer
+                avgRating:
+                  type: string
+        checklist:
+          type: object
+          properties:
+            booking:
+              type: boolean
+            dispatch:
+              type: boolean
+            tracking:
+              type: boolean
+            proofUpload:
+              type: boolean
+            queueUpdates:
+              type: boolean
+            otpCompletion:
+              type: boolean
+            revenue:
+              type: boolean
+            trustUpdates:
+              type: boolean
+            familyTracking:
+              type: boolean
+            adminMonitoring:
+              type: boolean
+        timestamp:
+          type: string
+
+    Leaderboard:
+      type: object
+      properties:
+        period:
+          type: string
+        comrades:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: integer
+              name:
+                type: string
+              phone:
+                type: string
+              trustScore:
+                type: integer
+              trustBadge:
+                type: string
+              tasksCompleted:
+                type: integer
+              tasksAccepted:
+                type: integer
+              tasksCancelled:
+                type: integer
+              completionRate:
+                type: integer
+              avgRating:
+                type: string
+              responseTime:
+                type: number
+                nullable: true
+        total:
+          type: integer
+
+    AreaPerformance:
+      type: object
+      properties:
+        areas:
+          type: array
+          items:
+            type: object
+            properties:
+              area:
+                type: string
+              tasks:
+                type: integer
+              completed:
+                type: integer
+              revenue:
+                type: number
+              comrades:
+                type: integer
+              onlineComrades:
+                type: integer
+              avgAcceptTime:
+                type: integer
+              avgCompleteTime:
+                type: integer
+              shortage:
+                type: integer
+        highDemand:
+          type: array
+          items:
+            type: object
+        lowSupply:
+          type: array
+          items:
+            type: object
+        totalTasks:
+          type: integer
+        totalComrades:
+          type: integer
+
+    KpiTracker:
+      type: object
+      properties:
+        goals:
+          type: object
+          properties:
+            tasks:
+              type: object
+              properties:
+                target:
+                  type: integer
+                current:
+                  type: integer
+            customers:
+              type: object
+              properties:
+                target:
+                  type: integer
+                current:
+                  type: integer
+            comrades:
+              type: object
+              properties:
+                target:
+                  type: integer
+                current:
+                  type: integer
+        overall:
+          type: integer
+        timestamp:
+          type: string
+
+    ExecutiveReport:
+      type: object
+      properties:
+        type:
+          type: string
+        period:
+          type: object
+          properties:
+            start:
+              type: string
+            end:
+              type: string
+        revenue:
+          type: number
+        revenueGrowth:
+          type: number
+        operations:
+          type: object
+          properties:
+            totalTasks:
+              type: integer
+            completed:
+              type: integer
+            pending:
+              type: integer
+            cancelled:
+              type: integer
+            avgTasksPerUser:
+              type: integer
+        customers:
+          type: object
+          properties:
+            uniqueUsers:
+              type: integer
+            uniqueComrades:
+              type: integer
+            totalUsers:
+              type: integer
+        topAreas:
+          type: array
+          items:
+            type: object
+            properties:
+              area:
+                type: string
+              tasks:
+                type: integer
+              revenue:
+                type: number
+        topComrades:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: integer
+              name:
+                type: string
+              tasks:
+                type: integer
+              trustScore:
+                type: integer
+        generatedAt:
+          type: string
+
+    FounderDashboard:
+      type: object
+      properties:
+        users:
+          type: object
+          properties:
+            total:
+              type: integer
+            uniqueWithTasks:
+              type: integer
+        comrades:
+          type: object
+          properties:
+            total:
+              type: integer
+            verified:
+              type: integer
+            online:
+              type: integer
+        tasks:
+          type: object
+          properties:
+            total:
+              type: integer
+            completed:
+              type: integer
+            activeNow:
+              type: integer
+            tasksToday:
+              type: integer
+            completionRate:
+              type: integer
+        revenue:
+          type: object
+          properties:
+            today:
+              type: number
+            total:
+              type: number
+        quality:
+          type: object
+          properties:
+            avgRating:
+              type: string
+            avgTrustScore:
+              type: integer
+            avgWaitSaved:
+              type: integer
+            qualityReviews:
+              type: integer
+        incidents:
+          type: object
+          properties:
+            open:
+              type: integer
+            total:
+              type: integer
+        support:
+          type: object
+          properties:
+            open:
+              type: integer
+            total:
+              type: integer
+        pilotGoals:
+          type: object
+          properties:
+            tasks:
+              type: object
+              properties:
+                current:
+                  type: integer
+                target:
+                  type: integer
+            customers:
+              type: object
+              properties:
+                current:
+                  type: integer
+                target:
+                  type: integer
+            comrades:
+              type: object
+              properties:
+                current:
+                  type: integer
+                target:
+                  type: integer
+        pilotProgress:
+          type: integer
+        growth:
+          type: object
+          properties:
+            taskGrowth:
+              type: integer
+            weekTasks:
+              type: integer
+            prevWeekTasks:
+              type: integer
+        timestamp:
+          type: string

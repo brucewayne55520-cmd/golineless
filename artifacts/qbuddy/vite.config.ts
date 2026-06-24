@@ -5,34 +5,19 @@ import path from "path";
 import runtimeErrorOverlay from "@replit/vite-plugin-runtime-error-modal";
 
 const rawPort = process.env.PORT;
+const basePath = process.env.BASE_PATH || "/";
 
-if (!rawPort) {
-  throw new Error(
-    "PORT environment variable is required but was not provided.",
-  );
-}
-
-const port = Number(rawPort);
-
-if (Number.isNaN(port) || port <= 0) {
-  throw new Error(`Invalid PORT value: "${rawPort}"`);
-}
-
-const basePath = process.env.BASE_PATH;
-
-if (!basePath) {
-  throw new Error(
-    "BASE_PATH environment variable is required but was not provided.",
-  );
-}
+const isProduction = process.env.NODE_ENV === "production";
 
 export default defineConfig({
   base: basePath,
   plugins: [
     react(),
-    tailwindcss(),
+    tailwindcss({
+      config: "./tailwind.config.js"
+    }),
     runtimeErrorOverlay(),
-    ...(process.env.NODE_ENV !== "production" &&
+    ...(!isProduction &&
     process.env.REPL_ID !== undefined
       ? [
           await import("@replit/vite-plugin-cartographer").then((m) =>
@@ -57,18 +42,29 @@ export default defineConfig({
   build: {
     outDir: path.resolve(import.meta.dirname, "dist/public"),
     emptyOutDir: true,
+    cssMinify: "esbuild",
+    css: {
+      transformer: "esbuild"
+    }
   },
   server: {
-    port,
-    strictPort: true,
+    port: rawPort ? Number(rawPort) : 5173,
+    strictPort: false,
     host: "0.0.0.0",
     allowedHosts: true,
     fs: {
       strict: true,
     },
+    proxy: {
+      "/api": {
+        target: "http://127.0.0.1:5001",
+        changeOrigin: true,
+        ws: true,
+      },
+    },
   },
   preview: {
-    port,
+    port: rawPort ? Number(rawPort) : 5173,
     host: "0.0.0.0",
     allowedHosts: true,
   },

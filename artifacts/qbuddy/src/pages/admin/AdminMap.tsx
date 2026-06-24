@@ -1,14 +1,14 @@
 import { useEffect, useRef } from "react";
-import { useGetActiveRunnerLocations } from "@workspace/api-client-react";
+import { useGetActiveRunnerLocations, type RunnerMapMarker } from "@workspace/api-client-react";
 import AdminSidebar from "@/components/AdminSidebar";
 
 export default function AdminMap() {
-  const { data: runners } = useGetActiveRunnerLocations({ query: { refetchInterval: 5000 } });
-  const mapRef = useRef<any>(null);
+  const { data: runners } = useGetActiveRunnerLocations({ query: { queryKey: ["activeRunnerLocations"], refetchInterval: 5000 } });
+  const mapRef = useRef<import("leaflet").Map | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-  const markersRef = useRef<any[]>([]);
+  const markersRef = useRef<import("leaflet").Marker[]>([]);
 
-  const runnerList = (runners as any[]) ?? [];
+  const runnerList = (runners ?? []) as RunnerMapMarker[];
   const online = runnerList.filter(r => r.status === "available").length;
   const onTask = runnerList.filter(r => r.status === "on_task").length;
   const offline = runnerList.filter(r => r.status === "offline").length;
@@ -18,7 +18,7 @@ export default function AdminMap() {
     const load = async () => {
       const L = await import("leaflet");
       await import("leaflet/dist/leaflet.css");
-      delete (L.Icon.Default.prototype as any)._getIconUrl;
+      delete (L.Icon.Default.prototype as unknown as { _getIconUrl?: unknown })._getIconUrl;
       L.Icon.Default.mergeOptions({
         iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
         iconRetinaUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
@@ -32,7 +32,8 @@ export default function AdminMap() {
   }, []);
 
   useEffect(() => {
-    if (!mapRef.current || runnerList.length === 0) return;
+    const map = mapRef.current;
+    if (!map || runnerList.length === 0) return;
     const load = async () => {
       const L = await import("leaflet");
       markersRef.current.forEach(m => m.remove());
@@ -45,7 +46,7 @@ export default function AdminMap() {
           iconSize: [16, 16],
         });
         const marker = L.marker([r.lat, r.lng], { icon })
-          .addTo(mapRef.current)
+          .addTo(map)
           .bindPopup(`<b>${r.name ?? "Runner"}</b><br>📞 ${r.phone}<br>Status: ${r.status}<br>${r.rating ? `⭐ ${Number(r.rating).toFixed(1)}` : ""}`);
         markersRef.current.push(marker);
       }
@@ -54,7 +55,12 @@ export default function AdminMap() {
   }, [runners]);
 
   useEffect(() => {
-    return () => { mapRef.current?.remove(); mapRef.current = null; };
+    return () => {
+      if (mapRef.current) {
+        mapRef.current.remove();
+        mapRef.current = null;
+      }
+    };
   }, []);
 
   return (

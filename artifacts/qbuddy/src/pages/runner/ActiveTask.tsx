@@ -1,33 +1,104 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 import confetti from "canvas-confetti";
-import { MapPin, Camera, KeyRound, Sparkles, Moon } from "lucide-react";
-import { useListTasks, useUpdateTaskStatus, useVerifyTaskOtp, useGetRunnerMe } from "@workspace/api-client-react";
+import { MapPin, Camera, KeyRound, Sparkles, Moon, Navigation, Clock, CheckCircle, Phone, MessageSquare, Timer, PauseCircle, PlayCircle, Banknote, type LucideIcon } from "lucide-react";
+import { useGetActiveTask, useUpdateTaskStatus, useVerifyTaskOtp, useStartWaiting, usePauseWaiting, useEndWaiting, useUpdateQueueProgress, useUploadProofPhoto, TaskStatusUpdateStatus, ProofPhotoInputProofType } from "@workspace/api-client-react";
 import { RunnerBottomNav } from "@/components/BottomNav";
 import { CategoryIcon } from "@/components/CategoryIcon";
 import { CATEGORY_NAMES, formatCurrency } from "@/lib/utils";
+import { NAVY, NAVY_GRAD, GOLD, GOLD_GRAD } from "@/lib/theme";
 
-const NAVY = "#0F2557";
-const NAVY_GRAD = "linear-gradient(135deg, #0F2557, #1D3D7C)";
-const GOLD = "#C9A84C";
-const GOLD_GRAD = "linear-gradient(135deg, #C9A84C, #D4B870)";
 const BG = "#080E1E";
+
+/** Haptic feedback helper — triggers device vibration on critical actions */
+function haptic(pattern: number | number[] = 50) {
+  try { navigator.vibrate?.(pattern); } catch { /* noop */ }
+}
+
+function getAuthHeaders() {
+  return { Authorization: `Bearer ${localStorage.getItem("golineless_runner_token") || ""}` };
+}
+
+
+
+interface StepBadgeProps {
+  label: string;
+  done: boolean;
+  current: boolean;
+  icon: LucideIcon;
+  index: number;
+}
+
+function StepBadge({ label, done, current, icon: Icon, index }: StepBadgeProps) {
+  return (
+    <div className={`flex items-center gap-3 p-3 rounded-xl transition-all ${current ? "bg-white/10 border border-white/20" : done ? "bg-green-500/10" : "bg-white/5"}`}>
+      <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 ${done ? "bg-green-500 text-white" : current ? "" : "bg-white/10 text-white/40"}`}
+        style={current && !done ? { background: GOLD_GRAD, color: "#0A1628" } : {}}>
+        {done ? <CheckCircle size={16} /> : index + 1}
+      </div>
+      <span className={`text-sm font-semibold ${done ? "text-green-400" : current ? "text-white" : "text-white/40"}`}>
+        {label}
+      </span>
+      {done && <CheckCircle size={14} className="ml-auto text-green-400" />}
+    </div>
+  );
+}
 
 export default function ActiveTask() {
   const [, navigate] = useLocation();
-  const { data: runner } = useGetRunnerMe();
-  const { data: tasks, isLoading } = useListTasks({ params: { role: "runner", status: "assigned,on_the_way,at_location,in_progress" } as any, query: { refetchInterval: 5000 } });
-  const updateStatus = useUpdateTaskStatus();
+  const { data: taskData, isLoading } = useGetActiveTask({ query: { queryKey: ["activeTask"], refetchInterval: 30000 } });
+  const task = taskData!;
+
+  const updateStatus = useUpdateTaskStatus({ request: { headers: getAuthHeaders() } });
   const verifyOtp = useVerifyTaskOtp();
+  const startWaiting = useStartWaiting({ request: { headers: getAuthHeaders() } });
+  const pauseWaiting = usePauseWaiting({ request: { headers: getAuthHeaders() } });
+  const endWaiting = useEndWaiting({ request: { headers: getAuthHeaders() } });
+  const updateQueueProgress = useUpdateQueueProgress({ request: { headers: getAuthHeaders() } });
+  const uploadProofPhoto = useUploadProofPhoto({ request: { headers: getAuthHeaders() } });
+
   const [otpDigits, setOtpDigits] = useState(["", "", "", "", "", ""]);
-  const [uploadedPhoto, setUploadedPhoto] = useState<string | null>(null);
+  const [uploadedPhotos, setUploadedPhotos] = useState<Record<string, string>>({});
   const [elapsed, setElapsed] = useState(0);
   const [timerActive, setTimerActive] = useState(false);
+  const [waitingActive, setWaitingActive] = useState(false);
+  const [waitingElapsed, setWaitingElapsed] = useState(0);
   const [completed, setCompleted] = useState(false);
+  const [cashConfirmed, setCashConfirmed] = useState(false);
+  const [cashConfirming, setCashConfirming] = useState(false);
+  const [currentStepIndex, setCurrentStepIndex] = useState(0);
+  const [queueToken, setQueueToken] = useState("");
+  const [queueCounter, setQueueCounter] = useState("");
+  const [queueNotes, setQueueNotes] = useState("");
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const socketRef = useRef<any>(null);
 
-  const task: any = tasks && (tasks as any[]).length > 0 ? (tasks as any[])[0] : null;
+  // Connect socket for waiting/queue events
+  useEffect(() => {
+    if (!task?.id) return;
+    const init = async () => {
+      const { io } = await import("socket.io-client");
+      const sock = io(window.location.origin, { path: "/api/socket.io" });
+      sock.emit("join_task", { taskId: task.id });
+      socketRef.current = sock;
+    };
+    init();
+    return () => { socketRef.current?.disconnect(); };
+  }, [task?.id]);
+
+  // Determine current step
+  useEffect(() => {
+    if (!task) return;
+    if (task.status === "assigned") setCurrentStepIndex(0);
+    else if (task.status === "on_the_way") setCurrentStepIndex(1);
+    else if (task.status === "reached_pickup") setCurrentStepIndex(2);
+    else if (task.status === "reached_task_location") setCurrentStepIndex(task.pickupRequired ? 3 : 2);
+    else if (task.status === "waiting_started") setCurrentStepIndex(task.pickupRequired ? 4 : 3);
+    else if (task.status === "in_progress") setCurrentStepIndex(task.pickupRequired ? 4 : 3);
+    else if (task.otpVerified) setCurrentStepIndex(5);
+  }, [task]);
 
   useEffect(() => {
     let interval: ReturnType<typeof setInterval>;
@@ -37,17 +108,85 @@ export default function ActiveTask() {
     return () => clearInterval(interval);
   }, [timerActive, task?.status]);
 
+  useEffect(() => {
+    let interval: ReturnType<typeof setInterval>;
+    if (waitingActive) {
+      interval = setInterval(() => setWaitingElapsed(e => e + 1), 1000);
+    }
+    return () => clearInterval(interval);
+  }, [waitingActive]);
+
   const formatTime = (s: number) => `${String(Math.floor(s / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`;
 
-  const handleStatus = (status: string) => {
+  const handleStatusUpdate = (status: TaskStatusUpdateStatus) => {
     if (!task) return;
-    updateStatus.mutate({ id: String(task.id), data: { status } } as any, {
+    haptic(30);
+    updateStatus.mutate({ id: task.id!, data: { status } }, {
       onSuccess: () => {
-        toast.success(status === "in_progress" ? "Task started!" : "Status updated!");
+        const msgs: Record<string, string> = {
+          on_the_way: "Marked as On the Way!",
+          reached_pickup: "Reached pickup location!",
+          reached_task_location: "Reached task location!",
+          in_progress: "Task started!",
+        };
+        toast.success(msgs[status] || "Status updated!");
         if (status === "in_progress") setTimerActive(true);
       },
       onError: () => toast.error("Failed to update status"),
     });
+  };
+
+  const handlePhotoUpload = async (proofType: ProofPhotoInputProofType) => {
+    if (!task) return;
+    let lat: number | null = null;
+    let lng: number | null = null;
+    let address: string | null = null;
+
+    try {
+      const pos = await new Promise<GeolocationPosition>((resolve, reject) => {
+        navigator.geolocation.getCurrentPosition(resolve, reject, { enableHighAccuracy: true, timeout: 10000 });
+      });
+      lat = pos.coords.latitude;
+      lng = pos.coords.longitude;
+      address = `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+    } catch (e) {
+      toast.error("Could not get location. GPS may be unavailable.");
+    }
+
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = "image/*";
+    input.onchange = async (e: Event) => {
+      const target = e.target as HTMLInputElement;
+      const file = target?.files?.[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = async (ev) => {
+        let imageUrl = ev.target?.result as string;
+
+        try {
+          const { applyWatermark } = await import("@/lib/utils");
+          imageUrl = await applyWatermark(imageUrl, {
+            taskId: task.id, proofType, lat, lng, address,
+            timestamp: new Date().toISOString(),
+          });
+        } catch (e) {
+          toast.error("Failed to apply watermark to photo");
+        }
+
+        setUploadedPhotos(prev => ({ ...prev, [proofType]: imageUrl }));
+
+        uploadProofPhoto.mutate({
+          id: task.id!,
+          data: { imageUrl, proofType, lat: lat ?? undefined, lng: lng ?? undefined, address: address ?? undefined },
+        }, {
+          onSuccess: () => toast.success("Proof photo uploaded!"),
+          onError: () => toast.error("Failed to upload proof photo"),
+        });
+      };
+      reader.readAsDataURL(file);
+    };
+    input.click();
   };
 
   const handleOtpChange = (val: string, idx: number) => {
@@ -57,11 +196,37 @@ export default function ActiveTask() {
     if (val && idx < 5) document.getElementById(`otp-active-${idx + 1}`)?.focus();
   };
 
+  const handleConfirmCash = async () => {
+    if (!task || cashConfirmed || cashConfirming) return;
+    setCashConfirming(true);
+    try {
+      const token = localStorage.getItem("golineless_runner_token") || "";
+      const res = await fetch(`/api/tasks/${task.id}/confirm-cash`, {
+        method: "POST",
+        headers: { "Authorization": `Bearer ${token}`, "Content-Type": "application/json" },
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setCashConfirmed(true);
+        toast.success(data.message || "Cash payment confirmed!");
+        confetti({ particleCount: 80, spread: 60, origin: { y: 0.6 }, colors: ["#22C55E", "#16A34A"] });
+      } else {
+        toast.error(data.error || "Failed to confirm cash payment");
+      }
+    } catch {
+      toast.error("Network error. Please try again.");
+    } finally {
+      setCashConfirming(false);
+    }
+  };
+
   const handleVerifyOtp = () => {
     const otp = otpDigits.join("");
     if (otp.length !== 6) { toast.error("Enter 6-digit OTP"); return; }
-    verifyOtp.mutate({ id: String(task.id), data: { otp } } as any, {
-      onSuccess: (data: any) => {
+    haptic([50, 30, 50]);
+    verifyOtp.mutate({ id: task.id, data: { otp } }, {
+      onSuccess: (data: { runnerEarning?: number }) => {
+        haptic([100, 50, 100]);
         setCompleted(true);
         setTimerActive(false);
         confetti({ particleCount: 150, spread: 100, origin: { y: 0.5 }, colors: [NAVY, GOLD, "#1D3D7C", "#22C55E"] });
@@ -84,7 +249,7 @@ export default function ActiveTask() {
     <div className="min-h-screen flex flex-col items-center justify-center pb-20" style={{ background: BG }}>
       <Moon size={48} className="text-white/20 mb-4" />
       <h3 className="text-white font-bold text-lg">No active task</h3>
-      <p className="text-white/50 text-sm mt-1 mb-5">Go to Tasks tab to find new tasks</p>
+      <p className="text-white/50 text-sm mt-1 mb-5">Go to Tasks tab to find new dispatch tasks</p>
       <button onClick={() => navigate("/runner/feed")} className="px-6 py-3 rounded-xl text-[#0A1628] font-semibold" style={{ background: GOLD_GRAD }}>
         Find Tasks
       </button>
@@ -94,6 +259,7 @@ export default function ActiveTask() {
 
   return (
     <div className="min-h-screen pb-24" style={{ background: BG }}>
+      {/* Header */}
       <div className="px-4 pt-4 pb-3 border-b border-white/10">
         <div className="flex items-center justify-between">
           <div>
@@ -108,12 +274,13 @@ export default function ActiveTask() {
         </div>
       </div>
 
+      {/* Task summary card */}
       <div className="mx-4 mt-4 bg-white/8 border border-white/10 rounded-2xl p-4">
         <div className="flex items-center gap-3 mb-2">
           <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center text-white">
             <CategoryIcon category={task.category} size={22} />
           </div>
-          <div>
+          <div className="flex-1 min-w-0">
             <h2 className="font-bold text-white">{CATEGORY_NAMES[task.category]}</h2>
             {task.locationName && (
               <p className="text-white/50 text-xs flex items-center gap-1">
@@ -121,89 +288,437 @@ export default function ActiveTask() {
               </p>
             )}
           </div>
-          <span className="ml-auto font-black text-lg" style={{ color: GOLD }}>{formatCurrency(task.runnerEarning ?? 0)}</span>
+          <span className="font-black text-lg flex-shrink-0" style={{ color: GOLD }}>{formatCurrency(task.runnerEarning ?? 0)}</span>
         </div>
-        <p className="text-white/60 text-sm">{task.description}</p>
+
+        {/* Dispatch info badges */}
+        <div className="flex flex-wrap gap-1.5 mt-2">
+          {task.fromArea && task.toArea && (
+            <span className="text-[10px] bg-blue-500/20 text-blue-400 px-2 py-0.5 rounded-full">
+              {task.fromArea} → {task.toArea}
+            </span>
+          )}
+          {task.pickupRequired && (
+            <span className="text-[10px] bg-amber-500/20 text-amber-400 px-2 py-0.5 rounded-full">
+              📦 Pickup: {task.pickupArea || "Required"}
+            </span>
+          )}
+          {task.estimatedDurationMinutes && (
+            <span className="text-[10px] bg-purple-500/20 text-purple-400 px-2 py-0.5 rounded-full">
+              ⏱ ~{task.estimatedDurationMinutes} min
+            </span>
+          )}
+        </div>
+
+        <p className="text-white/60 text-sm mt-2">{task.description}</p>
+
+        {/* Client info */}
         {task.user && (
           <div className="mt-3 pt-3 border-t border-white/10 flex items-center gap-2">
             <div className="w-7 h-7 rounded-full flex items-center justify-center text-white text-xs font-bold" style={{ background: NAVY_GRAD }}>
-              {task.user.name?.[0] ?? "U"}
+              {task.user.name?.[0] ?? "C"}
             </div>
-            <span className="text-white/60 text-xs">{task.user.name ?? "Customer"}</span>
+            <span className="text-white/60 text-xs">{task.user.name ?? "Client"}</span>
+            {task.user?.phone && (
+              <div className="ml-auto flex gap-1.5">
+                <a href={`tel:${task.user.phone}`} className="w-6 h-6 bg-green-500/20 rounded-full flex items-center justify-center">
+                  <Phone size={10} className="text-green-400" />
+                </a>
+                <a href={`https://wa.me/${task.user.phone?.replace(/\D/g, "")}`} target="_blank" rel="noreferrer" className="w-6 h-6 bg-green-500/20 rounded-full flex items-center justify-center">
+                  <MessageSquare size={10} className="text-green-400" />
+                </a>
+              </div>
+            )}
           </div>
         )}
       </div>
 
-      <div className="mx-4 mt-4 h-36 bg-white/5 border border-white/10 rounded-2xl flex items-center justify-center">
-        <div className="text-center text-white/30">
-          <MapPin size={28} className="mx-auto mb-1" />
-          <div className="text-sm">{task.locationArea ?? "Ahmedabad"}</div>
+      {/* Location info */}
+      <div className="mx-4 mt-4 bg-white/8 border border-white/10 rounded-2xl p-4">
+        <div className="flex items-center gap-2 mb-2">
+          <MapPin size={14} className="text-white/50" />
+          <h3 className="text-white font-semibold text-sm">Location Details</h3>
+        </div>
+        <div className="space-y-1 text-xs text-white/50">
+          <p><span className="text-white/30">Task:</span> {task.locationName || "—"} ({task.locationArea || "—"})</p>
+          {task.pickupRequired && (
+            <p><span className="text-white/30">Pickup:</span> {task.pickupAddress || "—"} ({task.pickupArea || "—"})</p>
+          )}
+          {task.fromArea && <p><span className="text-white/30">From:</span> {task.fromArea} <span className="text-white/30">→ To:</span> {task.toArea || task.locationArea}</p>}
+          {task.specialInstructions && (
+            <p><span className="text-white/30">Instructions:</span> {task.specialInstructions}</p>
+          )}
         </div>
       </div>
 
-      <div className="mx-4 mt-4 space-y-3">
-        {(task.status === "assigned" || task.status === "on_the_way") && (
-          <button
-            onClick={() => handleStatus("at_location")}
-            disabled={updateStatus.isPending}
-            className="w-full py-4 rounded-2xl text-white font-bold text-base flex items-center justify-center gap-2"
-            style={{ background: NAVY_GRAD }}
-          >
-            <MapPin size={18} /> I've Reached the Location
-          </button>
-        )}
+      {/* Step-based workflow */}
+      <div className="mx-4 mt-4 space-y-2">
+        {/* Step 1: Accept (always done once we see the task) */}
+        <StepBadge label="Accepted Task" done={true} current={false} icon={CheckCircle} index={0} />
 
-        {task.status === "at_location" && (
-          <button
-            onClick={() => handleStatus("in_progress")}
-            disabled={updateStatus.isPending}
-            className="w-full py-4 rounded-2xl text-[#0A1628] font-bold text-base"
-            style={{ background: GOLD_GRAD }}
-          >
-            Start Task Now
-          </button>
-        )}
-
-        {task.status === "in_progress" && (
+        {/* Step 2: Start Travel */}
+        {(task.status === "assigned") && (
           <div className="bg-white/8 border border-white/10 rounded-2xl p-4">
-            <h3 className="text-white font-semibold mb-3 flex items-center gap-2">
-              <Camera size={16} /> Upload Proof Photo
-            </h3>
-            <label className="block cursor-pointer">
+            <div className="flex items-center gap-2 mb-3">
+              <Navigation size={16} className="text-white" />
+              <h3 className="text-white font-semibold text-sm">Start Travel</h3>
+            </div>
+            <p className="text-white/50 text-xs mb-3">Head towards the task location to begin</p>
+            <button
+              onClick={() => handleStatusUpdate("on_the_way")}
+              disabled={updateStatus.isPending}
+              className="w-full py-3.5 rounded-xl text-white font-bold flex items-center justify-center gap-2"
+              style={{ background: NAVY_GRAD }}
+            >
+              <Navigation size={16} /> I'm on my way!
+            </button>
+          </div>
+        )}
+
+        {/* Step 3: Reached Pickup (if pickup required) */}
+        {task.pickupRequired && (task.status === "on_the_way" || task.status === "reached_pickup") && (
+          <div className="bg-white/8 border border-white/10 rounded-2xl p-4">
+            <div className="flex items-center gap-2 mb-3">
+              <MapPin size={16} className="text-amber-400" />
+              <h3 className="text-white font-semibold text-sm">Reached Pickup? {uploadedPhotos["reached_pickup"] && "✓"}</h3>
+            </div>
+            <p className="text-white/50 text-xs mb-3">Confirm you've reached the pickup location and upload proof</p>
+            <div className="flex gap-2">
+              <button
+                onClick={() => handlePhotoUpload("reached_pickup")}
+                className="flex-1 py-3 rounded-xl border border-amber-500/30 text-amber-400 font-semibold text-sm flex items-center justify-center gap-2"
+              >
+                <Camera size={14} /> {uploadedPhotos["reached_pickup"] ? "Re-upload" : "Upload Proof"}
+              </button>
+              {uploadedPhotos["reached_pickup"] && (
+                <button
+                  onClick={() => handleStatusUpdate("reached_task_location")}
+                  disabled={updateStatus.isPending}
+                  className="flex-1 py-3 rounded-xl text-white font-bold text-sm"
+                  style={{ background: NAVY_GRAD }}
+                >
+                  Proceed →
+                </button>
+              )}
+            </div>
+            {uploadedPhotos["reached_pickup"] && (
+              <img src={uploadedPhotos["reached_pickup"]} alt="Pickup proof" className="mt-3 w-full h-28 object-cover rounded-xl" />
+            )}
+          </div>
+        )}
+
+        {/* Step 4: Reached Task Location */}
+        {(task.status === "reached_task_location" || (task.pickupRequired && task.status === "reached_pickup")) && (
+          <div className="bg-white/8 border border-white/10 rounded-2xl p-4">
+            <div className="flex items-center gap-2 mb-3">
+              <MapPin size={16} className="text-green-400" />
+              <h3 className="text-white font-semibold text-sm">Reached Task Location {uploadedPhotos["reached_task_location"] && "✓"}</h3>
+            </div>
+            <p className="text-white/50 text-xs mb-3">Confirm you're at the task location</p>
+            <div className="flex gap-2">
+              <button
+                onClick={() => handlePhotoUpload("reached_task_location")}
+                className="flex-1 py-3 rounded-xl border border-green-500/30 text-green-400 font-semibold text-sm flex items-center justify-center gap-2"
+              >
+                <Camera size={14} /> Upload Location Proof
+              </button>
+              {uploadedPhotos["reached_task_location"] && (
+                <button
+                  onClick={() => handleStatusUpdate("in_progress")}
+                  disabled={updateStatus.isPending}
+                  className="flex-1 py-3 rounded-xl text-[#0A1628] font-bold text-sm"
+                  style={{ background: GOLD_GRAD }}
+                >
+                  Start Task →
+                </button>
+              )}
+            </div>
+            {uploadedPhotos["reached_task_location"] && (
+              <img src={uploadedPhotos["reached_task_location"]} alt="Location proof" className="mt-3 w-full h-28 object-cover rounded-xl" />
+            )}
+          </div>
+        )}
+
+        {/* Waiting Timer Section */}
+        {(task.status === "at_location" || task.status === "in_progress" || task.status === "waiting_started") && (
+          <div className="bg-white/8 border border-white/10 rounded-2xl p-4">
+            <div className="flex items-center gap-2 mb-3">
+              <Timer size={16} className="text-white/50" />
+              <h3 className="text-white font-semibold text-sm">Waiting Timer</h3>
+            </div>
+            {task.status !== "waiting_started" && !waitingActive && (
+              <div className="flex gap-2">
+                <button
+                  onClick={() => {
+                    startWaiting.mutate({ id: task.id }, {
+                      onSuccess: () => {
+                        setWaitingActive(true);
+                        setWaitingElapsed(0);
+                        socketRef.current?.emit("waiting_timer_start", { taskId: task.id });
+                        toast.success("Waiting timer started");
+                      },
+                      onError: () => toast.error("Failed to start timer"),
+                    });
+                  }}
+                  disabled={startWaiting.isPending}
+                  className="flex-1 py-3 rounded-xl border border-white/20 text-white/80 font-semibold text-sm flex items-center justify-center gap-2 hover:bg-white/5 transition-colors"
+                >
+                  <PlayCircle size={14} /> Start Waiting
+                </button>
+              </div>
+            )}
+            {(task.status === "waiting_started" || waitingActive) && (
+              <div>
+                <div className="text-center py-4">
+                  <div className="text-3xl font-black font-mono" style={{ color: GOLD }}>
+                    {String(Math.floor(waitingElapsed / 60)).padStart(2, "0")}:{String(waitingElapsed % 60).padStart(2, "0")}
+                  </div>
+                  <p className="text-white/40 text-xs mt-1">Waiting time</p>
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => {
+                      pauseWaiting.mutate({ id: task.id }, {
+                        onSuccess: () => {
+                          setWaitingActive(false);
+                          socketRef.current?.emit("waiting_timer_pause", { taskId: task.id, totalMinutes: Math.round(waitingElapsed / 60) });
+                          toast.success("Waiting paused");
+                        },
+                        onError: () => toast.error("Failed to pause"),
+                      });
+                    }}
+                    disabled={pauseWaiting.isPending}
+                    className="flex-1 py-3 rounded-xl border border-amber-500/40 text-amber-400 font-semibold text-sm flex items-center justify-center gap-2"
+                  >
+                    <PauseCircle size={14} /> Pause Waiting
+                  </button>
+                  <button
+                    onClick={() => {
+                      endWaiting.mutate({ id: task.id }, {
+                        onSuccess: () => {
+                          setWaitingActive(false);
+                          socketRef.current?.emit("waiting_timer_pause", { taskId: task.id, totalMinutes: Math.round(waitingElapsed / 60) });
+                          toast.success("Waiting ended");
+                        },
+                        onError: () => toast.error("Failed to end"),
+                      });
+                    }}
+                    disabled={endWaiting.isPending}
+                    className="flex-1 py-3 rounded-xl bg-green-500/20 text-green-400 font-semibold text-sm"
+                  >
+                    End Waiting ✓
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Queue Intelligence Section */}
+        {(task.status === "at_location" || task.status === "in_progress" || task.status === "waiting_started") && (
+          <div className="bg-white/8 border border-white/10 rounded-2xl p-4">
+            <div className="flex items-center gap-2 mb-3">
+              <MapPin size={16} className="text-white/50" />
+              <h3 className="text-white font-semibold text-sm">Queue Intelligence</h3>
+            </div>
+            {task.tokenNumber && (
+              <div>
+                <div className="grid grid-cols-3 gap-2 mb-2">
+                  <div className="bg-white/10 rounded-xl p-3 text-center">
+                    <p className="text-white/40 text-[9px] uppercase">Your Token</p>
+                    <p className="text-white font-black text-lg">{task.tokenNumber}</p>
+                  </div>
+                  <div className="bg-white/10 rounded-xl p-3 text-center">
+                    <p className="text-white/40 text-[9px] uppercase">Current</p>
+                    <p className="font-black text-lg" style={{ color: GOLD }}>{task.currentToken || "—"}</p>
+                  </div>
+                  <div className="bg-white/10 rounded-xl p-3 text-center">
+                    <p className="text-white/40 text-[9px] uppercase">Counter</p>
+                    <p className="text-white font-black text-lg">{task.counterNumber || "—"}</p>
+                  </div>
+                </div>
+                {(() => {
+                  const gap = task.queueGap != null ? task.queueGap :
+                    (task.currentToken && task.tokenNumber ? Math.max(0, parseInt(task.tokenNumber) - parseInt(task.currentToken)) : null);
+                  const wait = task.estimatedWaitMinutes != null ? task.estimatedWaitMinutes :
+                    (gap != null && !isNaN(gap) ? Math.round(gap * 1.5) : null);
+                  const progress = task.queueProgressPercent != null ? task.queueProgressPercent :
+                    (task.tokenNumber && task.currentToken && parseInt(task.tokenNumber) > 0
+                      ? Math.max(0, Math.min(100, Math.round((parseInt(task.currentToken) / parseInt(task.tokenNumber)) * 100)))
+                      : null);
+                  return (
+                    <div className="grid grid-cols-3 gap-1 mb-3">
+                      <div className="text-center bg-white/5 rounded-lg p-1.5">
+                        <p className="text-white/30 text-[8px]">Gap</p>
+                        <p className="text-white font-bold text-xs">{gap != null ? gap : "—"}</p>
+                      </div>
+                      <div className="text-center bg-white/5 rounded-lg p-1.5">
+                        <p className="text-white/30 text-[8px]">Wait</p>
+                        <p className="font-bold text-xs" style={{ color: GOLD }}>{wait != null ? `${wait}m` : "—"}</p>
+                      </div>
+                      <div className="text-center bg-white/5 rounded-lg p-1.5">
+                        <p className="text-white/30 text-[8px]">Progress</p>
+                        <p className="text-white font-bold text-xs">{progress != null ? `${progress}%` : "—"}</p>
+                      </div>
+                    </div>
+                  );
+                })()}
+              </div>
+            )}
+
+            {/* Update form */}
+            <div className="space-y-2 mb-2">
+              <div className="flex gap-2">
+                <input
+                  value={queueToken}
+                  onChange={e => setQueueToken(e.target.value)}
+                  placeholder="Current token #"
+                  className="flex-1 bg-white/10 border border-white/20 rounded-xl px-3 py-2.5 text-sm text-white placeholder-white/30 focus:outline-none"
+                />
+                <input
+                  value={queueCounter}
+                  onChange={e => setQueueCounter(e.target.value)}
+                  placeholder="Counter #"
+                  className="w-24 bg-white/10 border border-white/20 rounded-xl px-3 py-2.5 text-sm text-white placeholder-white/30 focus:outline-none"
+                />
+              </div>
+              <textarea
+                value={queueNotes}
+                onChange={e => setQueueNotes(e.target.value)}
+                placeholder="Queue notes (optional)"
+                rows={2}
+                className="w-full bg-white/10 border border-white/20 rounded-xl px-3 py-2.5 text-sm text-white placeholder-white/30 focus:outline-none resize-none"
+              />
+            </div>
+            <button
+              onClick={() => {
+                updateQueueProgress.mutate({
+                  id: task.id,
+                  data: { currentToken: queueToken, counterNumber: queueCounter, queueNotes },
+                }, {
+                  onSuccess: () => {
+                    socketRef.current?.emit("queue_progress_update", { taskId: task.id, currentToken: queueToken, counterNumber: queueCounter });
+                    toast.success("Queue status updated!");
+                    setQueueToken("");
+                    setQueueCounter("");
+                    setQueueNotes("");
+                  },
+                  onError: () => toast.error("Failed to update"),
+                });
+              }}
+              disabled={(!queueToken && !queueCounter) || updateQueueProgress.isPending}
+              className="w-full py-3 rounded-xl text-[#0A1628] font-bold text-sm"
+              style={{ background: !queueToken && !queueCounter ? "#374151" : GOLD_GRAD }}
+            >
+              Update Queue Status
+            </button>
+          </div>
+        )}
+
+        {/* Step 5: Start Working */}
+        {(task.status === "at_location" || task.status === "in_progress" || task.status === "waiting_started") && (
+          <div className="bg-white/8 border border-white/10 rounded-2xl p-4">
+            <div className="flex items-center gap-2 mb-3">
+              <Clock size={16} className="text-blue-400" />
+              <h3 className="text-white font-semibold text-sm">Task in Progress</h3>
+            </div>
+            <p className="text-white/50 text-xs mb-4">Upload progress photos while you work</p>
+
+            {/* Progress proof upload */}
+            <label className="block cursor-pointer mb-3">
               <input
                 type="file"
                 accept="image/*"
                 className="hidden"
-                onChange={(e) => {
+                onChange={async (e) => {
                   const file = e.target.files?.[0];
                   if (!file) return;
                   const reader = new FileReader();
-                  reader.onload = (ev) => { setUploadedPhoto(ev.target?.result as string); toast.success("Photo uploaded!"); };
+                  reader.onload = async (ev) => {
+                    let imageUrl = ev.target?.result as string;
+                    try {
+                      const { applyWatermark } = await import("@/lib/utils");
+                      imageUrl = await applyWatermark(imageUrl, {
+                        taskId: task.id, proofType: "in_progress",
+                        timestamp: new Date().toISOString(),
+                      });
+                    } catch (e) {
+                      toast.error("Failed to apply watermark to photo");
+                    }
+                    setUploadedPhotos(prev => ({ ...prev, ["in_progress"]: imageUrl }));
+                    uploadProofPhoto.mutate({
+                      id: task.id,
+                      data: { imageUrl, proofType: "in_progress" },
+                    }, {
+                      onSuccess: () => toast.success("Progress photo uploaded!"),
+                      onError: () => toast.error("Upload failed"),
+                    });
+                  };
                   reader.readAsDataURL(file);
                 }}
               />
-              <div className={`border-2 border-dashed rounded-xl p-6 text-center transition-all ${uploadedPhoto ? "border-green-500 bg-green-500/10" : "border-white/20 hover:border-white/40"}`}>
-                {uploadedPhoto ? (
+              <div className={`border-2 border-dashed rounded-xl p-4 text-center transition-all ${uploadedPhotos["in_progress"] ? "border-green-500 bg-green-500/10" : "border-white/20 hover:border-white/40"}`}>
+                {uploadedPhotos["in_progress"] ? (
                   <div>
-                    <img src={uploadedPhoto} alt="proof" className="w-24 h-24 object-cover rounded-xl mx-auto mb-2" />
-                    <p className="text-green-400 text-sm font-semibold">✓ Photo uploaded</p>
+                    <img src={uploadedPhotos["in_progress"]} alt="progress" className="w-20 h-20 object-cover rounded-xl mx-auto mb-1" />
+                    <p className="text-green-400 text-xs font-semibold">✓ Progress Photo</p>
                   </div>
                 ) : (
                   <div>
-                    <Camera size={28} className="text-white/30 mx-auto mb-2" />
-                    <p className="text-white/50 text-sm">Tap to upload proof photo</p>
+                    <Camera size={24} className="text-white/30 mx-auto mb-1" />
+                    <p className="text-white/50 text-xs">Tap to upload progress photo</p>
                   </div>
                 )}
               </div>
             </label>
+
+            <p className="text-white/40 text-xs mb-2">When task is done, take a completion photo and enter OTP</p>
+            <button
+              onClick={() => handlePhotoUpload("completed")}
+              className="w-full py-3 rounded-xl border border-green-500/30 text-green-400 font-semibold text-sm mb-2"
+            >
+              <Camera size={14} className="inline mr-1" /> Upload Completion Photo
+            </button>
           </div>
         )}
 
-        {task.status === "in_progress" && uploadedPhoto && (
+        {/* Step 5.5: Cash Payment Confirmation (offline mode) */}
+        {task.status === "in_progress" && task.paymentMethod === "cash" && (
+          <div className="bg-white/8 border border-white/10 rounded-2xl p-4">
+            <div className="flex items-center gap-2 mb-3">
+              <Banknote size={16} className="text-green-400" />
+              <h3 className="text-white font-semibold text-sm">Cash Payment</h3>
+            </div>
+            <p className="text-white/50 text-xs mb-3">Confirm you received Rs {task.price ?? 0} cash from the client</p>
+            {cashConfirmed ? (
+              <div className="flex items-center gap-2 p-3 rounded-xl bg-green-500/20 border border-green-500/30">
+                <CheckCircle size={18} className="text-green-400" />
+                <div>
+                  <p className="text-green-400 font-bold text-sm">Cash Confirmed ✓</p>
+                  <p className="text-green-400/60 text-[10px]">Rs {task.price ?? 0} payment marked as received</p>
+                </div>
+              </div>
+            ) : (
+              <button
+                onClick={handleConfirmCash}
+                disabled={cashConfirming}
+                className="w-full py-3.5 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all"
+                style={{ background: "linear-gradient(135deg, #22C55E, #16A34A)" }}
+              >
+                <Banknote size={16} className="text-white" />
+                {cashConfirming ? "Confirming..." : `Confirm Cash Received · Rs ${task.price ?? 0}`}
+              </button>
+            )}
+          </div>
+        )}
+
+        {/* Step 6: Complete & Get OTP */}
+        {task.status === "in_progress" && (
           <div className="bg-white/8 border border-white/10 rounded-2xl p-4">
             <h3 className="text-white font-semibold mb-3 flex items-center gap-2">
-              <KeyRound size={16} /> Enter OTP from Customer
+              <KeyRound size={16} /> Enter OTP from Client
             </h3>
+            <p className="text-white/40 text-xs mb-3">Ask the client for the 6-digit OTP to complete the task</p>
             <div className="flex gap-2 justify-center mb-4">
               {otpDigits.map((d, i) => (
                 <input
@@ -231,6 +746,7 @@ export default function ActiveTask() {
           </div>
         )}
 
+        {/* Completion celebration */}
         <AnimatePresence>
           {completed && (
             <motion.div

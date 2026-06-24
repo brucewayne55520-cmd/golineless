@@ -6,12 +6,10 @@ import { Star, CheckCircle2, Wallet, HelpCircle, FileText, Lock, ChevronRight, X
 import { useGetRunnerMe, useSubmitKyc, useLogout } from "@workspace/api-client-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { RunnerBottomNav } from "@/components/BottomNav";
-import { getInitials, formatCurrency } from "@/lib/utils";
+import { getInitials } from "@/lib/utils";
 import type { LucideIcon } from "lucide-react";
+import { GOLD, GOLD_GRAD, NAVY_GRAD } from "@/lib/theme";
 
-const GOLD = "#C9A84C";
-const GOLD_GRAD = "linear-gradient(135deg, #C9A84C, #D4B870)";
-const NAVY_GRAD = "linear-gradient(135deg, #0F2557, #1D3D7C)";
 const BG = "#080E1E";
 
 const KYC_STEPS = [
@@ -32,12 +30,12 @@ const SPECIALIZATIONS = [
   { key: "female", label: "Female Assistant", color: "#F472B6" },
 ];
 
-function getTrustLevel(tasks: number, rating: number) {
-  if (tasks >= 100 && rating >= 4.7) return { label: "Elite Runner", next: null, progress: 100, color: "#C9A84C" };
-  if (tasks >= 50 && rating >= 4.5) return { label: "Pro Runner", next: "100 tasks & 4.7★ for Elite", progress: Math.min((tasks / 100) * 100, 95), color: "#10B981" };
-  if (tasks >= 20 && rating >= 4.0) return { label: "Trusted Runner", next: "50 tasks & 4.5★ for Pro", progress: Math.min((tasks / 50) * 100, 95), color: "#3B82F6" };
-  if (tasks >= 5) return { label: "Active Runner", next: "20 tasks & 4.0★ for Trusted", progress: Math.min((tasks / 20) * 100, 95), color: "#9CA3AF" };
-  return { label: "New Runner", next: "Complete 5 tasks to become Active", progress: Math.min((tasks / 5) * 100, 95), color: "#9CA3AF" };
+function getTrustBadgeInfo(score: number): { label: string; color: string; progress: number; next?: string } {
+  if (score >= 95) return { label: "Elite Comrade", next: "Maximum trust level", progress: 100, color: "#C9A84C" };
+  if (score >= 90) return { label: "Trusted Comrade", next: "5 more points for Elite (95+)", progress: score, color: "#10B981" };
+  if (score >= 80) return { label: "Verified Comrade", next: "10 more points for Trusted (90+)", progress: score, color: "#3B82F6" };
+  if (score >= 70) return { label: "Active Comrade", next: "10 more points for Verified (80+)", progress: score, color: "#9CA3AF" };
+  return { label: "Improving Comrade", next: "Complete more tasks to increase score", progress: Math.max(score, 5), color: "#9CA3AF" };
 }
 
 export default function RunnerProfile() {
@@ -48,7 +46,7 @@ export default function RunnerProfile() {
   const logoutMutation = useLogout();
   const [showKyc, setShowKyc] = useState(false);
   const [kycStep, setKycStep] = useState(0);
-  const [form, setForm] = useState({
+  const [form, setForm] = useState<Record<string, string | boolean>>({
     fullName: "", aadhaarNumber: "", bankAccount: "", bankIfsc: "", bankAccountHolder: "",
     emergencyContactName: "", emergencyContactPhone: "", emergencyContactRelation: "",
     agreed: false,
@@ -57,15 +55,15 @@ export default function RunnerProfile() {
   const [aadhaarBack, setAadhaarBack] = useState<string | null>(null);
   const [selfie, setSelfie] = useState<string | null>(null);
 
-  const r = runner as any;
-  const totalTasks = r?.totalTasks ?? 0;
-  const rating = r?.rating ? Number(r.rating) : 0;
-  const trust = getTrustLevel(totalTasks, rating);
+  const totalTasks = runner?.totalTasks ?? 0;
+  const rating = runner?.rating ? Number(runner.rating) : 0;
+  const trustScore = runner?.trustScore ?? 50;
+  const trust = getTrustBadgeInfo(trustScore);
 
   const handleSubmitKyc = () => {
     if (!form.agreed) { toast.error("Please accept the runner agreement"); return; }
     submitKyc.mutate({
-      data: { ...form, aadhaarFront, aadhaarBack, selfie } as any,
+      data: { ...form, aadhaarFront, aadhaarBack, selfie } as import("@workspace/api-client-react").KycInput,
     }, {
       onSuccess: () => { toast.success("KYC submitted! Under review — typically within 24 hours."); setShowKyc(false); refetch(); },
       onError: () => toast.error("Failed to submit KYC. Please try again."),
@@ -81,14 +79,14 @@ export default function RunnerProfile() {
   };
 
   const handleLogout = () => {
-    logoutMutation.mutate(undefined as any, {
+    logoutMutation.mutate(undefined as void, {
       onSettled: () => { logout(); navigate("/"); },
     });
   };
 
-  const kycStatusColor = r?.kycStatus === "verified"
+  const kycStatusColor = runner?.kycStatus === "verified"
     ? "text-green-400 bg-green-400/10 border-green-400/30"
-    : r?.kycStatus === "rejected"
+    : runner?.kycStatus === "rejected"
     ? "text-red-400 bg-red-400/10 border-red-400/30"
     : "text-yellow-400 bg-yellow-400/10 border-yellow-400/30";
 
@@ -99,9 +97,9 @@ export default function RunnerProfile() {
   ];
 
   const stats: { Icon: LucideIcon; val: string | number; label: string; color: string; bg: string }[] = [
-    { Icon: CheckCircle2, val: r?.totalTasks ?? 0, label: "Tasks Done", color: "#22C55E", bg: "#22C55E20" },
+    { Icon: CheckCircle2, val: runner?.totalTasks ?? 0, label: "Tasks Done", color: "#22C55E", bg: "#22C55E20" },
     { Icon: Star, val: rating > 0 ? rating.toFixed(1) : "—", label: "Avg Rating", color: GOLD, bg: `${GOLD}20` },
-    { Icon: Wallet, val: r?.totalEarnings ? `Rs ${Math.round(Number(r.totalEarnings))}` : "Rs 0", label: "Total Earned", color: "#60A5FA", bg: "#60A5FA20" },
+    { Icon: Wallet, val: runner?.totalEarnings ? `Rs ${Math.round(Number(runner.totalEarnings))}` : "Rs 0", label: "Total Earned", color: "#60A5FA", bg: "#60A5FA20" },
   ];
 
   const inputClass = "w-full bg-white/10 border border-white/20 rounded-xl px-3.5 py-3 text-white text-sm focus:outline-none focus:border-white/40 transition-colors placeholder-white/30";
@@ -113,11 +111,11 @@ export default function RunnerProfile() {
         <div className="flex items-center gap-4">
           <div className="w-16 h-16 rounded-2xl flex items-center justify-center text-xl font-black text-[#0A1628] shadow-lg"
             style={{ background: GOLD_GRAD }}>
-            {getInitials(r?.name)}
+            {getInitials(runner?.name)}
           </div>
           <div className="flex-1">
-            <h2 className="font-black text-white text-xl leading-tight">{r?.name ?? "Runner"}</h2>
-            <p className="text-white/40 text-sm">{r?.phone}</p>
+            <h2 className="font-black text-white text-xl leading-tight">{runner?.name ?? "Runner"}</h2>
+            <p className="text-white/40 text-sm">{runner?.phone}</p>
             {rating > 0 && (
               <div className="flex items-center gap-3 mt-1">
                 <div className="flex items-center gap-1">
@@ -129,7 +127,7 @@ export default function RunnerProfile() {
               </div>
             )}
           </div>
-          {r?.kycStatus === "verified" && (
+          {runner?.kycStatus === "verified" && (
             <div className="flex items-center gap-1 text-green-400 text-xs font-bold bg-green-400/15 border border-green-400/30 px-2.5 py-1.5 rounded-xl">
               <Shield size={12} /> Verified
             </div>
@@ -137,17 +135,22 @@ export default function RunnerProfile() {
         </div>
       </div>
 
-      {/* Trust score card */}
-      {r?.kycStatus === "verified" && (
+      {/* Phase 5: Trust Score Card */}
+      {runner?.kycStatus === "verified" && (() => {
+        const r = runner as import("@workspace/api-client-react").Runner & { onTimeArrivals?: number; lateArrivals?: number; repeatClients?: number };
+        return (
         <div className="mx-4 mt-4 rounded-2xl p-4 border border-white/10" style={{ background: "rgba(255,255,255,0.05)" }}>
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-2">
               <Award size={14} style={{ color: trust.color }} />
               <span className="text-sm font-black" style={{ color: trust.color }}>{trust.label}</span>
             </div>
-            <TrendingUp size={14} className="text-white/30" />
+            <div className="flex items-center gap-1.5">
+              <span className="text-2xl font-black" style={{ color: trust.color }}>{trustScore}</span>
+              <TrendingUp size={14} className="text-white/30" />
+            </div>
           </div>
-          <div className="h-1.5 bg-white/10 rounded-full overflow-hidden mb-2">
+          <div className="h-2 bg-white/10 rounded-full overflow-hidden mb-2">
             <motion.div
               initial={{ width: 0 }}
               animate={{ width: `${trust.progress}%` }}
@@ -157,10 +160,29 @@ export default function RunnerProfile() {
             />
           </div>
           {trust.next && (
-            <p className="text-white/40 text-[10px]">🎯 Next: {trust.next}</p>
+            <p className="text-white/40 text-[10px]">🎯 {trust.next}</p>
           )}
-        </div>
-      )}
+          {/* Score breakdown */}
+          <div className="mt-3 pt-3 border-t border-white/10 grid grid-cols-4 gap-1 text-center">
+            <div>
+              <p className="text-white/30 text-[8px] uppercase">Completion</p>
+              <p className="text-white text-xs font-bold">{r.tasksCompleted ?? 0}/{r.tasksAccepted ?? 0}</p>
+            </div>
+            <div>
+              <p className="text-white/30 text-[8px] uppercase">Rating</p>
+              <p className="text-white text-xs font-bold">{r.averageRating ? Number(r.averageRating).toFixed(1) : "—"}</p>
+            </div>
+            <div>
+              <p className="text-white/30 text-[8px] uppercase">On Time</p>
+              <p className="text-white text-xs font-bold">{r.onTimeArrivals ?? 0}/{r.lateArrivals ?? 0}</p>
+            </div>
+            <div>
+              <p className="text-white/30 text-[8px] uppercase">Repeat</p>
+              <p className="text-white text-xs font-bold">{r.repeatClients ?? 0}</p>
+            </div>
+          </div>
+        </div>);
+      })()}
 
       {/* KYC status */}
       <div className="mx-4 mt-3">
@@ -168,21 +190,21 @@ export default function RunnerProfile() {
           <div className="flex items-center justify-between">
             <div>
               <p className="font-bold text-sm">
-                Identity Verification: {r?.kycStatus === "verified" ? "✓ Verified" : r?.kycStatus === "rejected" ? "⚠ Rejected" : "⏳ Under Review"}
+                Identity Verification: {runner?.kycStatus === "verified" ? "✓ Verified" : runner?.kycStatus === "rejected" ? "⚠ Rejected" : "⏳ Under Review"}
               </p>
-              {r?.kycStatus === "rejected" && r?.kycRejectionReason && (
-                <p className="text-xs mt-1 opacity-70 leading-relaxed">Reason: {r.kycRejectionReason}</p>
+              {runner?.kycStatus === "rejected" && runner?.kycRejectionReason && (
+                <p className="text-xs mt-1 opacity-70 leading-relaxed">Reason: {runner.kycRejectionReason}</p>
               )}
-              {r?.kycStatus === "pending" && <p className="text-xs opacity-70 mt-1">Usually reviewed within 24 hours</p>}
-              {r?.kycStatus === "verified" && <p className="text-xs opacity-70 mt-0.5">Your identity is confirmed · You can accept tasks</p>}
+              {runner?.kycStatus === "pending" && <p className="text-xs opacity-70 mt-1">Usually reviewed within 24 hours</p>}
+              {runner?.kycStatus === "verified" && <p className="text-xs opacity-70 mt-0.5">Your identity is confirmed · You can accept tasks</p>}
             </div>
-            {r?.kycStatus !== "verified" && (
+            {runner?.kycStatus !== "verified" && (
               <button
                 onClick={() => setShowKyc(true)}
                 className="px-3 py-1.5 rounded-xl text-[#0A1628] text-xs font-black flex-shrink-0 ml-3"
                 style={{ background: GOLD_GRAD }}
               >
-                {r?.kycStatus === "rejected" ? "Resubmit" : r?.fullName ? "Update" : "Submit KYC"}
+                {runner?.kycStatus === "rejected" ? "Resubmit" : runner?.fullName ? "Update" : "Submit KYC"}
               </button>
             )}
           </div>
@@ -284,7 +306,7 @@ export default function RunnerProfile() {
                         <label className="text-white/60 text-xs font-semibold mb-1.5 block">{f.label}</label>
                         <input
                           type={f.type ?? "text"}
-                          value={(form as any)[f.key]}
+                          value={form[f.key] as string}
                           onChange={(e) => setForm(prev => ({ ...prev, [f.key]: e.target.value }))}
                           placeholder={f.placeholder}
                           className={inputClass}
@@ -359,7 +381,7 @@ export default function RunnerProfile() {
                       <div key={f.key}>
                         <label className="text-white/60 text-xs font-semibold mb-1.5 block">{f.label}</label>
                         <input
-                          value={(form as any)[f.key]}
+                          value={form[f.key] as string}
                           onChange={(e) => setForm(prev => ({ ...prev, [f.key]: e.target.value }))}
                           placeholder={f.placeholder}
                           className={inputClass}
@@ -379,7 +401,7 @@ export default function RunnerProfile() {
                       <div key={f.key}>
                         <label className="text-white/60 text-xs font-semibold mb-1.5 block">{f.label}</label>
                         <input
-                          value={(form as any)[f.key]}
+                          value={form[f.key] as string}
                           onChange={(e) => setForm(prev => ({ ...prev, [f.key]: e.target.value }))}
                           placeholder={f.placeholder}
                           className={inputClass}
@@ -400,7 +422,7 @@ export default function RunnerProfile() {
                       <p>✓ I understand that earnings are paid out weekly via bank transfer.</p>
                     </div>
                     <label className="flex items-start gap-3 cursor-pointer bg-white/8 border border-white/15 rounded-xl p-3">
-                      <input type="checkbox" checked={form.agreed} onChange={(e) => setForm(prev => ({ ...prev, agreed: e.target.checked }))} className="mt-0.5 flex-shrink-0" style={{ accentColor: GOLD }} />
+                      <input type="checkbox" checked={!!form.agreed} onChange={(e) => setForm(prev => ({ ...prev, agreed: e.target.checked }))} className="mt-0.5 flex-shrink-0" style={{ accentColor: GOLD }} />
                       <span className="text-white/70 text-xs leading-relaxed">I have read and agree to the runner agreement and code of conduct above.</span>
                     </label>
                   </div>

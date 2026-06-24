@@ -2,14 +2,12 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
 import { HeartHandshake, CheckCircle2, ShieldCheck, MapPin, Star, Globe, Phone, Clock, Sparkles } from "lucide-react";
-import { useListSubscriptionPlans, useCreateSubscription } from "@workspace/api-client-react";
+import { useListSubscriptionPlans } from "@workspace/api-client-react";
 import { UserBottomNav } from "@/components/BottomNav";
 import { formatCurrency } from "@/lib/utils";
+import { NAVY, NAVY_GRAD, GOLD, GOLD_GRAD } from "@/lib/theme";
+import { EmptyState } from "@/components/EmptyState";
 
-const NAVY = "#0F2557";
-const NAVY_GRAD = "linear-gradient(135deg, #0F2557, #1D3D7C)";
-const GOLD = "#C9A84C";
-const GOLD_GRAD = "linear-gradient(135deg, #C9A84C, #D4B870)";
 
 const trustBadges = [
   { Icon: ShieldCheck, title: "KYC Verified Runners", desc: "Aadhaar + selfie verified" },
@@ -46,13 +44,10 @@ const nriCountries = ["🇺🇸 USA", "🇬🇧 UK", "🇦🇪 UAE", "🇨🇦 C
 export default function SeniorCare() {
   const [billing, setBilling] = useState<"monthly" | "yearly">("monthly");
   const { data: plans, isLoading } = useListSubscriptionPlans();
-  const createSub = useCreateSubscription();
 
-  const handleSubscribe = (planId: string) => {
-    createSub.mutate({ data: { planId, billingCycle: billing } } as any, {
-      onSuccess: () => toast.success("Subscription activated! Welcome to the family."),
-      onError: () => toast.error("Failed to subscribe. Please try again."),
-    });
+  // [OFFLINE MODE] Subscription activation — requires admin approval during pilot
+  const handleSubscribe = (_planId: string) => {
+    toast.info("Subscription requests require admin approval during our pilot phase. Please contact support@golineless.in or ask your admin to activate.", { duration: 8000 });
   };
 
   return (
@@ -85,7 +80,7 @@ export default function SeniorCare() {
             transition={{ delay: 0.4 }}
             className="text-white/70 text-sm leading-relaxed mb-4"
           >
-            Trusted by NRI families across {nriCountries.length} countries.<br />
+            Preferred by NRI families across {nriCountries.length} countries.<br />
             Your parents deserve the best support.
           </motion.p>
           <div className="flex flex-wrap gap-1.5 justify-center">
@@ -131,15 +126,15 @@ export default function SeniorCare() {
       {/* Plans */}
       <div className="px-4 mt-5 space-y-4">
         {isLoading ? (
-          Array.from({ length: 3 }).map((_, i) => <div key={i} className="h-48 bg-gray-100 rounded-2xl animate-pulse" />)
-        ) : !plans || (plans as any[]).length === 0 ? (
-          <div className="text-center py-16 bg-white rounded-2xl border border-gray-100 shadow-sm">
-            <HeartHandshake size={40} className="mx-auto mb-3 text-gray-300" />
-            <p className="font-bold text-gray-500">Plans coming soon</p>
-            <p className="text-xs text-gray-400 mt-1 px-6">We're finalizing our senior care packages. Check back in a few days!</p>
-          </div>
-        ) : (
-          (plans as any[]).map((plan: any, i: number) => (
+          Array.from({ length: 3 }).map((_, i) => <div key={i} className="h-48 bg-gray-100 rounded-2xl animate-pulse" />)          ) : !plans || plans.length === 0 ? (
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm">
+              <EmptyState
+                icon={HeartHandshake}
+                title="Plans coming soon"
+                description="We're finalizing our senior care packages. Check back in a few days!"
+              />
+            </div>
+        ) : (            (plans ?? []).map((plan: Required<import("@workspace/api-client-react").SubscriptionPlan>, i: number) => (
             <motion.div
               key={plan.id}
               initial={{ opacity: 0, y: 20 }}
@@ -191,13 +186,12 @@ export default function SeniorCare() {
                 )}
                 <button
                   onClick={() => handleSubscribe(plan.id)}
-                  disabled={createSub.isPending}
                   className="w-full py-3.5 rounded-xl font-black text-sm shadow-sm hover:shadow-md transition-all"
                   style={plan.isPopular
                     ? { background: GOLD_GRAD, color: "#0A1628" }
                     : { background: NAVY_GRAD, color: "white" }}
                 >
-                  {createSub.isPending ? "Activating..." : "Get Started →"}
+                  {"Get Started →"}
                 </button>
               </div>
             </motion.div>

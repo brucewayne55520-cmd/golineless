@@ -4,7 +4,7 @@ import { getInitials } from "@/lib/utils";
 
 export default function AdminUsers() {
   const { data: users, isLoading } = useListAdminUsers();
-  const list = (users as any[]) ?? [];
+  const list = (users ?? []) as Required<import("@workspace/api-client-react").User>[];
 
   return (
     <div className="flex min-h-screen bg-gray-50">
@@ -31,7 +31,7 @@ export default function AdminUsers() {
               ) : list.length === 0 ? (
                 <tr><td colSpan={4} className="text-center py-12 text-gray-400">No users yet</td></tr>
               ) : (
-                list.map((user: any) => (
+                list.map((user: Required<import("@workspace/api-client-react").User>) => (
                   <tr key={user.id} className="border-b border-gray-50 hover:bg-gray-50">
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-3">

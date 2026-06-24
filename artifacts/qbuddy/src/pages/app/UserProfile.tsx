@@ -1,10 +1,12 @@
 import { useLocation } from "wouter";
 import { CheckCircle2, Clock, Wallet, Crown, Bell, Globe, HelpCircle, Lock, FileText, Info, ChevronRight, MapPin } from "lucide-react";
-import { useGetMe, useGetUserStats, useGetMySubscription } from "@workspace/api-client-react";
+import { useGetMe, useGetUserStats, useGetMySubscription, type UserStats } from "@workspace/api-client-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { UserBottomNav } from "@/components/BottomNav";
 import { getInitials, formatCurrency } from "@/lib/utils";
 import type { LucideIcon } from "lucide-react";
+import { NAVY_GRAD, GOLD } from "@/lib/theme";
+import { LoadingSkeleton } from "@/components/LoadingSkeleton";
 
 export default function UserProfile() {
   const [, navigate] = useLocation();
@@ -15,12 +17,14 @@ export default function UserProfile() {
 
   const handleLogout = () => { logout(); navigate("/"); };
 
-  const user = me as any;
+  const user = me as Exclude<typeof me, undefined>;
+  const subData = sub!;
 
-  const statCards: { Icon: LucideIcon; label: string; val: string | number; color: string }[] = stats ? [
-    { Icon: CheckCircle2, label: "Tasks", val: (stats as any).totalTasks ?? 0, color: "#22C55E" },
-    { Icon: Clock, label: "Hrs Saved", val: `${((stats as any).hoursSaved ?? 0).toFixed(0)}h`, color: "#6C3FD4" },
-    { Icon: Wallet, label: "Value", val: formatCurrency((stats as any).valueSaved ?? 0), color: "#FF6B35" },
+  const statsData = stats as UserStats | undefined;
+  const statCards: { Icon: LucideIcon; label: string; val: string | number; color: string }[] = statsData ? [
+    { Icon: CheckCircle2, label: "Tasks", val: statsData.totalTasks, color: "#22C55E" },
+    { Icon: Clock, label: "Hrs Saved", val: `${Math.round(statsData.hoursSaved)}h`, color: "#0F2557" },
+    { Icon: Wallet, label: "Value", val: formatCurrency(statsData.valueSaved), color: GOLD },
   ] : [];
 
   const menuItems: { Icon: LucideIcon; label: string }[] = [
@@ -29,12 +33,14 @@ export default function UserProfile() {
     { Icon: HelpCircle, label: "Help & Support" },
     { Icon: Lock, label: "Privacy Policy" },
     { Icon: FileText, label: "Terms of Service" },
-    { Icon: Info, label: "About QBuddy" },
+    { Icon: Info, label: "About Go LineLess" },
   ];
 
+  const isLoadingStats = !stats;
+
   return (
-    <div className="min-h-screen bg-[#F8F7FF] pb-24">
-      <div className="rounded-b-3xl p-6 text-white" style={{ background: "linear-gradient(135deg, #6C3FD4, #9B6FF7)" }}>
+    <div className="min-h-screen bg-[#F8F9FC] pb-24">
+      <div className="rounded-b-3xl p-6 text-white" style={{ background: NAVY_GRAD }}>
         <div className="flex items-center gap-4">
           <div className="w-16 h-16 bg-white/20 border-2 border-white/40 rounded-full flex items-center justify-center text-2xl font-black">
             {getInitials(user?.name)}
@@ -52,12 +58,22 @@ export default function UserProfile() {
       </div>
 
       <div className="px-4 pt-4 space-y-4">
-        {statCards.length > 0 && (
+        {isLoadingStats ? (
+          <div className="grid grid-cols-3 gap-3">
+            {[1,2,3].map(i => (
+              <div key={i} className="bg-white rounded-2xl p-3 text-center shadow-sm">
+                <div className="w-8 h-8 bg-gray-200 rounded-lg mx-auto mb-2 animate-pulse" />
+                <div className="h-6 w-16 bg-gray-200 rounded-lg mx-auto mb-1 animate-pulse" />
+                <div className="h-3 w-12 bg-gray-200 rounded-lg mx-auto animate-pulse" />
+              </div>
+            ))}
+          </div>
+        ) : statCards.length > 0 && (
           <div className="grid grid-cols-3 gap-3">
             {statCards.map((s) => (
               <div key={s.label} className="bg-white rounded-2xl p-3 text-center shadow-sm">
                 <s.Icon size={18} className="mx-auto mb-1" style={{ color: s.color }} />
-                <div className="font-black text-[#6C3FD4] text-lg">{s.val}</div>
+                <div className="font-black text-[#0F2557] text-lg">{s.val}</div>
                 <div className="text-xs text-gray-400">{s.label}</div>
               </div>
             ))}
@@ -65,23 +81,22 @@ export default function UserProfile() {
         )}
 
         {sub ? (
-          <div className="bg-white rounded-2xl p-4 shadow-sm border border-purple-100">
+          <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
             <div className="flex items-center gap-2 mb-2">
-              <Crown size={16} className="text-[#6C3FD4]" />
-              <h3 className="font-bold text-[#1A1A2E]">{(sub as any).planName} Plan</h3>
+              <Crown size={16} className="text-[#C9A84C]" />
+              <h3 className="font-bold text-[#0A1628]">{subData.planName} Plan</h3>
               <span className="ml-auto text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-semibold">Active</span>
-            </div>
-            <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+            </div>              <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
               <div
-                className="h-full rounded-full bg-gradient-to-r from-[#6C3FD4] to-[#9B6FF7]"
-                style={{ width: `${Math.min(100, ((sub as any).tasksUsed / ((sub as any).tasksPerMonth || 10)) * 100)}%` }}
+                className="h-full rounded-full"
+                style={{ background: NAVY_GRAD, width: `${Math.min(100, ((subData.tasksUsed ?? 0) / (subData.tasksPerMonth || 10)) * 100)}%` }}
               />
             </div>
-            <p className="text-xs text-gray-500 mt-1">{(sub as any).tasksUsed} / {(sub as any).tasksPerMonth ?? "∞"} tasks used</p>
+            <p className="text-xs text-gray-500 mt-1">{subData.tasksUsed ?? 0} / {subData.tasksPerMonth ?? "∞"} tasks used</p>
           </div>
         ) : (
-          <div className="bg-gradient-to-r from-[#6C3FD4]/10 to-[#9B6FF7]/10 rounded-2xl p-4 border border-purple-100">
-            <p className="text-sm font-semibold text-[#6C3FD4]">No active subscription</p>
+          <div className="bg-gray-50 rounded-2xl p-4 border border-gray-200">
+            <p className="text-sm font-semibold text-[#0F2557]">No active subscription</p>
             <p className="text-xs text-gray-500 mt-1">Subscribe to Senior Care for unlimited tasks</p>
           </div>
         )}

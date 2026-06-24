@@ -2,8 +2,97 @@ import { createServer } from "http";
 import { Server as SocketIOServer } from "socket.io";
 import app from "./app";
 import { logger } from "./lib/logger";
-import { db, runnerLocationsTable, runnersTable } from "@workspace/db";
-import { eq } from "drizzle-orm";
+import { validateEnv, getFeatureStatus } from "./lib/env-check";
+import { initSentry, getSentryErrorHandler } from "./lib/sentry";
+import { setIo } from "./lib/socket";
+import { getUserFromToken, getRunnerFromToken, getAdminFromToken } from "./lib/auth";
+import { db, runnerLocationsTable, runnersTable, userSessionsTable, runnerSessionsTable, adminSessionsTable, notificationsTable } from "@workspace/db";
+import { eq, lt } from "drizzle-orm";
+
+type SocketIdentity = { type: "user" | "runner" | "admin"; id: number };
+
+async function resolveSocketIdentity(token: string | null): Promise<SocketIdentity | null> {
+  if (!token) return null;
+  if (process.env.ADMIN_TOKEN && token === process.env.ADMIN_TOKEN) return { type: "admin", id: 0 };
+  const user = await getUserFromToken(token);
+  if (user) return { type: "user", id: user.id };
+  const runner = await getRunnerFromToken(token);
+  if (runner) return { type: "runner", id: runner.id };
+  const admin = await getAdminFromToken(token);
+  if (admin) return { type: "admin", id: admin.id };
+  return null;
+}
+
+// --- Validate environment at startup ---
+const envOk = validateEnv();
+if (!envOk) {
+  logger.fatal("Missing required environment variables. See above.");
+  process.exit(1);
+}
+
+logger.info({ features: getFeatureStatus() }, "Feature status");
+
+// --- Initialize Sentry (if configured) ---
+await initSentry();
+
+// --- Start Auto-Finalize Cron (#22) ---
+import { startAutoFinalizeCron } from "./lib/auto-finalize";
+startAutoFinalizeCron();
+
+// --- Fix #13: Session Cleanup Cron — purge expired sessions every 6 hours ---
+function startSessionCleanupCron() {
+  const CLEANUP_INTERVAL_MS = 6 * 60 * 60 * 1000; // every 6 hours
+  async function purgeExpiredSessions() {
+    try {
+      const now = new Date();
+      const [userDeleted, runnerDeleted, adminDeleted] = await Promise.all([
+        db.delete(userSessionsTable).where(lt(userSessionsTable.expiresAt, now)).returning({ id: userSessionsTable.id }),
+        db.delete(runnerSessionsTable).where(lt(runnerSessionsTable.expiresAt, now)).returning({ id: runnerSessionsTable.id }),
+        db.delete(adminSessionsTable).where(lt(adminSessionsTable.expiresAt, now)).returning({ id: adminSessionsTable.id }),
+      ]);
+      const total = userDeleted.length + runnerDeleted.length + adminDeleted.length;
+      if (total > 0) {
+        logger.info({ user: userDeleted.length, runner: runnerDeleted.length, admin: adminDeleted.length }, "Expired sessions purged");
+      }
+    } catch (err) {
+      logger.error({ err }, "Session cleanup failed");
+    }
+  }
+  // Run immediately on startup, then every 6 hours
+  purgeExpiredSessions();
+  setInterval(purgeExpiredSessions, CLEANUP_INTERVAL_MS);
+  logger.info("Session cleanup cron started (every 6h)");
+}
+startSessionCleanupCron();
+
+// Fix #69: Data Retention Policy — auto-delete old data to prevent unbounded growth
+function startDataRetentionCron() {
+  const RETENTION_INTERVAL_MS = 24 * 60 * 60 * 1000; // every 24 hours
+  async function enforceRetention() {
+    try {
+      const now = new Date();
+      const runnerLocationsCutoff = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000); // 90 days
+      const notificationsCutoff = new Date(now.getTime() - 60 * 24 * 60 * 60 * 1000); // 60 days
+      const auditCutoff = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000); // 1 year
+
+      const [locDeleted, notifDeleted] = await Promise.all([
+        db.delete(runnerLocationsTable).where(lt(runnerLocationsTable.recordedAt, runnerLocationsCutoff)).returning({ id: runnerLocationsTable.id }),
+        db.delete(notificationsTable).where(lt(notificationsTable.createdAt, notificationsCutoff)).returning({ id: notificationsTable.id }),
+      ]);
+
+      const total = locDeleted.length + notifDeleted.length;
+      if (total > 0) {
+        logger.info({ locations: locDeleted.length, notifications: notifDeleted.length }, "Data retention cleanup completed");
+      }
+    } catch (err) {
+      logger.error({ err }, "Data retention cleanup failed");
+    }
+  }
+  enforceRetention();
+  setInterval(enforceRetention, RETENTION_INTERVAL_MS);
+  logger.info("Data retention cron started (every 24h)");
+}
+startDataRetentionCron();
 
 const rawPort = process.env["PORT"];
 
@@ -18,22 +107,68 @@ if (Number.isNaN(port) || port <= 0) {
 
 const httpServer = createServer(app);
 
+// Apply Sentry error handler if available
+const sentryErrorHandler = getSentryErrorHandler();
+if (sentryErrorHandler) {
+  app.use(sentryErrorHandler);
+}
+
+const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(",") || ["http://localhost:3000", "http://localhost:5173"];
 const io = new SocketIOServer(httpServer, {
-  cors: { origin: "*", methods: ["GET", "POST"] },
+  cors: { origin: allowedOrigins, methods: ["GET", "POST"], credentials: true },
   path: "/api/socket.io",
+});
+setIo(io);
+
+// --- Socket.IO Auth Hardening ---
+const isProduction = process.env.NODE_ENV === "production";
+io.use(async (socket, next) => {
+  const token = (socket.handshake.auth?.token as string | undefined) || null;
+  const identity = await resolveSocketIdentity(token);
+
+  if (isProduction) {
+    // In production, require a valid, resolvable identity.
+    if (!identity) {
+      logger.warn({ socketId: socket.id, ip: socket.handshake.address }, "Socket rejected — invalid/missing auth token");
+      next(new Error("Authentication required"));
+      return;
+    }
+    socket.data.identity = identity;
+    socket.data.authenticated = true;
+    logger.info({ socketId: socket.id, identity }, "Socket authenticated");
+    next();
+    return;
+  }
+
+  // Dev mode: permissive — attach identity if resolvable, else mark unauthenticated.
+  socket.data.identity = identity;
+  socket.data.authenticated = !!identity;
+  next();
 });
 
 io.on("connection", (socket) => {
-  logger.info({ socketId: socket.id }, "Socket connected");
+  logger.info({ socketId: socket.id, authenticated: socket.data.authenticated }, "Socket connected");
 
-  // Runner broadcasts location
+  // Identity-based authorization helpers. In production, enforce that the
+  // socket identity is authorized for the event/room; in dev, stay permissive.
+  const identity = socket.data.identity as SocketIdentity | null;
+  const isAdmin = identity?.type === "admin";
+  const allow = (cond: boolean) => !isProduction || cond;
+
   socket.on("runner_location", async (data: { taskId: number; runnerId: number; lat: number; lng: number; heading?: number; speed?: number }) => {
     const { taskId, runnerId, lat, lng, heading = 0, speed = 0 } = data;
+    // Only the runner themselves (or an admin) may broadcast/persist a location.
+    if (!allow(isAdmin || (identity?.type === "runner" && identity.id === runnerId))) {
+      logger.warn({ socketId: socket.id, runnerId }, "Unauthorized runner_location");
+      return;
+    }
     const room = `task_${taskId}`;
     socket.join(room);
 
-    // Broadcast to all in room
     io.to(room).emit("runner_location_update", { taskId, runnerId, lat, lng, heading, speed, timestamp: Date.now() });
+
+    // Also broadcast to admin fleet room
+    io.to("admin_fleet").emit("runner_location_update", { taskId, runnerId, lat, lng, heading, speed, timestamp: Date.now() });
 
     // Persist location
     try {
@@ -47,19 +182,73 @@ io.on("connection", (socket) => {
     }
   });
 
-  // Join task room (users/admin)
+  // Join task room (requires an authenticated identity in production)
   socket.on("join_task", (data: { taskId: number }) => {
+    if (!allow(identity != null)) {
+      logger.warn({ socketId: socket.id, taskId: data.taskId }, "Unauthorized join_task");
+      return;
+    }
     socket.join(`task_${data.taskId}`);
     logger.info({ socketId: socket.id, taskId: data.taskId }, "Joined task room");
   });
 
   // Task status update broadcast
-  socket.on("task_status_update", (data: { taskId: number; status: string }) => {
+  socket.on("task_status_update", (data: { taskId: number; status: string; timestamp?: string }) => {
     io.to(`task_${data.taskId}`).emit("task_status_changed", data);
+    io.to("admin_fleet").emit("task_status_changed", data);
   });
 
-  // Admin joins all-runners room
+  // Proof photo uploaded event
+  socket.on("proof_photo_uploaded", (data: { taskId: number; proof: Record<string, unknown> }) => {
+    io.to(`task_${data.taskId}`).emit("new_proof_photo", data);
+    io.to("admin_fleet").emit("new_proof_photo", data);
+  });
+
+  // Comrade joins the comrades room for dispatch notifications
+  socket.on("join_comrades_room", (data: { runnerId: number }) => {
+    if (!allow(isAdmin || (identity?.type === "runner" && identity.id === data.runnerId))) {
+      logger.warn({ socketId: socket.id, runnerId: data.runnerId }, "Unauthorized join_comrades_room");
+      return;
+    }
+    socket.join("comrades_room");
+    socket.join(`comrade_${data.runnerId}`);
+    logger.info({ socketId: socket.id, runnerId: data.runnerId }, "Comrade joined dispatch room");
+  });
+
+  // Client joins their own notification room
+  socket.on("join_user_room", (data: { userId: number }) => {
+    if (!allow(isAdmin || (identity?.type === "user" && identity.id === data.userId))) {
+      logger.warn({ socketId: socket.id, userId: data.userId }, "Unauthorized join_user_room");
+      return;
+    }
+    socket.join(`user_${data.userId}`);
+    logger.info({ socketId: socket.id, userId: data.userId }, "User joined notification room");
+  });
+
+  // Comrade broadcasts waiting timer start
+  socket.on("waiting_timer_start", (data: { taskId: number }) => {
+    io.to(`task_${data.taskId}`).emit("waiting_timer_update", { taskId: data.taskId, running: true, timestamp: Date.now() });
+    io.to("admin_fleet").emit("waiting_timer_update", { taskId: data.taskId, running: true, timestamp: Date.now() });
+  });
+
+  // Comrade pauses waiting timer
+  socket.on("waiting_timer_pause", (data: { taskId: number; totalMinutes: number }) => {
+    io.to(`task_${data.taskId}`).emit("waiting_timer_update", { taskId: data.taskId, running: false, totalMinutes: data.totalMinutes, timestamp: Date.now() });
+    io.to("admin_fleet").emit("waiting_timer_update", { taskId: data.taskId, running: false, totalMinutes: data.totalMinutes, timestamp: Date.now() });
+  });
+
+  // Comrade updates queue progress
+  socket.on("queue_progress_update", (data: { taskId: number; currentToken: string; counterNumber?: string }) => {
+    io.to(`task_${data.taskId}`).emit("queue_progress", data);
+    io.to("admin_fleet").emit("queue_progress", data);
+  });
+
+  // Admin joins all-runners room (admin-only in production)
   socket.on("join_admin_map", () => {
+    if (!allow(isAdmin)) {
+      logger.warn({ socketId: socket.id }, "Unauthorized join_admin_map");
+      return;
+    }
     socket.join("admin_fleet");
     logger.info({ socketId: socket.id }, "Admin joined fleet map");
   });
@@ -69,13 +258,35 @@ io.on("connection", (socket) => {
   });
 });
 
-// Export io for use in routes
-export { io };
-
 httpServer.listen(port, (err?: Error) => {
   if (err) {
     logger.error({ err }, "Error listening on port");
     process.exit(1);
   }
-  logger.info({ port }, "QBuddy API server listening");
+  logger.info({ port }, "Go LineLess API server listening");
 });
+
+// Fix #87: Graceful shutdown — handle SIGTERM/SIGINT for clean HTTP + Socket.IO teardown
+const SHUTDOWN_TIMEOUT_MS = 10_000; // 10 seconds max for graceful shutdown
+
+function gracefulShutdown(signal: string) {
+  logger.info({ signal }, "Received shutdown signal — starting graceful shutdown");
+
+  const forceExitTimer = setTimeout(() => {
+    logger.fatal("Graceful shutdown timed out — forcing exit");
+    process.exit(1);
+  }, SHUTDOWN_TIMEOUT_MS);
+
+  // Stop accepting new connections
+  httpServer.close(() => {
+    logger.info("HTTP server closed — all connections drained");
+    io.close(() => {
+      logger.info("Socket.IO server closed");
+      clearTimeout(forceExitTimer);
+      process.exit(0);
+    });
+  });
+}
+
+process.on("SIGTERM", () => gracefulShutdown("SIGTERM"));
+process.on("SIGINT", () => gracefulShutdown("SIGINT"));

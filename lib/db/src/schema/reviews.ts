@@ -8,11 +8,14 @@ import { tasksTable } from "./tasks";
 export const reviewsTable = pgTable("reviews", {
   id: serial("id").primaryKey(),
   taskId: integer("task_id").notNull().references(() => tasksTable.id),
-  userId: integer("user_id").notNull().references(() => usersTable.id),
-  runnerId: integer("runner_id").notNull().references(() => runnersTable.id),
+  userId: integer("user_id").references(() => usersTable.id),
+  runnerId: integer("runner_id").references(() => runnersTable.id),
   rating: integer("rating").notNull(),
   review: text("review"),
+  feedback: text("feedback"),
+  issueReport: text("issue_report"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }),
 });
 
 export const insertReviewSchema = createInsertSchema(reviewsTable).omit({ id: true, createdAt: true });

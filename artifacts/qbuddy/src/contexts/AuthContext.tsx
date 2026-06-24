@@ -9,6 +9,7 @@ interface AuthState {
 }
 
 interface AuthContextType extends AuthState {
+  isLoading: boolean;
   login: (token: string, role: string, userData?: User, runnerData?: Runner) => void;
   logout: () => void;
 }
@@ -16,8 +17,9 @@ interface AuthContextType extends AuthState {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
+  const [isLoading, setIsLoading] = useState(true);
   const [auth, setAuth] = useState<AuthState>(() => {
-    const stored = localStorage.getItem("qbuddy_auth");
+    const stored = localStorage.getItem("golineless_auth");
     if (stored) {
       try {
         return JSON.parse(stored);
@@ -28,6 +30,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return { token: null, role: null, user: null, runner: null };
   });
 
+  // Mark loading as done after first render (auth initialized from localStorage)
+  useEffect(() => {
+    setIsLoading(false);
+  }, []);
+
   const login = (token: string, role: string, userData?: User, runnerData?: Runner) => {
     const newState: AuthState = {
       token,
@@ -36,16 +43,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       runner: runnerData || null,
     };
     setAuth(newState);
-    localStorage.setItem("qbuddy_auth", JSON.stringify(newState));
+    localStorage.setItem("golineless_auth", JSON.stringify(newState));
+    // Also store token in individual keys so customFetch auto-attaches it
+    if (role === "admin") localStorage.setItem("golineless_admin_token", token);
+    else if (role === "runner") localStorage.setItem("golineless_runner_token", token);
+    else localStorage.setItem("golineless_user_token", token);
   };
 
   const logout = () => {
     setAuth({ token: null, role: null, user: null, runner: null });
-    localStorage.removeItem("qbuddy_auth");
+    localStorage.removeItem("golineless_auth");
+    localStorage.removeItem("golineless_admin_token");
+    localStorage.removeItem("golineless_user_token");
+    localStorage.removeItem("golineless_runner_token");
   };
 
   return (
-    <AuthContext.Provider value={{ ...auth, login, logout }}>
+    <AuthContext.Provider value={{ ...auth, isLoading, login, logout }}>
       {children}
     </AuthContext.Provider>
   );

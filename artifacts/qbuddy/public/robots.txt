@@ -1,2 +1,12 @@
+# Go LineLess — robots.txt
+# https://golineless.com
+
 User-agent: *
 Allow: /
+
+# Block admin and internal pages
+Disallow: /admin/
+Disallow: /runner/
+Disallow: /family/track/
+
+Sitemap: https://golineless.com/sitemap.xml

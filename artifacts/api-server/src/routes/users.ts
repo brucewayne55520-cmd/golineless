@@ -7,14 +7,14 @@ const router: IRouter = Router();
 
 // GET /users/me
 router.get("/users/me", requireUser, async (req, res): Promise<void> => {
-  const user = (req as any).user;
+  const user = req.user!;
   const { otp, otpExpiresAt, ...safe } = user;
   res.json(safe);
 });
 
 // PATCH /users/me
 router.patch("/users/me", requireUser, async (req, res): Promise<void> => {
-  const user = (req as any).user;
+  const user = req.user!;
   const { name, email, city, area, language } = req.body;
   const [updated] = await db
     .update(usersTable)
@@ -27,7 +27,7 @@ router.patch("/users/me", requireUser, async (req, res): Promise<void> => {
 
 // GET /users/me/stats
 router.get("/users/me/stats", requireUser, async (req, res): Promise<void> => {
-  const user = (req as any).user;
+  const user = req.user!;
   const tasks = await db.select().from(tasksTable).where(eq(tasksTable.userId, user.id));
   const completedTasks = tasks.filter(t => t.status === "completed");
   const totalTasks = completedTasks.length;
