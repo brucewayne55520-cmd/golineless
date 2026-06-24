@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
-import { Shield, User, PersonStanding, CheckCircle2, XCircle, X, Eye, Clock, BadgeCheck, AlertTriangle, AlertOctagon } from "lucide-react";
+import { Shield, User, PersonStanding, CheckCircle2, XCircle, X, Eye, Clock, BadgeCheck, AlertTriangle, AlertOctagon, Search } from "lucide-react";
 import { useListAdminUsers, useListAdminRunners, useReviewRunnerKyc } from "@workspace/api-client-react";
 import type { Runner, User as UserType } from "@workspace/api-client-react";
 
@@ -36,6 +36,7 @@ export default function AdminKycReview() {
   const [loadingDetail, setLoadingDetail] = useState(false);
 
   const [page, setPage] = useState(0);
+  const [searchQuery, setSearchQuery] = useState("");
   const PAGE_SIZE = 20;
 
   // A5: Fetch stale count on mount
@@ -61,11 +62,16 @@ export default function AdminKycReview() {
   const staleCount = staleSubmissions.totalStale;
 
   const userList = (users ?? []) as UserWithKyc[];
+  const searchLower = searchQuery.toLowerCase();
+  const matchesSearch = (name?: string, phone?: string, uniqueId?: string, city?: string) =>
+    !searchQuery || [name, phone, uniqueId, city].some(f => f?.toLowerCase().includes(searchLower));
+
   const filteredUsers = statusFilter === "none"
     ? userList.filter(u => !u.kycStatus || u.kycStatus === "none")
     : statusFilter === "stale"
     ? userList.filter(u => u.kycStatus === "pending" && u.updatedAt && (Date.now() - new Date(u.updatedAt).getTime()) > 7 * 86400000)
     : userList.filter(u => u.kycStatus === (statusFilter as string));
+  const searchedUsers = filteredUsers.filter(u => matchesSearch(u.name ?? undefined, u.phone ?? undefined, u.uniqueId ?? undefined, u.city ?? undefined));
 
   const runnerList = (runners ?? []) as RunnerWithKyc[];
   const filteredRunners = statusFilter === "stale"
@@ -73,6 +79,7 @@ export default function AdminKycReview() {
     : statusFilter === "none"
     ? runnerList.filter(r => !r.kycStatus || (r.kycStatus as string) === "none")
     : runnerList.filter(r => r.kycStatus === (statusFilter as string));
+  const searchedRunners = filteredRunners.filter(r => matchesSearch(r.name ?? undefined, r.phone ?? undefined, r.uniqueId ?? undefined, r.city ?? undefined));
 
   const handleUserReview = async (userId: number, action: "approve" | "reject") => {
     try {
@@ -126,9 +133,9 @@ export default function AdminKycReview() {
   };
 
   // Pagination
-  const pagedUsers = filteredUsers.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
-  const pagedRunners = filteredRunners.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
-  const totalItems = tab === "users" ? filteredUsers.length : filteredRunners.length;
+  const pagedUsers = searchedUsers.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
+  const pagedRunners = searchedRunners.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
+  const totalItems = tab === "users" ? searchedUsers.length : searchedRunners.length;
   const totalPages = Math.ceil(totalItems / PAGE_SIZE);
 
   const pendingCount = tab === "users"
@@ -164,6 +171,20 @@ export default function AdminKycReview() {
               )}
             </button>
           ))}
+        </div>
+
+        {/* Search Bar */}
+        <div className="mb-4">
+          <div className="relative max-w-md">
+            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={e => { setSearchQuery(e.target.value); setPage(0); }}
+              placeholder="Search by name, phone, ID, or city..."
+              className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#6C3FD4]/20 focus:border-[#6C3FD4] transition-all"
+            />
+          </div>
         </div>
 
         {/* Status Filter */}

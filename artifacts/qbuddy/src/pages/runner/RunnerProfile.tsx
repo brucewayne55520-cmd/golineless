@@ -207,8 +207,13 @@ export default function RunnerProfile() {
               <p className="font-bold text-sm">
                 Identity Verification: {runner?.kycStatus === "verified" ? "✓ Verified" : runner?.kycStatus === "rejected" ? "⚠ Rejected" : "⏳ Under Review"}
               </p>
-              {runner?.kycStatus === "rejected" && runner?.kycRejectionReason && (
-                <p className="text-xs mt-1 opacity-70 leading-relaxed">Reason: {runner.kycRejectionReason}</p>
+              {runner?.kycStatus === "rejected" && (
+                <div className="mt-2 p-2.5 bg-red-400/10 rounded-xl border border-red-400/20">
+                  {runner?.kycRejectionReason && (
+                    <p className="text-xs font-semibold text-red-300 mb-1">Reason: {runner.kycRejectionReason}</p>
+                  )}
+                  <p className="text-[10px] text-white/40">Please update your documents and resubmit. Make sure Aadhaar photos are clear and selfie shows your full face.</p>
+                </div>
               )}
               {runner?.kycStatus === "pending" && <p className="text-xs opacity-70 mt-1">Usually reviewed within 24 hours</p>}
               {runner?.kycStatus === "verified" && <p className="text-xs opacity-70 mt-0.5">Your identity is confirmed · You can accept tasks</p>}

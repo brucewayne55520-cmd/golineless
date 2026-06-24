@@ -12,6 +12,7 @@ import pricingRouter from "./pricing";
 import operationsRouter from "./operations";
 import paymentsRouter from "./payments";
 import verificationRouter from "./verification";
+import kycEnhancementsRouter from "./kyc-enhancements";
 
 const router: IRouter = Router();
 
@@ -28,5 +29,6 @@ router.use(pricingRouter);
 router.use(operationsRouter);
 router.use(paymentsRouter);
 router.use(verificationRouter);
+router.use(kycEnhancementsRouter);
 
 export default router;

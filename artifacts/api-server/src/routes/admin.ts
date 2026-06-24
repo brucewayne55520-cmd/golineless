@@ -6,6 +6,7 @@ import { calculatePilotMetrics } from "../lib/revenue-engine";
 import { logger } from "../lib/logger";
 import { validateBody } from "../lib/validate";
 import { decrypt, isEncrypted } from "../lib/crypto";
+import { sendEmail } from "../lib/email";
 import { z } from "@workspace/db";
 
 const router: IRouter = Router();
@@ -493,6 +494,17 @@ router.patch("/admin/runners/:id/kyc", requireAdmin, async (req, res): Promise<v
   } else if (action === "reject") {
     await db.insert(notificationsTable).values({ runnerId: id, type: "kyc_rejected", title: "KYC Rejected", message: `Reason: ${rejectionReason ?? "Please resubmit documents"}` });
   }
+  // U4: Send email notification via Brevo for KYC approval/rejection
+  try {
+    const [runner] = await db.select({ email: runnersTable.email, name: runnersTable.name }).from(runnersTable).where(eq(runnersTable.id, id));
+    if (runner?.email) {
+      const subject = action === "approve" ? "Go LineLess — KYC Approved!" : "Go LineLess — KYC Rejected";
+      const html = action === "approve"
+        ? `<h2>KYC Approved ✓</h2><p>Hi ${runner.name ?? "Comrade"},</p><p>Your identity verification has been <strong>approved</strong>. You can now accept tasks and earn.</p><p>— Go LineLess Team</p>`
+        : `<h2>KYC Rejected</h2><p>Hi ${runner.name ?? "Comrade"},</p><p>Unfortunately, your KYC submission was <strong>rejected</strong>.</p>${rejectionReason ? `<p><strong>Reason:</strong> ${rejectionReason}</p>` : ""}<p>Please update your documents and resubmit from the app.</p><p>— Go LineLess Team</p>`;
+      await sendEmail({ to: runner.email, subject, htmlContent: html });
+    }
+  } catch { /* email is best-effort */ }
   if (dispatchAllowed === true && updated.kycStatus === "pending") {
     await db.insert(notificationsTable).values({ runnerId: id, type: "dispatch_allowed", title: "Dispatch Approved!", message: "Your admin has allowed you to receive tasks while KYC is in progress." });
   }
@@ -566,6 +578,17 @@ router.patch("/admin/users/:id/kyc", requireAdmin, async (req, res): Promise<voi
       ? "Your identity has been verified. You can now use all features."
       : `Your KYC was rejected.${rejectionReason ? ` Reason: ${rejectionReason}` : " Please resubmit."}`,
   });
+  // U4: Send email notification via Brevo for user KYC approval/rejection
+  try {
+    const [user] = await db.select({ email: usersTable.email, name: usersTable.name }).from(usersTable).where(eq(usersTable.id, id));
+    if (user?.email) {
+      const subject = action === "approve" ? "Go LineLess — KYC Verified!" : "Go LineLess — KYC Rejected";
+      const html = action === "approve"
+        ? `<h2>KYC Verified ✓</h2><p>Hi ${user.name ?? "User"},</p><p>Your identity verification has been <strong>approved</strong>. You can now use all features.</p><p>— Go LineLess Team</p>`
+        : `<h2>KYC Rejected</h2><p>Hi ${user.name ?? "User"},</p><p>Unfortunately, your KYC submission was <strong>rejected</strong>.</p>${rejectionReason ? `<p><strong>Reason:</strong> ${rejectionReason}</p>` : ""}<p>Please update your documents and resubmit from the app.</p><p>— Go LineLess Team</p>`;
+      await sendEmail({ to: user.email, subject, htmlContent: html });
+    }
+  } catch { /* email is best-effort */ }
 
   res.json({ kycStatus: action === "approve" ? "verified" : "rejected", message: `User KYC ${action}d` });
 });
