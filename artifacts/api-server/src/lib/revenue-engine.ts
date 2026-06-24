@@ -1,11 +1,19 @@
 import { db, tasksTable, runnersTable, adminSettingsTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
+import { logger } from "./logger";
 
 /**
  * Load revenue settings from admin_settings
  */
 export async function getRevenueConfig() {
-  const [settings] = await db.select().from(adminSettingsTable).limit(1);
+  let settings;
+  try {
+    [settings] = await db.select().from(adminSettingsTable).limit(1);
+  } catch (err) {
+    // Table may not exist yet — return defaults
+    logger.warn({ err }, "admin_settings table not available, using defaults");
+    settings = undefined;
+  }
   if (!settings) {
     return {
       freeWaitingMinutes: 15,
