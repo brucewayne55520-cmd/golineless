@@ -47,10 +47,15 @@ export default function AdminDashboard() {
       const allUsers = Array.isArray(usersData) ? usersData : [];
       const allRunners = Array.isArray(runnersData.runners) ? runnersData.runners : [];
       const all = [...allUsers, ...allRunners];
+      // A5: Count stale submissions (> 7 days pending)
+      const stale = all.filter((u: { kycStatus?: string; updatedAt?: string }) =>
+        u.kycStatus === "pending" && u.updatedAt && (Date.now() - new Date(u.updatedAt).getTime()) > 7 * 86400000
+      ).length;
       return {
         pending: all.filter((u: { kycStatus?: string }) => u.kycStatus === "pending").length,
         verified: all.filter((u: { kycStatus?: string }) => u.kycStatus === "verified").length,
         rejected: all.filter((u: { kycStatus?: string }) => u.kycStatus === "rejected").length,
+        stale,
         total: all.length,
       };
     },
@@ -220,7 +225,7 @@ export default function AdminDashboard() {
                   View All →
                 </button>
               </div>
-              <div className="grid grid-cols-4 gap-3">
+              <div className="grid grid-cols-5 gap-3">
                 <div className="bg-amber-50 rounded-xl p-3 text-center">
                   <p className="text-2xl font-black text-amber-600">{kycMetrics.pending}</p>
                   <p className="text-xs text-amber-700 font-semibold">Pending</p>
@@ -233,6 +238,12 @@ export default function AdminDashboard() {
                   <p className="text-2xl font-black text-red-500">{kycMetrics.rejected}</p>
                   <p className="text-xs text-red-600 font-semibold">Rejected</p>
                 </div>
+                {kycMetrics.stale > 0 && (
+                  <div className="bg-red-50 rounded-xl p-3 text-center border border-red-200">
+                    <p className="text-2xl font-black text-red-500">{kycMetrics.stale}</p>
+                    <p className="text-xs text-red-600 font-semibold">Overdue (&gt;7d)</p>
+                  </div>
+                )}
                 <div className="bg-gray-50 rounded-xl p-3 text-center">
                   <p className="text-2xl font-black text-gray-700">{kycMetrics.total}</p>
                   <p className="text-xs text-gray-500 font-semibold">Total</p>

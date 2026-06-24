@@ -1,18 +1,18 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
-import { Shield, User, PersonStanding, CheckCircle2, XCircle, X, Eye, Clock, BadgeCheck, AlertTriangle } from "lucide-react";
+import { Shield, User, PersonStanding, CheckCircle2, XCircle, X, Eye, Clock, BadgeCheck, AlertTriangle, AlertOctagon } from "lucide-react";
 import { useListAdminUsers, useListAdminRunners, useReviewRunnerKyc } from "@workspace/api-client-react";
 import type { Runner, User as UserType } from "@workspace/api-client-react";
 
-type UserWithKyc = UserType & { kycStatus?: string; uniqueId?: string; aadhaarFront?: string; aadhaarBack?: string; emergencyContact?: string; idDocumentUrl?: string };
-type RunnerWithKyc = Runner & { kycStatus?: string; uniqueId?: string; bankAccount?: string; bankIfsc?: string; bankAccountHolder?: string; aadhaarFront?: string; aadhaarBack?: string; selfie?: string; fullName?: string };
+type UserWithKyc = UserType & { kycStatus?: string; uniqueId?: string; aadhaarFront?: string; aadhaarBack?: string; emergencyContact?: string; idDocumentUrl?: string; updatedAt?: string };
+type RunnerWithKyc = Runner & { kycStatus?: string; uniqueId?: string; bankAccount?: string; bankIfsc?: string; bankAccountHolder?: string; aadhaarFront?: string; aadhaarBack?: string; selfie?: string; fullName?: string; updatedAt?: string };
 import AdminSidebar from "@/components/AdminSidebar";
 import { getInitials } from "@/lib/utils";
 import { customFetch } from "@workspace/api-client-react";
 
 type Tab = "users" | "runners";
-type KycFilter = "pending" | "verified" | "rejected" | "none";
+type KycFilter = "pending" | "verified" | "rejected" | "none" | "stale";
 
 const KYC_TABS: { key: Tab; label: string; icon: typeof User }[] = [
   { key: "users", label: "Users (KYC)", icon: User },
@@ -24,6 +24,7 @@ const STATUS_TABS: { key: KycFilter; label: string }[] = [
   { key: "verified", label: "Approved" },
   { key: "rejected", label: "Rejected" },
   { key: "none", label: "Not Started" },
+  { key: "stale", label: "Stale (>7d)" },
 ];
 
 export default function AdminKycReview() {
@@ -37,19 +38,41 @@ export default function AdminKycReview() {
   const [page, setPage] = useState(0);
   const PAGE_SIZE = 20;
 
+  // A5: Fetch stale count on mount
+  useEffect(() => {
+    (async () => {
+      try {
+        const token = localStorage.getItem("golineless_admin_token") || "";
+        const res = await customFetch("/api/admin/kyc/stale", { headers: { Authorization: `Bearer ${token}` } });
+        if (res) setStaleSubmissions(res as { staleUsers: unknown[]; staleRunners: unknown[]; totalStale: number });
+      } catch { /* ignore */ }
+    })();
+  }, []);
+
   const { data: users, isLoading: usersLoading, refetch: refetchUsers } = useListAdminUsers({ limit: 200 });
   const { data: runners, isLoading: runnersLoading, refetch: refetchRunners } = useListAdminRunners({
-    kyc_status: statusFilter === "none" ? undefined : (statusFilter as import("@workspace/api-client-react").ListAdminRunnersKycStatus),
+    kyc_status: statusFilter === "stale" || statusFilter === "none" ? undefined : (statusFilter as import("@workspace/api-client-react").ListAdminRunnersKycStatus),
     limit: 200,
   });
   const reviewKyc = useReviewRunnerKyc();
 
+  // A5: Fetch stale KYC submissions (> 7 days pending)
+  const [staleSubmissions, setStaleSubmissions] = useState<{ staleUsers: unknown[]; staleRunners: unknown[]; totalStale: number }>({ staleUsers: [], staleRunners: [], totalStale: 0 });
+  const staleCount = staleSubmissions.totalStale;
+
   const userList = (users ?? []) as UserWithKyc[];
   const filteredUsers = statusFilter === "none"
     ? userList.filter(u => !u.kycStatus || u.kycStatus === "none")
-    : userList.filter(u => u.kycStatus === statusFilter);
+    : statusFilter === "stale"
+    ? userList.filter(u => u.kycStatus === "pending" && u.updatedAt && (Date.now() - new Date(u.updatedAt).getTime()) > 7 * 86400000)
+    : userList.filter(u => u.kycStatus === (statusFilter as string));
 
   const runnerList = (runners ?? []) as RunnerWithKyc[];
+  const filteredRunners = statusFilter === "stale"
+    ? runnerList.filter(r => r.kycStatus === "pending" && r.updatedAt && (Date.now() - new Date(r.updatedAt).getTime()) > 7 * 86400000)
+    : statusFilter === "none"
+    ? runnerList.filter(r => !r.kycStatus || (r.kycStatus as string) === "none")
+    : runnerList.filter(r => r.kycStatus === (statusFilter as string));
 
   const handleUserReview = async (userId: number, action: "approve" | "reject") => {
     try {
@@ -104,8 +127,8 @@ export default function AdminKycReview() {
 
   // Pagination
   const pagedUsers = filteredUsers.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
-  const pagedRunners = runnerList.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
-  const totalItems = tab === "users" ? filteredUsers.length : runnerList.length;
+  const pagedRunners = filteredRunners.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
+  const totalItems = tab === "users" ? filteredUsers.length : filteredRunners.length;
   const totalPages = Math.ceil(totalItems / PAGE_SIZE);
 
   const pendingCount = tab === "users"
@@ -135,6 +158,9 @@ export default function AdminKycReview() {
               {t.label}
               {t.key === "users" && pendingCount != null && pendingCount > 0 && (
                 <span className="ml-1 px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-400 text-white">{pendingCount}</span>
+              )}
+              {staleCount > 0 && (
+                <span className="ml-1 px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-red-500 text-white">{staleCount} overdue</span>
               )}
             </button>
           ))}
@@ -170,6 +196,16 @@ export default function AdminKycReview() {
             onSelect={(r) => { setSelectedRunner(r); setRejReason(""); }}
             getStatusBadge={getStatusBadge}
           />
+        )}
+        {/* A5: Stale KYC warning banner */}
+        {statusFilter === "stale" && staleCount > 0 && (
+          <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-2xl flex items-center gap-3">
+            <AlertOctagon size={20} className="text-red-500 flex-shrink-0" />
+            <div>
+              <p className="text-red-700 text-sm font-bold">{staleCount} submission(s) pending for over 7 days</p>
+              <p className="text-red-500 text-xs">These may need urgent admin attention to maintain trust scores.</p>
+            </div>
+          </div>
         )}
 
         {/* Pagination */}

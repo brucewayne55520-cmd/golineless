@@ -1081,4 +1081,38 @@ router.get("/admin/export", requireAdmin, async (req, res): Promise<void> => {
   }
 });
 
+// GET /admin/kyc/stale — KYC submissions pending > 7 days
+router.get("/admin/kyc/stale", requireAdmin, async (_req, res): Promise<void> => {
+  const cutoff = new Date();
+  cutoff.setDate(cutoff.getDate() - 7);
+
+  const [staleUsers, staleRunners] = await Promise.all([
+    db.select({
+      id: usersTable.id, name: usersTable.name, phone: usersTable.phone,
+      uniqueId: usersTable.uniqueId, city: usersTable.city, area: usersTable.area,
+      email: usersTable.email, createdAt: usersTable.createdAt, updatedAt: usersTable.updatedAt,
+    }).from(usersTable)
+      .where(and(eq(usersTable.kycStatus, "pending"), sql`${usersTable.updatedAt} < ${cutoff}`))
+      .orderBy(usersTable.updatedAt),
+    db.select({
+      id: runnersTable.id, name: runnersTable.name, phone: runnersTable.phone,
+      uniqueId: runnersTable.uniqueId, city: runnersTable.city, area: runnersTable.area,
+      rating: runnersTable.rating, totalTasks: runnersTable.tasksCompleted,
+      createdAt: runnersTable.createdAt, updatedAt: runnersTable.updatedAt,
+    }).from(runnersTable)
+      .where(and(eq(runnersTable.kycStatus, "pending"), sql`${runnersTable.updatedAt} < ${cutoff}`))
+      .orderBy(runnersTable.updatedAt),
+  ]);
+
+  res.json({
+    staleUsers: staleUsers.map(u => ({ ...u, type: "user" as const, daysPending: Math.floor((Date.now() - new Date(u.updatedAt).getTime()) / 86400000) })),
+    staleRunners: staleRunners.map(r => ({
+      ...r, type: "runner" as const,
+      rating: r.rating ? Number(r.rating) : null,
+      daysPending: Math.floor((Date.now() - new Date(r.updatedAt).getTime()) / 86400000),
+    })),
+    totalStale: staleUsers.length + staleRunners.length,
+  });
+});
+
 export default router;
