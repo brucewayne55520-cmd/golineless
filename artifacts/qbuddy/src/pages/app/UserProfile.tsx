@@ -11,6 +11,16 @@ import type { LucideIcon } from "lucide-react";
 import { NAVY_GRAD, GOLD } from "@/lib/theme";
 import { LoadingSkeleton } from "@/components/LoadingSkeleton";
 
+/** Extended user fields not in the generated User type */
+interface UserProfileFields {
+  gender?: string;
+  dateOfBirth?: string;
+  address?: string;
+  pincode?: string;
+  uniqueId?: string;
+  kycStatus?: string;
+}
+
 const KYC_STEPS = [
   { key: "aadhaar", label: "Aadhaar Details", desc: "Your 12-digit Aadhaar number" },
   { key: "upload", label: "Upload Aadhaar", desc: "Front & back of your card" },
@@ -39,13 +49,13 @@ export default function UserProfile() {
   const { data: notifications } = useListNotifications();
   const unreadCount = ((notifications ?? []) as NotificationType[]).filter(n => !n.isRead).length;
 
-  const user = me as Exclude<typeof me, undefined>;
+  const user = me as (Exclude<typeof me, undefined>) & UserProfileFields;
 
   const startEditProfile = () => {
     setEditForm({
       name: user?.name ?? "", phone: user?.phone ?? "", email: user?.email ?? "",
-      city: user?.city ?? "", area: user?.area ?? "", gender: (user as any)?.gender ?? "",
-      dateOfBirth: (user as any)?.dateOfBirth ?? "", address: (user as any)?.address ?? "", pincode: (user as any)?.pincode ?? "",
+      city: user?.city ?? "", area: user?.area ?? "", gender: user?.gender ?? "",
+      dateOfBirth: user?.dateOfBirth ?? "", address: user?.address ?? "", pincode: user?.pincode ?? "",
     });
     setEditingProfile(true);
   };
@@ -83,7 +93,7 @@ export default function UserProfile() {
 
   const subData = sub!;
   const statsData = stats as UserStats | undefined;
-  const kycStatus = (user as any)?.kycStatus ?? "none";
+  const kycStatus = user?.kycStatus ?? "none";
 
   const statCards: { Icon: LucideIcon; label: string; val: string | number; color: string }[] = statsData ? [
     { Icon: CheckCircle2, label: "Tasks", val: statsData.totalTasks, color: "#22C55E" },
@@ -123,11 +133,11 @@ export default function UserProfile() {
           </div>
         </div>
         {/* Unique ID */}
-        {(user as any)?.uniqueId && (
+        {user?.uniqueId && (
           <div className="mt-3 bg-white/10 border border-white/20 rounded-xl px-3 py-2 flex items-center gap-2">
             <CreditCard size={14} className="text-white/60" />
             <span className="text-white/80 text-xs font-semibold">ID:</span>
-            <span className="text-white font-black text-sm tracking-wider">{(user as any).uniqueId}</span>
+            <span className="text-white font-black text-sm tracking-wider">{user.uniqueId}</span>
           </div>
         )}
       </div>
@@ -216,7 +226,7 @@ export default function UserProfile() {
                   <label className="text-xs font-semibold text-gray-500 mb-1 block">{f.label}</label>
                   <input
                     type={f.type ?? "text"}
-                    value={(editForm as any)[f.key]}
+                    value={(editForm as Record<string, string>)[f.key]}
                     onChange={(e) => setEditForm(prev => ({ ...prev, [f.key]: e.target.value }))}
                     placeholder={f.placeholder}
                     className={inputClass}
