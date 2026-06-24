@@ -12,6 +12,7 @@ export const runnersTable = pgTable("runners", {
   area: text("area"),
   avatar: text("avatar"),
   gender: text("gender"),
+  uniqueId: text("unique_id"),
   kycStatus: text("kyc_status").notNull().default("pending"),
   kycRejectionReason: text("kyc_rejection_reason"),
   isOnline: boolean("is_online").notNull().default(false),

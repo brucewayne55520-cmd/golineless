@@ -465,9 +465,65 @@ router.patch("/admin/runners/:id/kyc", requireAdmin, async (req, res): Promise<v
 
 // GET /admin/users
 router.get("/admin/users", requireAdmin, async (req, res): Promise<void> => {
-  const { limit = "50", offset = "0" } = req.query as Record<string, string>;
-  const users = await db.select().from(usersTable).orderBy(desc(usersTable.createdAt)).limit(Number(limit)).offset(Number(offset));
-  res.json(users.map(({ otp, otpExpiresAt, ...u }) => u));
+  const { limit = "50", offset = "0", kyc_status } = req.query as Record<string, string>;
+  let users = await db.select().from(usersTable).orderBy(desc(usersTable.createdAt)).limit(Number(limit)).offset(Number(offset));
+  if (kyc_status) users = users.filter(u => u.kycStatus === kyc_status);
+  res.json(users.map(({ otp, otpExpiresAt, aadhaarNumber, aadhaarFront, aadhaarBack, ...u }) => u));
+});
+
+// GET /admin/users/:id/kyc — get full KYC details for a user
+router.get("/admin/users/:id/kyc", requireAdmin, async (req, res): Promise<void> => {
+  const id = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id, 10);
+  const [user] = await db.select().from(usersTable).where(eq(usersTable.id, id));
+  if (!user) { res.status(404).json({ error: "User not found" }); return; }
+  // Return KYC data for admin review (strip sensitive fields)
+  const { otp, otpExpiresAt, passwordHash, passwordResetToken, passwordResetExpiresAt, aadhaarNumber, ...safe } = user;
+  res.json(safe);
+});
+
+// PATCH /admin/users/:id/kyc — approve or reject user KYC
+router.patch("/admin/users/:id/kyc", requireAdmin, async (req, res): Promise<void> => {
+  const id = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id, 10);
+  const { action, rejectionReason } = req.body;
+
+  if (action !== "approve" && action !== "reject") {
+    res.status(400).json({ error: "Action must be 'approve' or 'reject'" }); return;
+  }
+
+  const [existing] = await db.select().from(usersTable).where(eq(usersTable.id, id));
+  if (!existing) { res.status(404).json({ error: "User not found" }); return; }
+
+  const updates: Record<string, unknown> = {};
+  if (action === "approve") {
+    updates.kycStatus = "verified";
+  } else {
+    updates.kycStatus = "rejected";
+  }
+
+  await db.update(usersTable).set(updates).where(eq(usersTable.id, id));
+
+  // Audit log
+  await db.insert(paymentAuditLogTable).values({
+    taskId: 0,
+    previousStatus: existing.kycStatus,
+    newStatus: action === "approve" ? "verified" : "rejected",
+    actor: req.admin?.username ?? "admin",
+    actorType: "admin",
+    reason: `Admin ${action}d user KYC #${id}${rejectionReason ? `: ${rejectionReason}` : ""}`,
+    metadata: JSON.stringify({ userId: id, action, rejectionReason }),
+  });
+
+  // Notify user
+  await db.insert(notificationsTable).values({
+    userId: id,
+    type: action === "approve" ? "kyc_approved" : "kyc_rejected",
+    title: action === "approve" ? "KYC Verified!" : "KYC Rejected",
+    message: action === "approve"
+      ? "Your identity has been verified. You can now use all features."
+      : `Your KYC was rejected.${rejectionReason ? ` Reason: ${rejectionReason}` : " Please resubmit."}`,
+  });
+
+  res.json({ kycStatus: action === "approve" ? "verified" : "rejected", message: `User KYC ${action}d` });
 });
 
 // GET /admin/subscriptions

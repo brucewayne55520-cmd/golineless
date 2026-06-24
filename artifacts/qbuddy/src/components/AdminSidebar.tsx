@@ -1,5 +1,5 @@
 import { useLocation } from "wouter";
-import { LayoutDashboard, Map, ClipboardList, PersonStanding, Users, Crown, TrendingUp, Settings, LogOut, UserPlus, BookOpen, Star, Ticket, ShieldAlert, MapPin, Zap, Activity, Award } from "lucide-react";
+import { LayoutDashboard, Map, ClipboardList, PersonStanding, Users, Crown, TrendingUp, Settings, LogOut, UserPlus, BookOpen, Star, Ticket, ShieldAlert, Shield, MapPin, Zap, Activity, Award } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import type { LucideIcon } from "lucide-react";
@@ -18,6 +18,7 @@ const navItems: { path: string; icon: LucideIcon; label: string; exact?: boolean
   { path: "/admin/map", icon: Map, label: "Live Map" },
   { path: "/admin/tasks", icon: ClipboardList, label: "Tasks" },
   { path: "/admin/runners", icon: PersonStanding, label: "Runners" },
+  { path: "/admin/kyc", icon: Shield, label: "KYC Review" },
   { path: "/admin/recruitment", icon: UserPlus, label: "Recruitment" },
   { path: "/admin/training", icon: BookOpen, label: "Training" },
   { path: "/admin/quality", icon: Star, label: "Quality" },

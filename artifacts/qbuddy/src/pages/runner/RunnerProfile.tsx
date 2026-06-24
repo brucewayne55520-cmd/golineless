@@ -115,8 +115,8 @@ export default function RunnerProfile() {
           </div>
           <div className="flex-1">
             <h2 className="font-black text-white text-xl leading-tight">{runner?.name ?? "Runner"}</h2>
-            {runner?.uniqueId && (
-              <p className="text-white/50 text-xs font-mono mt-0.5">ID: {runner.uniqueId}</p>
+            {(runner as (typeof runner & { uniqueId?: string }))?.uniqueId && (
+              <p className="text-white/50 text-xs font-mono mt-0.5">ID: {(runner as typeof runner & { uniqueId?: string }).uniqueId}</p>
             )}
             <p className="text-white/40 text-sm">{runner?.phone}</p>
             {rating > 0 && (
