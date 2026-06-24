@@ -5,6 +5,7 @@ import { requireAdmin } from "../lib/auth";
 import { calculatePilotMetrics } from "../lib/revenue-engine";
 import { logger } from "../lib/logger";
 import { validateBody } from "../lib/validate";
+import { decrypt, isEncrypted } from "../lib/crypto";
 import { z } from "@workspace/db";
 
 const router: IRouter = Router();
@@ -399,11 +400,16 @@ router.get("/admin/runners", requireAdmin, async (req, res): Promise<void> => {
   const { kyc_status, limit = "50", offset = "0" } = req.query as Record<string, string>;
   let runners = await db.select().from(runnersTable).orderBy(desc(runnersTable.createdAt)).limit(Number(limit)).offset(Number(offset));
   if (kyc_status) runners = runners.filter(r => r.kycStatus === kyc_status);
-  res.json(runners.map(({ otp, otpExpiresAt, aadhaarNumber, ...r }) => ({
-    ...r,
-    rating: r.rating ? Number(r.rating) : null,
-    totalEarnings: r.totalEarnings ? Number(r.totalEarnings) : null,
-  })));
+  // A1: Return total count for pagination
+  const [{ count: totalCount }] = await db.select({ count: count() }).from(runnersTable);
+  res.json({
+    runners: runners.map(({ otp, otpExpiresAt, aadhaarNumber, ...r }) => ({
+      ...r,
+      rating: r.rating ? Number(r.rating) : null,
+      totalEarnings: r.totalEarnings ? Number(r.totalEarnings) : null,
+    })),
+    total: totalCount,
+  });
 });
 
 // PATCH /admin/runners/:id/kyc
@@ -471,14 +477,17 @@ router.get("/admin/users", requireAdmin, async (req, res): Promise<void> => {
   res.json(users.map(({ otp, otpExpiresAt, aadhaarNumber, aadhaarFront, aadhaarBack, ...u }) => u));
 });
 
-// GET /admin/users/:id/kyc — get full KYC details for a user
+// GET /admin/users/:id/kyc — get full KYC details for a user (decrypts Aadhaar for admin view)
 router.get("/admin/users/:id/kyc", requireAdmin, async (req, res): Promise<void> => {
   const id = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id, 10);
   const [user] = await db.select().from(usersTable).where(eq(usersTable.id, id));
   if (!user) { res.status(404).json({ error: "User not found" }); return; }
-  // Return KYC data for admin review (strip sensitive fields)
+  // Return KYC data for admin review — decrypt Aadhaar for display, strip auth fields
   const { otp, otpExpiresAt, passwordHash, passwordResetToken, passwordResetExpiresAt, aadhaarNumber, ...safe } = user;
-  res.json(safe);
+  // S1: Decrypt Aadhaar images for admin view (number itself is still stripped)
+  const aadhaarFront = user.aadhaarFront && isEncrypted(user.aadhaarFront) ? decrypt(user.aadhaarFront) : user.aadhaarFront;
+  const aadhaarBack = user.aadhaarBack && isEncrypted(user.aadhaarBack) ? decrypt(user.aadhaarBack) : user.aadhaarBack;
+  res.json({ ...safe, aadhaarFront, aadhaarBack });
 });
 
 // PATCH /admin/users/:id/kyc — approve or reject user KYC

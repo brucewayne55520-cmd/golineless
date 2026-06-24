@@ -4,6 +4,8 @@ import { eq } from "drizzle-orm";
 import { requireUser } from "../lib/auth";
 import { logger } from "../lib/logger";
 import crypto from "crypto";
+import { encrypt, decrypt } from "../lib/crypto";
+import { sendOtp, verifyOtp } from "../lib/sms";
 
 const router: IRouter = Router();
 
@@ -40,11 +42,29 @@ router.patch("/users/me", requireUser, async (req, res): Promise<void> => {
   if (area !== undefined) updates.area = area;
   if (language !== undefined) updates.language = language;
 
-  // Phone update: check uniqueness
+  // S3: Phone update requires OTP verification — send OTP first, then call PATCH with otp field
   if (phone && phone !== user.phone) {
     const [existing] = await db.select({ id: usersTable.id }).from(usersTable).where(eq(usersTable.phone, phone));
     if (existing && existing.id !== user.id) {
       res.status(409).json({ error: "Phone number already in use" });
+      return;
+    }
+    // Require OTP for phone change to prevent account takeover
+    const { otp: phoneOtp } = req.body;
+    if (!phoneOtp) {
+      // Send OTP to the new phone number
+      const sent = await sendOtp(phone);
+      if (!sent) {
+        res.status(500).json({ error: "Failed to send OTP to new phone number" });
+        return;
+      }
+      res.status(202).json({ message: "OTP sent to new phone number. Please verify.", phoneOtpRequired: true });
+      return;
+    }
+    // Verify OTP against new phone
+    const valid = await verifyOtp(phone, phoneOtp);
+    if (!valid) {
+      res.status(401).json({ error: "Invalid OTP for phone verification" });
       return;
     }
     updates.phone = phone;
@@ -94,9 +114,9 @@ router.post("/users/me/kyc", requireUser, async (req, res): Promise<void> => {
   await db
     .update(usersTable)
     .set({
-      aadhaarNumber: cleanAadhaar,
-      aadhaarFront,
-      aadhaarBack,
+      aadhaarNumber: encrypt(cleanAadhaar),
+      aadhaarFront: aadhaarFront ? encrypt(aadhaarFront) : aadhaarFront,
+      aadhaarBack: aadhaarBack ? encrypt(aadhaarBack) : aadhaarBack,
       kycStatus: "pending",
       emergencyContact: emergencyContact || null,
     })

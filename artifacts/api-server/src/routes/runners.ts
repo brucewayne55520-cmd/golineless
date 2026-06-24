@@ -1,5 +1,6 @@
 import { Router, type IRouter } from "express";
 import crypto from "crypto";
+import { encrypt, decrypt } from "../lib/crypto";
 import { db, runnersTable, tasksTable, runnerLocationsTable, usersTable, reviewsTable, runnerPayoutsTable } from "@workspace/db";
 import { eq, desc, and, gte, sql, inArray, or, count } from "drizzle-orm";
 import { requireRunner, requireAdmin, extractToken, getUserFromToken, getRunnerFromToken, resolveAdmin } from "../lib/auth";
@@ -110,8 +111,7 @@ router.post("/runners/kyc", requireRunner, async (req, res): Promise<void> => {
     bankAccountHolder, emergencyContactName, emergencyContactPhone, emergencyContactRelation } = req.body;
 
   const [updated] = await db.update(runnersTable).set({
-    fullName, aadhaarNumber, aadhaarFront, aadhaarBack, selfie,
-    bankAccount, bankIfsc, bankAccountHolder,
+    fullName, aadhaarNumber: aadhaarNumber ? encrypt(aadhaarNumber) : aadhaarNumber, aadhaarFront: aadhaarFront ? encrypt(aadhaarFront) : aadhaarFront, aadhaarBack: aadhaarBack ? encrypt(aadhaarBack) : aadhaarBack, selfie,
     emergencyContactName, emergencyContactPhone, emergencyContactRelation,
     kycStatus: "pending",
   }).where(eq(runnersTable.id, runner.id)).returning();

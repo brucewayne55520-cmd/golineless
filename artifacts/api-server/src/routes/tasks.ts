@@ -161,6 +161,18 @@ router.get("/tasks/available", requireRunner, async (req, res): Promise<void> =>
 router.post("/tasks", requireUser, validateBody(createTaskSchema), async (req, res): Promise<void> => {
   const user = req.user!;
 
+  // S4: Enforce KYC for sensitive categories (senior care)
+  const SENIOR_CATEGORIES = ["senior_care"];
+  const { category: reqCategory } = req.body;
+  if (SENIOR_CATEGORIES.includes(reqCategory) && user.kycStatus !== "verified") {
+    res.status(403).json({
+      error: "KYC verification required for senior care bookings",
+      detail: "Please complete your identity verification (KYC) before booking senior care tasks.",
+      kycStatus: user.kycStatus ?? "none",
+    });
+    return;
+  }
+
   // Phase 9: Pilot Mode enforcement — zone + category validation
   const [settings] = await db.select({ pilotMode: adminSettingsTable.pilotMode, pilotCategories: adminSettingsTable.pilotCategories, maxTasksPerRunnerPerDay: adminSettingsTable.maxTasksPerRunnerPerDay }).from(adminSettingsTable).limit(1);
   if (settings?.pilotMode) {
