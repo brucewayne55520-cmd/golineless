@@ -1,6 +1,7 @@
 import { Router, type IRouter } from "express";
 import crypto from "crypto";
 import { encrypt, decrypt } from "../lib/crypto";
+import { uploadDataUrl } from "../lib/storage";
 import { db, runnersTable, tasksTable, runnerLocationsTable, usersTable, reviewsTable, runnerPayoutsTable } from "@workspace/db";
 import { eq, desc, and, gte, sql, inArray, or, count } from "drizzle-orm";
 import { requireRunner, requireAdmin, extractToken, getUserFromToken, getRunnerFromToken, resolveAdmin } from "../lib/auth";
@@ -110,11 +111,25 @@ router.post("/runners/kyc", requireRunner, async (req, res): Promise<void> => {
   const { fullName, aadhaarNumber, aadhaarFront, aadhaarBack, selfie, bankAccount, bankIfsc,
     bankAccountHolder, emergencyContactName, emergencyContactPhone, emergencyContactRelation } = req.body;
 
-  const [updated] = await db.update(runnersTable).set({
-    fullName, aadhaarNumber: aadhaarNumber ? encrypt(aadhaarNumber) : aadhaarNumber, aadhaarFront: aadhaarFront ? encrypt(aadhaarFront) : aadhaarFront, aadhaarBack: aadhaarBack ? encrypt(aadhaarBack) : aadhaarBack, selfie,
-    emergencyContactName, emergencyContactPhone, emergencyContactRelation,
+  // S2: Upload Aadhaar images + selfie to B2 cloud storage instead of storing base64 in DB
+  const [aadhaarFrontUrl, aadhaarBackUrl, selfieUrl] = await Promise.all([
+    uploadDataUrl(aadhaarFront, "kyc/runners"),
+    uploadDataUrl(aadhaarBack, "kyc/runners"),
+    selfie ? uploadDataUrl(selfie, "kyc/runners") : Promise.resolve(selfie),
+  ]);
+
+  const kycUpdates: Record<string, unknown> = {
+    fullName,
+    aadhaarNumber: aadhaarNumber ? encrypt(aadhaarNumber) : aadhaarNumber,
+    aadhaarFront: aadhaarFrontUrl ? encrypt(aadhaarFrontUrl) : aadhaarFrontUrl,
+    aadhaarBack: aadhaarBackUrl ? encrypt(aadhaarBackUrl) : aadhaarBackUrl,
+    selfie: selfieUrl,
+    emergencyContactName,
+    emergencyContactPhone,
+    emergencyContactRelation,
     kycStatus: "pending",
-  }).where(eq(runnersTable.id, runner.id)).returning();
+  };
+  const [updated] = await db.update(runnersTable).set(kycUpdates).where(eq(runnersTable.id, runner.id)).returning();
 
   const { otp, otpExpiresAt, aadhaarNumber: an, ...safe } = updated;
   res.json(safe);
@@ -144,7 +159,7 @@ router.post("/runners/me/onboarding", requireRunner, async (req, res): Promise<v
   if (bankAccount) updates.bankAccount = bankAccount;
   if (bankIfsc) updates.bankIfsc = bankIfsc;
   if (bankAccountHolder) updates.bankAccountHolder = bankAccountHolder;
-  if (selfie) updates.selfie = selfie;
+  if (selfie) updates.selfie = await uploadDataUrl(selfie, "kyc/runners");
   if (step === 6) {
     updates.onboardingCompleted = true;
     // Submit KYC as pending when wizard completes

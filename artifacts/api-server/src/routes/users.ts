@@ -5,6 +5,7 @@ import { requireUser } from "../lib/auth";
 import { logger } from "../lib/logger";
 import crypto from "crypto";
 import { encrypt, decrypt } from "../lib/crypto";
+import { uploadDataUrl } from "../lib/storage";
 import { sendOtp, verifyOtp } from "../lib/sms";
 
 const router: IRouter = Router();
@@ -111,12 +112,18 @@ router.post("/users/me/kyc", requireUser, async (req, res): Promise<void> => {
 
   logger.info({ userId: user.id }, "User KYC submitted");
 
+  // S2: Upload Aadhaar images to B2 cloud storage instead of storing base64 in DB
+  const [aadhaarFrontUrl, aadhaarBackUrl] = await Promise.all([
+    uploadDataUrl(aadhaarFront, "kyc/users"),
+    uploadDataUrl(aadhaarBack, "kyc/users"),
+  ]);
+
   await db
     .update(usersTable)
     .set({
       aadhaarNumber: encrypt(cleanAadhaar),
-      aadhaarFront: aadhaarFront ? encrypt(aadhaarFront) : aadhaarFront,
-      aadhaarBack: aadhaarBack ? encrypt(aadhaarBack) : aadhaarBack,
+      aadhaarFront: encrypt(aadhaarFrontUrl),
+      aadhaarBack: encrypt(aadhaarBackUrl),
       kycStatus: "pending",
       emergencyContact: emergencyContact || null,
     })

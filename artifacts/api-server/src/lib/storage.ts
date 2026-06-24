@@ -147,3 +147,40 @@ export async function deleteFile(key: string): Promise<boolean> {
 }
 
 export { isConfigured as isB2Configured };
+
+/**
+ * Upload a base64 data URL to cloud storage.
+ * Parses the data URL, converts to buffer, and uploads.
+ * Returns the cloud URL if B2 is configured, or the original data URL as fallback.
+ * Used by KYC routes to replace massive base64 strings in the database with cloud URLs.
+ */
+export async function uploadDataUrl(
+  dataUrl: string,
+  folder = "kyc",
+): Promise<string> {
+  // If not a data URL or B2 not configured, return as-is
+  if (!dataUrl.startsWith("data:")) return dataUrl;
+  if (!isConfigured) {
+    logger.warn({ folder }, "B2 not configured — keeping base64 data URL in DB");
+    return dataUrl;
+  }
+
+  const matches = dataUrl.match(/^data:image\/(\w+);base64,(.+)$/);
+  if (!matches) {
+    logger.error({ folder }, "Invalid data URL format for uploadDataUrl");
+    return dataUrl;
+  }
+
+  const ext = matches[1] === "jpeg" ? "jpg" : matches[1];
+  const buffer = Buffer.from(matches[2], "base64");
+  const filename = `${crypto.randomUUID()}.${ext}`;
+
+  const result = await uploadFile(buffer, filename, folder);
+  if (result) {
+    logger.info({ key: result.key, folder, sizeBytes: buffer.length }, "Data URL uploaded to B2");
+    return result.url;
+  }
+  // Upload failed — keep the original data URL as fallback
+  logger.error({ folder, sizeBytes: buffer.length }, "B2 upload failed — keeping base64 fallback");
+  return dataUrl;
+}
