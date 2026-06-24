@@ -34,9 +34,13 @@ export default function AdminKycReview() {
   const [rejReason, setRejReason] = useState("");
   const [loadingDetail, setLoadingDetail] = useState(false);
 
-  const { data: users, isLoading: usersLoading, refetch: refetchUsers } = useListAdminUsers({ limit: 100 });
+  const [page, setPage] = useState(0);
+  const PAGE_SIZE = 20;
+
+  const { data: users, isLoading: usersLoading, refetch: refetchUsers } = useListAdminUsers({ limit: 200 });
   const { data: runners, isLoading: runnersLoading, refetch: refetchRunners } = useListAdminRunners({
     kyc_status: statusFilter === "none" ? undefined : (statusFilter as import("@workspace/api-client-react").ListAdminRunnersKycStatus),
+    limit: 200,
   });
   const reviewKyc = useReviewRunnerKyc();
 
@@ -98,6 +102,12 @@ export default function AdminKycReview() {
     return <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-gray-100 text-gray-500"><AlertTriangle size={10} /> Not Started</span>;
   };
 
+  // Pagination
+  const pagedUsers = filteredUsers.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
+  const pagedRunners = runnerList.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
+  const totalItems = tab === "users" ? filteredUsers.length : runnerList.length;
+  const totalPages = Math.ceil(totalItems / PAGE_SIZE);
+
   const pendingCount = tab === "users"
     ? userList.filter(u => u.kycStatus === "pending").length
     : undefined;
@@ -118,7 +128,7 @@ export default function AdminKycReview() {
           {KYC_TABS.map(t => (
             <button
               key={t.key}
-              onClick={() => { setTab(t.key); setStatusFilter("pending"); }}
+              onClick={() => { setTab(t.key); setStatusFilter("pending"); setPage(0); }}
               className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all ${tab === t.key ? "bg-[#6C3FD4] text-white shadow-md" : "bg-white text-gray-600 border border-gray-200 hover:bg-gray-50"}`}
             >
               <t.icon size={15} />
@@ -135,7 +145,7 @@ export default function AdminKycReview() {
           {STATUS_TABS.map(s => (
             <button
               key={s.key}
-              onClick={() => setStatusFilter(s.key)}
+              onClick={() => { setStatusFilter(s.key); setPage(0); }}
               className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${statusFilter === s.key ? "bg-[#1A1A2E] text-white" : "text-gray-500 hover:bg-gray-100"}`}
             >
               {s.label}
@@ -146,7 +156,7 @@ export default function AdminKycReview() {
         {/* Content */}
         {tab === "users" ? (
           <UserKycList
-            users={filteredUsers}
+            users={pagedUsers}
             isLoading={usersLoading}
             statusFilter={statusFilter}
             onSelect={openUserDetail}
@@ -154,12 +164,35 @@ export default function AdminKycReview() {
           />
         ) : (
           <RunnerKycList
-            runners={runnerList}
+            runners={pagedRunners}
             isLoading={runnersLoading}
             statusFilter={statusFilter}
             onSelect={(r) => { setSelectedRunner(r); setRejReason(""); }}
             getStatusBadge={getStatusBadge}
           />
+        )}
+
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <div className="flex items-center justify-center gap-2 mt-6">
+            <button
+              onClick={() => setPage(p => Math.max(0, p - 1))}
+              disabled={page === 0}
+              className="px-4 py-2 rounded-xl text-sm font-semibold border border-gray-200 disabled:opacity-40 hover:bg-gray-50 transition-colors"
+            >
+              ← Previous
+            </button>
+            <span className="text-sm text-gray-500 font-semibold px-3">
+              Page {page + 1} / {totalPages} · {totalItems} items
+            </span>
+            <button
+              onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))}
+              disabled={page >= totalPages - 1}
+              className="px-4 py-2 rounded-xl text-sm font-semibold border border-gray-200 disabled:opacity-40 hover:bg-gray-50 transition-colors"
+            >
+              Next →
+            </button>
+          </div>
         )}
 
         {/* User KYC Detail Modal */}

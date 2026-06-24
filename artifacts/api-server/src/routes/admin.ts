@@ -212,6 +212,46 @@ router.get("/admin/activity", requireAdmin, async (_req, res): Promise<void> => 
   res.json(notifs.map(n => ({ id: n.id, type: n.type, message: n.message, createdAt: n.createdAt })));
 });
 
+// GET /admin/audit-log — Searchable audit trail (KYC actions, payment changes, admin actions)
+router.get("/admin/audit-log", requireAdmin, async (req, res): Promise<void> => {
+  const { limit = "50", offset = "0", actor_type, actor, action, days = "30" } = req.query as Record<string, string>;
+  const numDays = Number(days);
+  const cutoff = new Date(); cutoff.setDate(cutoff.getDate() - numDays);
+
+  const conditions = [gte(paymentAuditLogTable.createdAt, cutoff)];
+  if (actor_type) conditions.push(eq(paymentAuditLogTable.actorType, actor_type));
+  if (actor) conditions.push(eq(paymentAuditLogTable.actor, actor));
+  if (action) conditions.push(eq(paymentAuditLogTable.newStatus, action));
+
+  const logs = await db
+    .select()
+    .from(paymentAuditLogTable)
+    .where(and(...conditions))
+    .orderBy(desc(paymentAuditLogTable.createdAt))
+    .limit(Number(limit) + 1)
+    .offset(Number(offset));
+
+  const [{ count: totalCount }] = await db
+    .select({ count: count() })
+    .from(paymentAuditLogTable)
+    .where(and(...conditions));
+
+  res.json({
+    logs: logs.map(l => ({
+      id: l.id,
+      taskId: l.taskId,
+      previousStatus: l.previousStatus,
+      newStatus: l.newStatus,
+      actor: l.actor,
+      actorType: l.actorType,
+      reason: l.reason,
+      metadata: l.metadata,
+      createdAt: l.createdAt,
+    })),
+    total: totalCount,
+  });
+});
+
 // GET /admin/tasks
 router.get("/admin/tasks", requireAdmin, async (req, res): Promise<void> => {
   const { status, category, search, limit = "20", offset = "0" } = req.query as Record<string, string>;
@@ -400,16 +440,11 @@ router.get("/admin/runners", requireAdmin, async (req, res): Promise<void> => {
   const { kyc_status, limit = "50", offset = "0" } = req.query as Record<string, string>;
   let runners = await db.select().from(runnersTable).orderBy(desc(runnersTable.createdAt)).limit(Number(limit)).offset(Number(offset));
   if (kyc_status) runners = runners.filter(r => r.kycStatus === kyc_status);
-  // A1: Return total count for pagination
-  const [{ count: totalCount }] = await db.select({ count: count() }).from(runnersTable);
-  res.json({
-    runners: runners.map(({ otp, otpExpiresAt, aadhaarNumber, ...r }) => ({
-      ...r,
-      rating: r.rating ? Number(r.rating) : null,
-      totalEarnings: r.totalEarnings ? Number(r.totalEarnings) : null,
-    })),
-    total: totalCount,
-  });
+  res.json(runners.map(({ otp, otpExpiresAt, aadhaarNumber, ...r }) => ({
+    ...r,
+    rating: r.rating ? Number(r.rating) : null,
+    totalEarnings: r.totalEarnings ? Number(r.totalEarnings) : null,
+  })));
 });
 
 // PATCH /admin/runners/:id/kyc

@@ -42,6 +42,7 @@ const AdminAreaPerformance = lazy(() => import("@/pages/admin/AdminAreaPerforman
 const AdminFounder = lazy(() => import("@/pages/admin/AdminFounder"));
 const AdminIncidentResponse = lazy(() => import("@/pages/admin/AdminIncidentResponse"));
 const AdminKycReview = lazy(() => import("@/pages/admin/AdminKycReview"));
+const AdminAuditLog = lazy(() => import("@/pages/admin/AdminAuditLog"));
 const NotFound = lazy(() => import("@/pages/not-found"));
 const FamilyTrack = lazy(() => import("@/pages/app/FamilyTrack"));
 const PayRetry = lazy(() => import("@/pages/app/PayRetry"));
@@ -133,6 +134,7 @@ function Router() {
       <Route path="/admin/founder"><AdminProtectedRoute><AdminFounder /></AdminProtectedRoute></Route>
       <Route path="/admin/incident-response"><AdminProtectedRoute><AdminIncidentResponse /></AdminProtectedRoute></Route>
       <Route path="/admin/kyc"><AdminProtectedRoute><AdminKycReview /></AdminProtectedRoute></Route>
+      <Route path="/admin/audit-log"><AdminProtectedRoute><AdminAuditLog /></AdminProtectedRoute></Route>
 
       <Route path="/family/track/:token">{(params) => <FamilyTrack token={params.token} />}</Route>
       <Route component={NotFound} />

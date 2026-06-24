@@ -1,6 +1,6 @@
 import {
   ClipboardList, Zap, CheckCircle2, XCircle, Wallet, Building2, PersonStanding,
-  Clock, AlertTriangle, Star, Activity, ArrowRight,
+  Clock, AlertTriangle, Star, Activity, ArrowRight, Shield,
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { useGetAdminStats, useGetAdminActivity, useGetDailyOps, useGetFraudFlags } from "@workspace/api-client-react";
@@ -32,6 +32,30 @@ export default function AdminDashboard() {
   const [, navigate] = useLocation();
   const { data: stats, isLoading } = useGetAdminStats({ query: { queryKey: ["adminStats"], refetchInterval: 10000 } });
   const { data: activity } = useGetAdminActivity({ query: { queryKey: ["adminActivity"], refetchInterval: 5000 } });
+
+  // A4: KYC metrics — fetch user KYC stats for dashboard widget
+  const { data: kycMetrics } = useQuery({
+    queryKey: ["kycMetrics"],
+    queryFn: async () => {
+      const token = localStorage.getItem("golineless_admin_token") || "";
+      const [usersRes, runnersRes] = await Promise.all([
+        fetch("/api/admin/users?limit=500", { headers: { Authorization: `Bearer ${token}` } }),
+        fetch("/api/admin/runners?limit=500", { headers: { Authorization: `Bearer ${token}` } }),
+      ]);
+      const usersData = usersRes.ok ? await usersRes.json() : [];
+      const runnersData = runnersRes.ok ? await runnersRes.json() : { runners: [] };
+      const allUsers = Array.isArray(usersData) ? usersData : [];
+      const allRunners = Array.isArray(runnersData.runners) ? runnersData.runners : [];
+      const all = [...allUsers, ...allRunners];
+      return {
+        pending: all.filter((u: { kycStatus?: string }) => u.kycStatus === "pending").length,
+        verified: all.filter((u: { kycStatus?: string }) => u.kycStatus === "verified").length,
+        rejected: all.filter((u: { kycStatus?: string }) => u.kycStatus === "rejected").length,
+        total: all.length,
+      };
+    },
+    refetchInterval: 60000,
+  });
 
   const s = stats as Required<import("@workspace/api-client-react").AdminStats>;
   const pm = s?.pilotMetrics as unknown as PilotMetricsDisplay | undefined;
@@ -181,6 +205,41 @@ export default function AdminDashboard() {
 
           {/* Phase 6: Pilot Launch Dashboard */}
           {pm && <PilotMetricsPanel pilotMetrics={pm} />}
+
+          {/* A4: KYC Metrics Widget */}
+          {kycMetrics && kycMetrics.total > 0 && (
+            <div className="mt-5 bg-white rounded-2xl p-5 border border-gray-100 shadow-sm">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="font-black text-[#1A1A2E] flex items-center gap-2">
+                  <Shield size={18} /> KYC Overview
+                </h3>
+                <button
+                  onClick={() => navigate("/admin/kyc")}
+                  className="text-xs font-semibold text-[#6C3FD4] hover:underline"
+                >
+                  View All →
+                </button>
+              </div>
+              <div className="grid grid-cols-4 gap-3">
+                <div className="bg-amber-50 rounded-xl p-3 text-center">
+                  <p className="text-2xl font-black text-amber-600">{kycMetrics.pending}</p>
+                  <p className="text-xs text-amber-700 font-semibold">Pending</p>
+                </div>
+                <div className="bg-green-50 rounded-xl p-3 text-center">
+                  <p className="text-2xl font-black text-green-600">{kycMetrics.verified}</p>
+                  <p className="text-xs text-green-700 font-semibold">Verified</p>
+                </div>
+                <div className="bg-red-50 rounded-xl p-3 text-center">
+                  <p className="text-2xl font-black text-red-500">{kycMetrics.rejected}</p>
+                  <p className="text-xs text-red-600 font-semibold">Rejected</p>
+                </div>
+                <div className="bg-gray-50 rounded-xl p-3 text-center">
+                  <p className="text-2xl font-black text-gray-700">{kycMetrics.total}</p>
+                  <p className="text-xs text-gray-500 font-semibold">Total</p>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Phase 7.2: Fraud Alerts */}
           {fraud && flags.length > 0 && (
