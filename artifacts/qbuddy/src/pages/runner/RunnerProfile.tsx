@@ -2,8 +2,8 @@ import { useState } from "react";
 import { useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
-import { Star, CheckCircle2, Wallet, HelpCircle, FileText, Lock, ChevronRight, X, Camera, Shield, TrendingUp, Award } from "lucide-react";
-import { useGetRunnerMe, useSubmitKyc, useLogout } from "@workspace/api-client-react";
+import { Star, CheckCircle2, Wallet, HelpCircle, FileText, Lock, ChevronRight, X, Camera, Shield, TrendingUp, Award, Bell } from "lucide-react";
+import { useGetRunnerMe, useSubmitKyc, useLogout, useListNotifications } from "@workspace/api-client-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { RunnerBottomNav } from "@/components/BottomNav";
 import { getInitials } from "@/lib/utils";
@@ -44,6 +44,8 @@ export default function RunnerProfile() {
   const { data: runner, refetch } = useGetRunnerMe();
   const submitKyc = useSubmitKyc();
   const logoutMutation = useLogout();
+  const { data: notifications } = useListNotifications();
+  const unreadCount = (notifications ?? []).filter((n: { isRead?: boolean }) => !n.isRead).length;
   const [showKyc, setShowKyc] = useState(false);
   const [kycStep, setKycStep] = useState(0);
   const [form, setForm] = useState<Record<string, string | boolean>>({
@@ -108,6 +110,16 @@ export default function RunnerProfile() {
     <div className="min-h-screen pb-24" style={{ background: BG }}>
       {/* Profile header */}
       <div className="px-4 pt-6 pb-5 border-b border-white/10">
+        <div className="flex justify-end mb-2">
+          <button onClick={() => navigate("/runner/notifications")} className="relative p-2 rounded-xl hover:bg-white/10 transition-colors">
+            <Bell size={20} className="text-white/60" />
+            {unreadCount > 0 && (
+              <span className="absolute -top-0.5 -right-0.5 w-5 h-5 bg-red-500 rounded-full text-white text-[10px] font-bold flex items-center justify-center">
+                {unreadCount > 9 ? "9+" : unreadCount}
+              </span>
+            )}
+          </button>
+        </div>
         <div className="flex items-center gap-4">
           <div className="w-16 h-16 rounded-2xl flex items-center justify-center text-xl font-black text-[#0A1628] shadow-lg"
             style={{ background: GOLD_GRAD }}>
@@ -239,6 +251,25 @@ export default function RunnerProfile() {
             </div>
           ))}
         </div>
+      </div>
+
+      {/* Notifications shortcut */}
+      <div className="mx-4 mt-4">
+        <button onClick={() => navigate("/runner/notifications")} className="w-full flex items-center gap-3 px-4 py-3.5 rounded-2xl bg-white/5 border border-white/10 hover:bg-white/10 transition-colors">
+          <div className="w-9 h-9 rounded-xl bg-amber-400/15 flex items-center justify-center flex-shrink-0">
+            <Bell size={16} className="text-amber-400" />
+          </div>
+          <div className="flex-1 text-left">
+            <span className="text-white/80 text-sm font-semibold">Notifications</span>
+            {unreadCount > 0 && <p className="text-amber-400 text-[10px] mt-0.5">{unreadCount} unread</p>}
+          </div>
+          {unreadCount > 0 && (
+            <span className="w-6 h-6 bg-red-500 rounded-full text-white text-[10px] font-bold flex items-center justify-center">
+              {unreadCount > 9 ? "9+" : unreadCount}
+            </span>
+          )}
+          <ChevronRight size={14} className="text-white/20" />
+        </button>
       </div>
 
       {/* Menu */}

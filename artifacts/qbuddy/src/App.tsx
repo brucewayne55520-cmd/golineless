@@ -43,6 +43,8 @@ const AdminFounder = lazy(() => import("@/pages/admin/AdminFounder"));
 const AdminIncidentResponse = lazy(() => import("@/pages/admin/AdminIncidentResponse"));
 const AdminKycReview = lazy(() => import("@/pages/admin/AdminKycReview"));
 const AdminAuditLog = lazy(() => import("@/pages/admin/AdminAuditLog"));
+const NotificationsPage = lazy(() => import("@/pages/app/NotificationsPage"));
+const RunnerNotificationsPage = lazy(() => import("@/pages/runner/RunnerNotificationsPage"));
 const NotFound = lazy(() => import("@/pages/not-found"));
 const FamilyTrack = lazy(() => import("@/pages/app/FamilyTrack"));
 const PayRetry = lazy(() => import("@/pages/app/PayRetry"));
@@ -104,11 +106,13 @@ function Router() {
       <Route path="/app/tasks/:id/pay">{(params) => <ProtectedRoute><PayRetry id={params.id} /></ProtectedRoute>}</Route>
       <Route path="/app/senior"><ProtectedRoute><SeniorCare /></ProtectedRoute></Route>
       <Route path="/app/profile"><ProtectedRoute><UserProfile /></ProtectedRoute></Route>
+      <Route path="/app/notifications"><ProtectedRoute><NotificationsPage /></ProtectedRoute></Route>
 
       <Route path="/runner/feed"><RunnerProtectedRoute><RunnerFeed /></RunnerProtectedRoute></Route>
       <Route path="/runner/active"><RunnerProtectedRoute><ActiveTask /></RunnerProtectedRoute></Route>
       <Route path="/runner/earnings"><RunnerProtectedRoute><RunnerEarnings /></RunnerProtectedRoute></Route>
       <Route path="/runner/profile"><RunnerProtectedRoute><RunnerProfile /></RunnerProtectedRoute></Route>
+      <Route path="/runner/notifications"><RunnerProtectedRoute><RunnerNotificationsPage /></RunnerProtectedRoute></Route>
       <Route path="/runner/onboarding"><RunnerProtectedRoute><RunnerOnboarding /></RunnerProtectedRoute></Route>
       <Route path="/runner/playbook"><RunnerProtectedRoute><RunnerPlaybook /></RunnerProtectedRoute></Route>
 

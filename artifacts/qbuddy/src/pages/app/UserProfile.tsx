@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
 import { CheckCircle2, Clock, Wallet, Crown, Bell, Globe, HelpCircle, Lock, FileText, Info, ChevronRight, MapPin, Camera, Edit3, Shield, User, Phone, Mail, Calendar, CreditCard, X } from "lucide-react";
+import { useListNotifications } from "@workspace/api-client-react";
+import type { Notification as NotificationType } from "@workspace/api-client-react";
 import { useGetMe, useGetUserStats, useGetMySubscription, type UserStats } from "@workspace/api-client-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { UserBottomNav } from "@/components/BottomNav";
@@ -33,6 +35,9 @@ export default function UserProfile() {
   });
   const [aadhaarFront, setAadhaarFront] = useState<string | null>(null);
   const [aadhaarBack, setAadhaarBack] = useState<string | null>(null);
+
+  const { data: notifications } = useListNotifications();
+  const unreadCount = ((notifications ?? []) as NotificationType[]).filter(n => !n.isRead).length;
 
   const user = me as Exclude<typeof me, undefined>;
 
@@ -86,10 +91,10 @@ export default function UserProfile() {
     { Icon: Wallet, label: "Value", val: formatCurrency(statsData.valueSaved), color: GOLD },
   ] : [];
 
-  const menuItems: { Icon: LucideIcon; label: string; action?: () => void }[] = [
+  const menuItems: { Icon: LucideIcon; label: string; action?: () => void; badge?: number }[] = [
     { Icon: Edit3, label: "Edit Profile", action: startEditProfile },
     { Icon: Shield, label: kycStatus === "verified" ? "KYC Verified ✓" : kycStatus === "pending" ? "KYC Under Review" : "Verify Identity (KYC)", action: kycStatus === "none" ? () => { setKycStep(0); setShowKyc(true); } : undefined },
-    { Icon: Bell, label: "Notifications" },
+    { Icon: Bell, label: "Notifications", action: () => navigate("/app/notifications"), badge: unreadCount > 0 ? unreadCount : undefined },
     { Icon: Globe, label: "Language" },
     { Icon: HelpCircle, label: "Help & Support" },
     { Icon: Lock, label: "Privacy Policy" },
@@ -172,7 +177,12 @@ export default function UserProfile() {
             >
               <item.Icon size={16} className="text-gray-400" />
               <span className="text-sm font-medium text-gray-700 flex-1">{item.label}</span>
-              {item.action && <ChevronRight size={14} className="text-gray-300" />}
+              {item.badge && (
+                <span className="px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-[#6C3FD4] text-white min-w-[18px] text-center">
+                  {item.badge > 99 ? "99+" : item.badge}
+                </span>
+              )}
+              {item.action && !item.badge && <ChevronRight size={14} className="text-gray-300" />}
             </button>
           ))}
         </div>
