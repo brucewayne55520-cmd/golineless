@@ -1,28 +1,108 @@
 import { Router, type IRouter } from "express";
-import { db, usersTable, tasksTable, subscriptionsTable } from "@workspace/db";
-import { eq, count } from "drizzle-orm";
+import { db, usersTable, tasksTable } from "@workspace/db";
+import { eq } from "drizzle-orm";
 import { requireUser } from "../lib/auth";
+import { logger } from "../lib/logger";
+import crypto from "crypto";
 
 const router: IRouter = Router();
+
+/**
+ * Generate a unique ID for users: GLU-XXXX-XXXXXX
+ * 6 random hex chars = 16M+ possibilities — safe for user-facing IDs.
+ */
+function generateUserUniqueId(id: number): string {
+  const suffix = crypto.randomBytes(3).toString("hex").toUpperCase();
+  return `GLU-${String(id).padStart(4, "0")}-${suffix}`;
+}
+
+/** Fields to strip from user responses (sensitive/internal). */
+const SENSITIVE_FIELDS = ["otp", "otpExpiresAt", "passwordHash", "passwordResetToken", "passwordResetExpiresAt"] as const;
 
 // GET /users/me
 router.get("/users/me", requireUser, async (req, res): Promise<void> => {
   const user = req.user!;
-  const { otp, otpExpiresAt, ...safe } = user;
+  const safe = Object.fromEntries(
+    Object.entries(user).filter(([k]) => !SENSITIVE_FIELDS.includes(k as typeof SENSITIVE_FIELDS[number]))
+  );
   res.json(safe);
 });
 
-// PATCH /users/me
+// PATCH /users/me — update profile fields
 router.patch("/users/me", requireUser, async (req, res): Promise<void> => {
   const user = req.user!;
-  const { name, email, city, area, language } = req.body;
+  const { name, email, city, area, language, phone } = req.body;
+
+  const updates: Record<string, unknown> = {};
+  if (name !== undefined) updates.name = name;
+  if (email !== undefined) updates.email = email;
+  if (city !== undefined) updates.city = city;
+  if (area !== undefined) updates.area = area;
+  if (language !== undefined) updates.language = language;
+
+  // Phone update: check uniqueness
+  if (phone && phone !== user.phone) {
+    const [existing] = await db.select({ id: usersTable.id }).from(usersTable).where(eq(usersTable.phone, phone));
+    if (existing && existing.id !== user.id) {
+      res.status(409).json({ error: "Phone number already in use" });
+      return;
+    }
+    updates.phone = phone;
+  }
+
+  // Auto-generate unique_id if missing
+  if (!user.uniqueId) {
+    updates.uniqueId = generateUserUniqueId(user.id);
+  }
+
+  if (Object.keys(updates).length === 0) {
+    res.status(400).json({ error: "No valid fields to update" });
+    return;
+  }
+
   const [updated] = await db
     .update(usersTable)
-    .set({ name, email, city, area, language })
+    .set(updates)
     .where(eq(usersTable.id, user.id))
     .returning();
-  const { otp, otpExpiresAt, ...safe } = updated;
+
+  const safe = Object.fromEntries(
+    Object.entries(updated).filter(([k]) => !SENSITIVE_FIELDS.includes(k as typeof SENSITIVE_FIELDS[number]))
+  );
   res.json(safe);
+});
+
+// POST /users/me/kyc — submit user KYC (Aadhaar verification)
+router.post("/users/me/kyc", requireUser, async (req, res): Promise<void> => {
+  const user = req.user!;
+  const { aadhaarNumber, aadhaarFront, aadhaarBack, emergencyContact } = req.body;
+
+  if (!aadhaarNumber || !aadhaarFront || !aadhaarBack) {
+    res.status(400).json({ error: "Aadhaar number and both sides of the card are required" });
+    return;
+  }
+
+  // Validate Aadhaar format (12 digits, optionally with spaces/dashes)
+  const cleanAadhaar = aadhaarNumber.replace(/[\s-]/g, "");
+  if (!/^\d{12}$/.test(cleanAadhaar)) {
+    res.status(400).json({ error: "Invalid Aadhaar number. Must be 12 digits." });
+    return;
+  }
+
+  logger.info({ userId: user.id }, "User KYC submitted");
+
+  await db
+    .update(usersTable)
+    .set({
+      aadhaarNumber: cleanAadhaar,
+      aadhaarFront,
+      aadhaarBack,
+      kycStatus: "pending",
+      emergencyContact: emergencyContact || null,
+    })
+    .where(eq(usersTable.id, user.id));
+
+  res.json({ kycStatus: "pending", message: "KYC submitted. Under review — typically within 24 hours." });
 });
 
 // GET /users/me/stats

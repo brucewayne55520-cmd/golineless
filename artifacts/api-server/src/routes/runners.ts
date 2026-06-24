@@ -1,4 +1,5 @@
 import { Router, type IRouter } from "express";
+import crypto from "crypto";
 import { db, runnersTable, tasksTable, runnerLocationsTable, usersTable, reviewsTable, runnerPayoutsTable } from "@workspace/db";
 import { eq, desc, and, gte, sql, inArray, or, count } from "drizzle-orm";
 import { requireRunner, requireAdmin, extractToken, getUserFromToken, getRunnerFromToken, resolveAdmin } from "../lib/auth";
@@ -11,6 +12,13 @@ const router: IRouter = Router();
 router.get("/runners/me", requireRunner, async (req, res): Promise<void> => {
   const runner = req.runner!;
   const { otp, otpExpiresAt, aadhaarNumber, ...safe } = runner;
+  // Auto-generate unique_id if missing (GLR-XXXX-XXXX)
+  if (!(safe as any).uniqueId) {
+    const suffix = crypto.randomBytes(2).toString("hex").toUpperCase();
+    const newUniqueId = `GLR-${String(runner.id).padStart(4, "0")}-${suffix}`;
+    await db.update(runnersTable).set({ uniqueId: newUniqueId } as any).where(eq(runnersTable.id, runner.id));
+    (safe as any).uniqueId = newUniqueId;
+  }
   res.json({
     ...safe,
     rating: safe.rating ? Number(safe.rating) : null,
