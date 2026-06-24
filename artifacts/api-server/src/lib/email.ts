@@ -42,7 +42,7 @@ export interface SendEmailParams {
  * (#25) Uses module-level cached client, (#24) retries once on transient failure.
  */
 export async function sendEmail(params: SendEmailParams): Promise<boolean> {
-  const { to, subject, htmlContent, textContent, fromName = "Go LineLess", fromEmail = "no-reply@golineless.com" } = params;
+  const { to, subject, htmlContent, textContent, fromName = process.env.BREVO_SENDER_NAME || "Go LineLess", fromEmail = process.env.BREVO_SENDER_EMAIL || "no-reply@golineless.com" } = params;
 
   const api = getBrevoApi();
   if (!api) {

@@ -65,6 +65,13 @@ services:
       # --- UPI ---
       - key: UPI_ID
         sync: false
+      # --- Email (Brevo) ---
+      - key: BREVO_API_KEY
+        sync: false
+      - key: BREVO_SENDER_EMAIL
+        value: no-reply@golineless.com
+      - key: BREVO_SENDER_NAME
+        value: Go LineLess
       # --- Error Monitoring (Sentry) ---
       - key: SENTRY_DSN
         sync: false

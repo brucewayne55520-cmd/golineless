@@ -1104,6 +1104,33 @@ router.get("/admin/export", requireAdmin, async (req, res): Promise<void> => {
   }
 });
 
+// POST /admin/test-email — Send a test email to verify Brevo integration
+router.post("/admin/test-email", requireAdmin, async (req, res): Promise<void> => {
+  const { to } = req.body;
+  if (!to || typeof to !== "string") {
+    res.status(400).json({ error: "'to' email address is required" }); return;
+  }
+  const apiKey = process.env.BREVO_API_KEY;
+  if (!apiKey) {
+    res.status(503).json({ error: "BREVO_API_KEY not configured on the server", configured: false }); return;
+  }
+  try {
+    const sent = await sendEmail({
+      to,
+      subject: "Go LineLess — Brevo Email Test",
+      htmlContent: `<h2>Email Integration Working ✓</h2><p>Hi there,</p><p>This is a test email from Go LineLess. If you received this, your Brevo email integration is configured correctly.</p><p><strong>Sent at:</strong> ${new Date().toISOString()}</p><p>— Go LineLess Team</p>`,
+    });
+    if (sent) {
+      res.json({ success: true, message: `Test email sent to ${to}`, configured: true });
+    } else {
+      res.status(500).json({ success: false, error: "Brevo API returned an error. Check your BREVO_API_KEY.", configured: true });
+    }
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : "Unknown error";
+    res.status(500).json({ success: false, error: msg, configured: true });
+  }
+});
+
 // GET /admin/kyc/stale — KYC submissions pending > 7 days
 router.get("/admin/kyc/stale", requireAdmin, async (_req, res): Promise<void> => {
   const cutoff = new Date();
