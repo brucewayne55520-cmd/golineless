@@ -60,6 +60,8 @@ services:
       # --- Google OAuth ---
       - key: GOOGLE_CLIENT_ID
         sync: false
+      - key: VITE_GOOGLE_CLIENT_ID
+        sync: false
       # --- UPI ---
       - key: UPI_ID
         sync: false
