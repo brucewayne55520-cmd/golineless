@@ -79,7 +79,7 @@ router.post("/admin/kyc/bulk", requireAdmin, async (req, res): Promise<void> => 
 
       // Audit log
       await db.insert(paymentAuditLogTable).values({
-        taskId: 0, previousStatus: null, newStatus: action,
+        taskId: null, previousStatus: null, newStatus: action,
         actor: req.admin?.username ?? "admin", actorType: "admin",
         reason: `Bulk ${action} KYC for ${entityType} #${id}${rejectionReason ? `: ${rejectionReason}` : ""}`,
         metadata: JSON.stringify({ id, entityType, action, bulk: true }),

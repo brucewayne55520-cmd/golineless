@@ -1,11 +1,11 @@
 import { pgTable, text, serial, timestamp, integer, jsonb, index } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
-import { tasksTable } from "./tasks";
+
 
 export const paymentAuditLogTable = pgTable("payment_audit_log", {
   id: serial("id").primaryKey(),
-  taskId: integer("task_id").references(() => tasksTable.id),
+  taskId: integer("task_id"),  // NOT NULL FK removed: KYC/admin audit entries use null task_id
   previousStatus: text("previous_status"),
   newStatus: text("new_status"),
   actor: text("actor"),                     // user:123, runner:456, admin, system:auto_finalize

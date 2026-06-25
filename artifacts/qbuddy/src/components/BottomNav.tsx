@@ -1,8 +1,10 @@
+import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { Home, ClipboardList, HeartHandshake, User, List, Play, Wallet } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { LucideIcon } from "lucide-react";
 import { NAVY, GOLD } from "@/lib/theme";
+import { customFetch } from "@workspace/api-client-react";
 
 interface NavItem {
   path: string;
@@ -55,23 +57,40 @@ export function UserBottomNav() {
 
 export function RunnerBottomNav() {
   const [location, navigate] = useLocation();
+  // L15: Check for active task to show badge on Active tab
+  const [hasActiveTask, setHasActiveTask] = useState(false);
+  useEffect(() => {
+    const token = localStorage.getItem("golineless_runner_token") || "";
+    if (!token) return;
+    fetch("/api/runners/me/active-tasks", { headers: { Authorization: `Bearer ${token}` } })
+      .then(r => r.json())
+      .then(data => setHasActiveTask(!!data))
+      .catch(() => {});
+  }, [location]);
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-40 backdrop-blur-xl border-t border-white/10" style={{ background: "rgba(8,14,30,0.97)" }}>
       <div className="flex">
         {runnerNav.map((item) => {
           const active = location.startsWith(item.path);
           const Icon = item.icon;
+          const isActiveTab = item.path === "/runner/active";
           return (
             <button
               key={item.path}
               onClick={() => navigate(item.path)}
               className={cn(
-                "flex-1 flex flex-col items-center gap-0.5 py-3 transition-all",
+                "flex-1 flex flex-col items-center gap-0.5 py-3 transition-all relative",
                 active ? "" : "text-white/40"
               )}
               style={active ? { color: GOLD } : {}}
             >
-              <Icon size={active ? 22 : 20} className="transition-all" />
+              <div className="relative">
+                <Icon size={active ? 22 : 20} className="transition-all" />
+                {/* L15: Badge dot when there's an active task */}
+                {isActiveTab && hasActiveTask && !active && (
+                  <div className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-green-400 rounded-full animate-pulse" />
+                )}
+              </div>
               <span className="text-[10px] font-semibold">{item.label}</span>
             </button>
           );

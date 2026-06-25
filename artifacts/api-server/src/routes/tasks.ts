@@ -270,6 +270,8 @@ router.post("/tasks", requireUser, validateBody(createTaskSchema), async (req, r
     const finalPlatformFee = finalPrice - finalRunnerEarning;
 
     const otp = generateAuthOtp();
+    // L5: Hash OTP before storing in DB (SHA-256)
+    const otpHash = crypto.createHash("sha256").update(otp).digest("hex");
     let scheduledAt: Date | undefined;
     if (scheduledDate && scheduledTime) {
       scheduledAt = new Date(`${scheduledDate}T${scheduledTime}`);
@@ -289,7 +291,7 @@ router.post("/tasks", requireUser, validateBody(createTaskSchema), async (req, r
       urgencyCharge: urgencyChargeVal.toString(), price: finalPrice.toString(),
       runnerEarning: finalRunnerEarning.toString(), platformFee: finalPlatformFee.toString(),
       paymentMethod, couponCode, discountAmount: discountAmount.toString(),
-      seniorInvolved, specialInstructions: sanitizedSpecialInstructions || specialInstructions, otp, otpExpiresAt: new Date(Date.now() + 30 * 60 * 1000), status: "pending",
+      seniorInvolved, specialInstructions: sanitizedSpecialInstructions || specialInstructions, otp: otpHash, otpExpiresAt: new Date(Date.now() + 30 * 60 * 1000), status: "pending",
       priorityLevel, priorityFee: priorityFee.toString(),
       waitingChargeAmount: "0", waitingEarnings: "0", bonusEarnings: "0",
       // New dispatch fields
@@ -721,6 +723,12 @@ router.post("/tasks/:id/accept", requireRunner, async (req, res): Promise<void> 
   const id = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id, 10);
   const now = new Date();
 
+  // C7 FIX: Reject acceptance if runner KYC is not verified or dispatch-allowed
+  if (runner.kycStatus !== "verified" && !runner.dispatchAllowed) {
+    res.status(403).json({ error: "KYC verification required to accept tasks. Please complete your identity verification first." });
+    return;
+  }
+
   // HIGH FIX 3: Duplicate acceptance protection — check if runner already has an active task
   const existingActive = await db
     .select({ id: tasksTable.id })
@@ -806,8 +814,11 @@ router.post("/tasks/:id/accept", requireRunner, async (req, res): Promise<void> 
     }
   }
 
-  // Update runner status
-  await db.update(runnersTable).set({ isOnline: true }).where(eq(runnersTable.id, runner.id));
+  // B1 FIX: Increment tasksAccepted counter on the runner profile
+  await db.update(runnersTable).set({
+    isOnline: true,
+    tasksAccepted: sql`${runnersTable.tasksAccepted} + 1`,
+  }).where(eq(runnersTable.id, runner.id));
 
   // Cancel any pending dispatch waves
   cancelDispatch(task.id);
@@ -841,6 +852,15 @@ router.post("/tasks/:id/accept", requireRunner, async (req, res): Promise<void> 
 router.post("/tasks/:id/confirm-cash", requireRunner, async (req, res): Promise<void> => {
   const runner = req.runner!;
   const id = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id, 10);
+
+  // M6 FIX: Validate task is in an active status for cash confirmation
+  const [preCheck] = await db.select({ status: tasksTable.status, paymentMethod: tasksTable.paymentMethod, paymentStatus: tasksTable.paymentStatus, runnerId: tasksTable.runnerId }).from(tasksTable).where(eq(tasksTable.id, id));
+  if (!preCheck) { res.status(404).json({ error: "Task not found" }); return; }
+  if (preCheck.runnerId !== runner.id) { res.status(403).json({ error: "Not assigned to this task" }); return; }
+  if (preCheck.paymentMethod !== "cash") { res.status(400).json({ error: "Cash confirmation only available for cash payment tasks" }); return; }
+  if (!["in_progress", "waiting_started", "at_location"].includes(preCheck.status)) {
+    res.status(400).json({ error: "Cash can only be confirmed when task is in progress" }); return;
+  }
 
   // Only allowed for cash payment tasks that haven't been paid yet
   // (#10) Atomic UPDATE WHERE prevents race conditions between concurrent requests
@@ -1073,6 +1093,12 @@ router.post("/tasks/:id/verify-otp", requireRunner, async (req, res): Promise<vo
   if (!task) { res.status(404).json({ error: "Task not found" }); return; }
   if (task.runnerId !== runner.id) { res.status(403).json({ error: "Not assigned to this task" }); return; }
 
+  // C5 FIX: Handle already-completed tasks gracefully
+  if (task.status === "completed") {
+    res.json({ message: "Task already completed", alreadyCompleted: true });
+    return;
+  }
+
   // Validate state machine transition — can only complete from in_progress
   const stateTransition = validateTimelineTransition(task.status, "completed");
   if (!stateTransition.valid) {
@@ -1101,7 +1127,9 @@ router.post("/tasks/:id/verify-otp", requireRunner, async (req, res): Promise<vo
     return;
   }
 
-  if (task.otp !== otp) {
+  // L5: Compare hashed OTP
+  const inputHash = crypto.createHash("sha256").update(otp).digest("hex");
+  if (task.otp !== inputHash) {
     // Atomic increment + fraud flag in a single UPDATE to prevent race condition (fix #1)
     const existingFlags = Array.isArray(task.fraudFlags) ? task.fraudFlags : [];
 
@@ -1150,16 +1178,18 @@ router.post("/tasks/:id/verify-otp", requireRunner, async (req, res): Promise<vo
   // Dual-write: record timeline event in normalized table
   recordTimelineEvent(id, "otp_verified", "OTP verified — task completed", now);
 
-  // Reconcile payment status: only auto-mark paid for cash tasks.
-  // For online tasks, rely on the Razorpay webhook having captured payment
-  // (task.paymentStatus === "paid"); otherwise keep it pending until captured.
-  // (#12) For cash tasks, also record paidAmount on completion
+  // H9 FIX: For cash tasks, require confirm-cash before OTP verification.
+  // If runner verifies OTP without confirming cash, set status to cash_pending
+  // to preserve the 24hr dispute window.
   const reconciledPaymentStatus =
     task.paymentMethod === "cash"
-      ? "paid"
+      ? (task.paymentStatus === "cash_pending" || task.paymentStatus === "paid"
+          ? task.paymentStatus  // Already confirmed via confirm-cash
+          : "cash_pending")     // OTP verified but cash not confirmed yet
       : task.paymentStatus === "paid"
         ? "paid"
         : "pending";
+  const reconciledPaidAmount = reconciledPaymentStatus === "paid" ? Number(task.price) : 0;
   if (reconciledPaymentStatus !== "paid") {
     timelineEntries.push(makeTimelineEntry("payment_pending", "Task completed — online payment not yet captured"));
     // Dual-write: record payment_pending timeline event in normalized table
@@ -1173,7 +1203,7 @@ router.post("/tasks/:id/verify-otp", requireRunner, async (req, res): Promise<vo
       status: "completed",
       completedAt: now,
       paymentStatus: reconciledPaymentStatus,
-      paidAmount: reconciledPaymentStatus === "paid" ? task.price : task.paidAmount,
+      paidAmount: String(reconciledPaidAmount),
       activeRunnerId: null, // Clear active runner on completion
       otpAttempts: 0,
       otpLockedUntil: null,
@@ -1186,6 +1216,7 @@ router.post("/tasks/:id/verify-otp", requireRunner, async (req, res): Promise<vo
   const totalRunnerEarning = Number(task.runnerEarning || 0) + Number(task.waitingEarnings || 0);
   await db.update(runnersTable).set({
     totalTasks: runner.totalTasks + 1,
+    tasksCompleted: sql`${runnersTable.tasksCompleted} + 1`,
     totalEarnings: (Number(runner.totalEarnings || 0) + totalRunnerEarning).toString(),
   }).where(eq(runnersTable.id, runner.id));
 
@@ -1281,8 +1312,11 @@ async function cancelAndRespond(existing: typeof tasksTable.$inferSelect, id: nu
     .where(eq(tasksTable.id, id))
     .returning();
 
-  // Recalculate trust score for the assigned runner if any
+  // B2 FIX: Increment tasksCancelled counter on the assigned runner
   if (existing.runnerId) {
+    await db.update(runnersTable).set({
+      tasksCancelled: sql`${runnersTable.tasksCancelled} + 1`,
+    }).where(eq(runnersTable.id, existing.runnerId));
     updateRunnerMetrics(existing.runnerId).catch(err => logger.error({ err }, "Trust score update failed"));
   }
 
@@ -1710,7 +1744,11 @@ router.get("/tasks/:id/timeline", async (req, res): Promise<void> => {
   // Check admin token
   const admin = await resolveAdmin(token);
   if (admin) {
-    res.json(task.taskTimeline || []);
+    // S3: Read from normalized taskTimelineEventsTable
+    const events = await db.select().from(taskTimelineEventsTable)
+      .where(eq(taskTimelineEventsTable.taskId, id))
+      .orderBy(taskTimelineEventsTable.eventTimestamp);
+    res.json(events);
     return;
   }
 
@@ -1718,7 +1756,10 @@ router.get("/tasks/:id/timeline", async (req, res): Promise<void> => {
   const user = await getUserFromToken(token);
   if (user) {
     if (task.userId !== user.id) { res.status(403).json({ error: "You can only view your own task timelines" }); return; }
-    res.json(task.taskTimeline || []);
+    const events = await db.select().from(taskTimelineEventsTable)
+      .where(eq(taskTimelineEventsTable.taskId, id))
+      .orderBy(taskTimelineEventsTable.eventTimestamp);
+    res.json(events);
     return;
   }
 
@@ -1726,7 +1767,10 @@ router.get("/tasks/:id/timeline", async (req, res): Promise<void> => {
   const runner = await getRunnerFromToken(token);
   if (runner) {
     if (task.runnerId !== runner.id) { res.status(403).json({ error: "You can only view timelines for tasks assigned to you" }); return; }
-    res.json(task.taskTimeline || []);
+    const events = await db.select().from(taskTimelineEventsTable)
+      .where(eq(taskTimelineEventsTable.taskId, id))
+      .orderBy(taskTimelineEventsTable.eventTimestamp);
+    res.json(events);
     return;
   }
 

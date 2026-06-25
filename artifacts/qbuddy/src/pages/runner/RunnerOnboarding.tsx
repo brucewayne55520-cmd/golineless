@@ -145,14 +145,14 @@ export default function RunnerOnboarding() {
     );
   };
 
-  // Auto-check GPS on step 2 entrance
+  // Auto-check GPS on step 2 entrance — M9 FIX: include checkGps in deps
   useEffect(() => {
     if (step === 2 && gpsStatus === "checking") {
       const timer = setTimeout(checkGps, 500);
       return () => clearTimeout(timer);
     }
     return undefined;
-  }, [step]);
+  }, [step, gpsStatus]);
 
   const handleFileRead = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -366,9 +366,13 @@ export default function RunnerOnboarding() {
                         type="text"
                         value={bankAccount}
                         onChange={(e) => setBankAccount(e.target.value.replace(/\D/g, ""))}
-                        placeholder="Enter account number"
+                        placeholder="9-18 digit account number"
                         className={inputClass}
+                        maxLength={18}
                       />
+                      {bankAccount.length > 0 && (bankAccount.length < 9 || bankAccount.length > 18) && (
+                        <p className="text-red-400 text-[10px] mt-1">Must be 9-18 digits</p>
+                      )}
                     </div>
                     <div>
                       <label className="text-white/50 text-xs font-semibold mb-1 block">IFSC Code</label>
@@ -380,6 +384,9 @@ export default function RunnerOnboarding() {
                         className={inputClass}
                         maxLength={11}
                       />
+                      {bankIfsc && !/^[A-Z]{4}0[A-Z0-9]{6}$/.test(bankIfsc) && (
+                        <p className="text-red-400 text-[10px] mt-1">Invalid IFSC format (e.g. SBIN0001234)</p>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -510,7 +517,7 @@ export default function RunnerOnboarding() {
           )}
           <button
             onClick={handleNext}
-            disabled={saving || (step === 2 && gpsStatus === "checking")}
+            disabled={saving || (step === 2 && gpsStatus === "checking") || (step === 2 && gpsStatus === "denied")}
             className="flex-[2] py-3.5 rounded-2xl text-[#0A1628] font-black text-sm flex items-center justify-center gap-1.5 transition-all disabled:opacity-50"
             style={{ background: GOLD_GRAD }}
           >

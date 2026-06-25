@@ -45,6 +45,7 @@ const AdminKycReview = lazy(() => import("@/pages/admin/AdminKycReview"));
 const AdminAuditLog = lazy(() => import("@/pages/admin/AdminAuditLog"));
 const NotificationsPage = lazy(() => import("@/pages/app/NotificationsPage"));
 const RunnerNotificationsPage = lazy(() => import("@/pages/runner/RunnerNotificationsPage"));
+const RunnerReviewsPage = lazy(() => import("@/pages/runner/RunnerReviewsPage"));
 const NotFound = lazy(() => import("@/pages/not-found"));
 const FamilyTrack = lazy(() => import("@/pages/app/FamilyTrack"));
 const PayRetry = lazy(() => import("@/pages/app/PayRetry"));
@@ -115,6 +116,7 @@ function Router() {
       <Route path="/runner/notifications"><RunnerProtectedRoute><RunnerNotificationsPage /></RunnerProtectedRoute></Route>
       <Route path="/runner/onboarding"><RunnerProtectedRoute><RunnerOnboarding /></RunnerProtectedRoute></Route>
       <Route path="/runner/playbook"><RunnerProtectedRoute><RunnerPlaybook /></RunnerProtectedRoute></Route>
+      <Route path="/runner/reviews"><RunnerProtectedRoute><RunnerReviewsPage /></RunnerProtectedRoute></Route>
 
       <Route path="/admin/login" component={AdminLoginPage} />
       <Route path="/admin"><AdminProtectedRoute><AdminDashboard /></AdminProtectedRoute></Route>

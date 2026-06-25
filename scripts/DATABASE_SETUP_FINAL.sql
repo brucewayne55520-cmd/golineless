@@ -941,8 +941,8 @@ DO $$ BEGIN ALTER TABLE "task_timeline_events" ADD CONSTRAINT "task_timeline_eve
 -- Runner payouts
 DO $$ BEGIN ALTER TABLE "runner_payouts" ADD CONSTRAINT "runner_payouts_runner_id_runners_id_fk" FOREIGN KEY ("runner_id") REFERENCES "runners"("id"); EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
--- Payment audit log
-DO $$ BEGIN ALTER TABLE "payment_audit_log" ADD CONSTRAINT "payment_audit_log_task_id_tasks_id_fk" FOREIGN KEY ("task_id") REFERENCES "tasks"("id"); EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+-- Payment audit log (no FK on task_id — KYC/admin audit entries use null task_id)
+-- DO NOT add a FK constraint here: payment_audit_log.task_id is intentionally nullable
 
 -- Verification sessions
 DO $$ BEGIN ALTER TABLE "verification_sessions" ADD CONSTRAINT "verification_sessions_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "users"("id"); EXCEPTION WHEN duplicate_object THEN NULL; END $$;

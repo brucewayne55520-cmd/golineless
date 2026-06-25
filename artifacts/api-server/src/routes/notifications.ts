@@ -78,7 +78,17 @@ router.post("/notifications/read-all", async (req, res): Promise<void> => {
   const user = await getUserFromToken(token);
   if (user) {
     await db.update(notificationsTable).set({ isRead: true }).where(eq(notificationsTable.userId, user.id));
+    res.json({ message: "All notifications marked as read" });
+    return;
   }
+
+  const runner = await getRunnerFromToken(token);
+  if (runner) {
+    await db.update(notificationsTable).set({ isRead: true }).where(eq(notificationsTable.runnerId, runner.id));
+    res.json({ message: "All notifications marked as read" });
+    return;
+  }
+
   res.json({ message: "All notifications marked as read" });
 });
 

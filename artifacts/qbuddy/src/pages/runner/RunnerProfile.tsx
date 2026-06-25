@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
@@ -56,6 +56,14 @@ export default function RunnerProfile() {
   const [aadhaarFront, setAadhaarFront] = useState<string | null>(null);
   const [aadhaarBack, setAadhaarBack] = useState<string | null>(null);
   const [selfie, setSelfie] = useState<string | null>(null);
+  const [selectedSpecs, setSelectedSpecs] = useState<string[]>([]);
+
+  // Initialize selected specs from runner data
+  const runnerSpecializations = (runner as unknown as { specializations?: string[] })?.specializations ?? [];
+
+  useEffect(() => {
+    setSelectedSpecs(runnerSpecializations);
+  }, [runnerSpecializations.length]);
 
   const totalTasks = runner?.totalTasks ?? 0;
   const rating = runner?.rating ? Number(runner.rating) : 0;
@@ -64,12 +72,35 @@ export default function RunnerProfile() {
 
   const handleSubmitKyc = () => {
     if (!form.agreed) { toast.error("Please accept the runner agreement"); return; }
+    // M11: Validate IFSC format
+    if (form.bankIfsc && !/^[A-Z]{4}0[A-Z0-9]{6}$/.test(form.bankIfsc as string)) {
+      toast.error("Invalid IFSC code format (e.g. SBIN0001234)"); return;
+    }
     submitKyc.mutate({
       data: { ...form, aadhaarFront, aadhaarBack, selfie } as import("@workspace/api-client-react").KycInput,
     }, {
       onSuccess: () => { toast.success("KYC submitted! Under review — typically within 24 hours."); setShowKyc(false); refetch(); },
       onError: () => toast.error("Failed to submit KYC. Please try again."),
     });
+  };
+
+  // M13 FIX: Pre-fill KYC form with existing runner data when modal opens
+  const openKycModal = () => {
+    if (runner) {
+      const r = runner as import("@workspace/api-client-react").Runner & { fullName?: string; bankAccount?: string; bankIfsc?: string; bankAccountHolder?: string; emergencyContactName?: string; emergencyContactPhone?: string; emergencyContactRelation?: string };
+      setForm({
+        fullName: r.fullName || r.name || "",
+        aadhaarNumber: "",
+        bankAccount: r.bankAccount || "",
+        bankIfsc: r.bankIfsc || "",
+        bankAccountHolder: r.bankAccountHolder || "",
+        emergencyContactName: r.emergencyContactName || "",
+        emergencyContactPhone: r.emergencyContactPhone || "",
+        emergencyContactRelation: r.emergencyContactRelation || "",
+        agreed: false,
+      });
+    }
+    setShowKyc(true);
   };
 
   const handleFileRead = (setter: (v: string) => void) => (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -92,10 +123,12 @@ export default function RunnerProfile() {
     ? "text-red-400 bg-red-400/10 border-red-400/30"
     : "text-yellow-400 bg-yellow-400/10 border-yellow-400/30";
 
-  const menuItems: { Icon: LucideIcon; label: string; sub: string }[] = [
-    { Icon: HelpCircle, label: "Help & Support", sub: "FAQs, contact us" },
-    { Icon: FileText, label: "Terms of Service", sub: "Runner agreement" },
-    { Icon: Lock, label: "Privacy Policy", sub: "Your data rights" },
+  const menuItems: { Icon: LucideIcon; label: string; sub: string; onClick?: () => void }[] = [
+    { Icon: Star, label: "My Reviews", sub: "See what clients say", onClick: () => navigate("/runner/reviews") },
+    { Icon: TrendingUp, label: "Performance Stats", sub: "Completion rate, avg response", onClick: () => navigate("/runner/earnings") },
+    { Icon: HelpCircle, label: "Help & Support", sub: "FAQs, contact us", onClick: () => window.open("https://golineless.com/support", "_blank") },
+    { Icon: FileText, label: "Terms of Service", sub: "Runner agreement", onClick: () => window.open("https://golineless.com/terms", "_blank") },
+    { Icon: Lock, label: "Privacy Policy", sub: "Your data rights", onClick: () => window.open("https://golineless.com/privacy", "_blank") },
   ];
 
   const stats: { Icon: LucideIcon; val: string | number; label: string; color: string; bg: string }[] = [
@@ -105,6 +138,26 @@ export default function RunnerProfile() {
   ];
 
   const inputClass = "w-full bg-white/10 border border-white/20 rounded-xl px-3.5 py-3 text-white text-sm focus:outline-none focus:border-white/40 transition-colors placeholder-white/30";
+
+  // L10: Profile loading skeleton
+  if (!runner) return (
+    <div className="min-h-screen pb-24" style={{ background: BG }}>
+      <div className="px-4 pt-6 pb-5 border-b border-white/10 animate-pulse">
+        <div className="flex items-center gap-4">
+          <div className="w-16 h-16 rounded-2xl bg-white/10" />
+          <div className="flex-1 space-y-2">
+            <div className="h-5 w-32 bg-white/10 rounded" />
+            <div className="h-3 w-24 bg-white/10 rounded" />
+          </div>
+        </div>
+      </div>
+      <div className="mx-4 mt-4 space-y-3">
+        {[1, 2, 3].map(i => (
+          <div key={i} className="h-20 bg-white/5 rounded-2xl animate-pulse" />
+        ))}
+      </div>
+    </div>
+  );
 
   return (
     <div className="min-h-screen pb-24" style={{ background: BG }}>
@@ -121,10 +174,36 @@ export default function RunnerProfile() {
           </button>
         </div>
         <div className="flex items-center gap-4">
-          <div className="w-16 h-16 rounded-2xl flex items-center justify-center text-xl font-black text-[#0A1628] shadow-lg"
-            style={{ background: GOLD_GRAD }}>
-            {getInitials(runner?.name)}
-          </div>
+          <label className="relative cursor-pointer group">
+            <input type="file" accept="image/*" className="hidden" onChange={async (e) => {
+              const file = e.target.files?.[0];
+              if (!file) return;
+              const reader = new FileReader();
+              reader.onload = async (ev) => {
+                const dataUrl = ev.target?.result as string;
+                try {
+                  const token = localStorage.getItem("golineless_runner_token") || "";
+                  const res = await fetch("/api/runners/me/avatar", {
+                    method: "PATCH",
+                    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+                    body: JSON.stringify({ avatar: dataUrl }),
+                  });
+                  if (res.ok) { toast.success("Avatar updated!"); refetch(); }
+                  else { toast.error("Failed to upload avatar"); }
+                } catch { toast.error("Network error"); }
+              };
+              reader.readAsDataURL(file);
+            }} />
+            <div className="w-16 h-16 rounded-2xl flex items-center justify-center text-xl font-black text-[#0A1628] shadow-lg overflow-hidden group-hover:opacity-80 transition-opacity"
+              style={{ background: (runner as unknown as { avatar?: string })?.avatar ? undefined : GOLD_GRAD }}>
+              {(runner as unknown as { avatar?: string })?.avatar
+                ? <img src={(runner as unknown as { avatar?: string }).avatar} alt="" className="w-full h-full object-cover" />
+                : getInitials(runner?.name)}
+            </div>
+            <div className="absolute inset-0 rounded-2xl bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+              <Camera size={18} className="text-white" />
+            </div>
+          </label>
           <div className="flex-1">
             <h2 className="font-black text-white text-xl leading-tight">{runner?.name ?? "Runner"}</h2>
             {(runner as (typeof runner & { uniqueId?: string }))?.uniqueId && (
@@ -220,7 +299,7 @@ export default function RunnerProfile() {
             </div>
             {runner?.kycStatus !== "verified" && (
               <button
-                onClick={() => setShowKyc(true)}
+                onClick={openKycModal}
                 className="px-3 py-1.5 rounded-xl text-[#0A1628] text-xs font-black flex-shrink-0 ml-3"
                 style={{ background: GOLD_GRAD }}
               >
@@ -244,17 +323,48 @@ export default function RunnerProfile() {
 
       {/* Specialization badges */}
       <div className="mx-4 mt-4">
-        <p className="text-white/50 text-xs font-semibold uppercase tracking-wider mb-2.5">Specializations</p>
-        <div className="flex flex-wrap gap-2">
-          {SPECIALIZATIONS.map((sp) => (
-            <div
-              key={sp.key}
-              className="px-3 py-1.5 rounded-xl border text-xs font-semibold"
-              style={{ background: `${sp.color}15`, borderColor: `${sp.color}30`, color: sp.color }}
+        <div className="flex items-center justify-between mb-2.5">
+          <p className="text-white/50 text-xs font-semibold uppercase tracking-wider">Specializations</p>
+          {JSON.stringify(selectedSpecs) !== JSON.stringify(runnerSpecializations) && (
+            <button
+              onClick={async () => {
+                try {
+                  const token = localStorage.getItem("golineless_runner_token") || "";
+                  const res = await fetch("/api/runners/me/specializations", {
+                    method: "PATCH",
+                    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+                    body: JSON.stringify({ specializations: selectedSpecs }),
+                  });
+                  if (res.ok) { toast.success("Specializations saved!"); refetch(); }
+                  else { toast.error("Failed to save"); }
+                } catch { toast.error("Network error"); }
+              }}
+              className="text-[10px] font-bold px-2 py-1 rounded-lg"
+              style={{ color: GOLD, background: `${GOLD}15` }}
             >
-              {sp.label}
-            </div>
-          ))}
+              Save
+            </button>
+          )}
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {SPECIALIZATIONS.map((sp) => {
+            const isActive = selectedSpecs.includes(sp.key);
+            return (
+              <button
+                key={sp.key}
+                onClick={() => setSelectedSpecs(prev => isActive ? prev.filter(k => k !== sp.key) : [...prev, sp.key])}
+                className="px-3 py-1.5 rounded-xl border text-xs font-semibold transition-all"
+                style={{
+                  background: isActive ? `${sp.color}30` : `${sp.color}15`,
+                  borderColor: isActive ? `${sp.color}60` : `${sp.color}30`,
+                  color: sp.color,
+                  opacity: isActive ? 1 : 0.6,
+                }}
+              >
+                {isActive ? "✓ " : ""}{sp.label}
+              </button>
+            );
+          })}
         </div>
       </div>
 
@@ -280,7 +390,7 @@ export default function RunnerProfile() {
       {/* Menu */}
       <div className="mx-4 mt-5 bg-white/5 border border-white/10 rounded-2xl overflow-hidden">
         {menuItems.map((item, i) => (
-          <button key={item.label} className={`w-full flex items-center gap-3 px-4 py-4 text-left hover:bg-white/5 transition-colors ${i > 0 ? "border-t border-white/5" : ""}`}>
+          <button key={item.label} onClick={item.onClick} className={`w-full flex items-center gap-3 px-4 py-4 text-left hover:bg-white/5 transition-colors ${i > 0 ? "border-t border-white/5" : ""}`}>
             <div className="w-8 h-8 rounded-xl bg-white/8 flex items-center justify-center flex-shrink-0">
               <item.Icon size={15} className="text-white/50" />
             </div>
@@ -339,16 +449,24 @@ export default function RunnerProfile() {
                   <div className="space-y-3">
                     {[
                       { key: "fullName", label: "Full Name", placeholder: "As it appears on your Aadhaar card" },
-                      { key: "aadhaarNumber", label: "Aadhaar Number", placeholder: "XXXX XXXX XXXX", type: "tel" },
+                      { key: "aadhaarNumber", label: "Aadhaar Number", placeholder: "XXXX XXXX XXXX", type: "tel", maxLength: 14 },
                     ].map((f) => (
                       <div key={f.key}>
                         <label className="text-white/60 text-xs font-semibold mb-1.5 block">{f.label}</label>
                         <input
                           type={f.type ?? "text"}
                           value={form[f.key] as string}
-                          onChange={(e) => setForm(prev => ({ ...prev, [f.key]: e.target.value }))}
+                          onChange={(e) => {
+                            let val = e.target.value.replace(/[^\d]/g, "");
+                            // M3: Format Aadhaar as XXXX XXXX XXXX
+                            if (f.key === "aadhaarNumber") {
+                              val = val.replace(/(\d{4})(?=\d)/g, "$1 ").trim();
+                            }
+                            setForm(prev => ({ ...prev, [f.key]: val }));
+                          }}
                           placeholder={f.placeholder}
                           className={inputClass}
+                          maxLength={f.maxLength}
                         />
                       </div>
                     ))}
@@ -414,17 +532,22 @@ export default function RunnerProfile() {
                   <div className="space-y-3">
                     {[
                       { key: "bankAccountHolder", label: "Account Holder Name", placeholder: "As per bank records" },
-                      { key: "bankAccount", label: "Account Number", placeholder: "Enter account number" },
-                      { key: "bankIfsc", label: "IFSC Code", placeholder: "E.g. SBIN0001234" },
+                      { key: "bankAccount", label: "Account Number", placeholder: "Enter account number", inputMode: "numeric" as const },
+                      { key: "bankIfsc", label: "IFSC Code", placeholder: "E.g. SBIN0001234", maxLength: 11 },
                     ].map((f) => (
                       <div key={f.key}>
                         <label className="text-white/60 text-xs font-semibold mb-1.5 block">{f.label}</label>
                         <input
                           value={form[f.key] as string}
-                          onChange={(e) => setForm(prev => ({ ...prev, [f.key]: e.target.value }))}
+                          onChange={(e) => setForm(prev => ({ ...prev, [f.key]: f.key === "bankIfsc" ? e.target.value.toUpperCase() : e.target.value }))}
                           placeholder={f.placeholder}
                           className={inputClass}
+                          inputMode={f.inputMode}
+                          maxLength={f.maxLength}
                         />
+                        {f.key === "bankIfsc" && form.bankIfsc && !/^[A-Z]{4}0[A-Z0-9]{6}$/.test(form.bankIfsc as string) && (
+                          <p className="text-red-400 text-[10px] mt-1">Invalid IFSC format</p>
+                        )}
                       </div>
                     ))}
                   </div>
@@ -434,7 +557,7 @@ export default function RunnerProfile() {
                   <div className="space-y-3">
                     {[
                       { key: "emergencyContactName", label: "Contact Name", placeholder: "Full name" },
-                      { key: "emergencyContactPhone", label: "Phone Number", placeholder: "10-digit mobile" },
+                      { key: "emergencyContactPhone", label: "Phone Number", placeholder: "10-digit mobile", validate: (v: string) => /^\d{10}$/.test(v) ? "" : "Must be exactly 10 digits" },
                       { key: "emergencyContactRelation", label: "Relationship", placeholder: "E.g. Mother, Spouse, Friend" },
                     ].map((f) => (
                       <div key={f.key}>

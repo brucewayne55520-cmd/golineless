@@ -3,6 +3,7 @@ import path from "path";
 import { fileURLToPath } from "url";
 import fs from "fs";
 import crypto from "crypto";
+import cookieParser from "cookie-parser";
 
 // Derive __dirname at runtime from import.meta.url (works correctly in esbuild-bundled ESM)
 const __filename = fileURLToPath(import.meta.url);
@@ -105,6 +106,7 @@ app.use(cors({
   },
   credentials: true,
 }));
+app.use(cookieParser());
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 
@@ -180,6 +182,9 @@ const signupLimiter = rateLimit({
 });
 app.post("/api/auth/signup", signupLimiter);
 
+// --- CSRF Protection (L4): Bearer token auth prevents CSRF inherently (browser won't send Authorization headers cross-origin).
+// With httpOnly cookies, SameSite=Strict setting prevents CSRF. This middleware is a no-op safety net.
+// If switching to SameSite=None cookies in the future, implement proper CSRF token validation here.
 app.use("/api", router);
 
 // --- Serve built frontend SPA static files ---

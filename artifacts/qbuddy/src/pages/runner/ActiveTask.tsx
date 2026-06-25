@@ -3,7 +3,7 @@ import { useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 import confetti from "canvas-confetti";
-import { MapPin, Camera, KeyRound, Sparkles, Moon, Navigation, Clock, CheckCircle, Phone, MessageSquare, Timer, PauseCircle, PlayCircle, Banknote, type LucideIcon } from "lucide-react";
+import { MapPin, Camera, KeyRound, Sparkles, Moon, Navigation, Clock, CheckCircle, Phone, MessageSquare, Timer, PauseCircle, PlayCircle, Banknote, AlertTriangle, type LucideIcon } from "lucide-react";
 import { useGetActiveTask, useUpdateTaskStatus, useVerifyTaskOtp, useStartWaiting, usePauseWaiting, useEndWaiting, useUpdateQueueProgress, useUploadProofPhoto, TaskStatusUpdateStatus, ProofPhotoInputProofType } from "@workspace/api-client-react";
 import { RunnerBottomNav } from "@/components/BottomNav";
 import { CategoryIcon } from "@/components/CategoryIcon";
@@ -75,18 +75,35 @@ export default function ActiveTask() {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const socketRef = useRef<any>(null);
 
-  // Connect socket for waiting/queue events
+  // L12 + L3: Connect socket for waiting/queue events with error boundary and reconnection
   useEffect(() => {
     if (!task?.id) return;
-    const init = async () => {
-      const { io } = await import("socket.io-client");
-      const sock = io(window.location.origin, { path: "/api/socket.io" });
-      sock.emit("join_task", { taskId: task.id });
-      socketRef.current = sock;
-    };
-    init();
+    try {
+      const init = async () => {
+        const { io } = await import("socket.io-client");
+        const sock = io(window.location.origin, {
+          path: "/api/socket.io",
+          reconnection: true,
+          reconnectionDelay: 1000,
+          reconnectionAttempts: 10,
+        });
+        sock.on("connect_error", () => { /* L12: swallow socket errors */ });
+        sock.emit("join_task", { taskId: task.id });
+        socketRef.current = sock;
+      };
+      init();
+    } catch { /* L12: Socket init error boundary */ }
     return () => { socketRef.current?.disconnect(); };
   }, [task?.id]);
+
+  // B4 FIX: Initialize waitingElapsed from server's waitingStartedAt on mount
+  useEffect(() => {
+    if (task?.status === "waiting_started" && task.waitingStartedAt && !waitingActive) {
+      const serverElapsed = Math.max(0, Math.floor((Date.now() - new Date(task.waitingStartedAt).getTime()) / 1000));
+      setWaitingElapsed(serverElapsed);
+      setWaitingActive(true);
+    }
+  }, [task?.status, task?.waitingStartedAt]);
 
   // Determine current step
   useEffect(() => {
@@ -136,6 +153,9 @@ export default function ActiveTask() {
     });
   };
 
+  // L8: Photo upload progress state
+  const [uploadProgress, setUploadProgress] = useState<number | null>(null);
+
   const handlePhotoUpload = async (proofType: ProofPhotoInputProofType) => {
     if (!task) return;
     let lat: number | null = null;
@@ -176,12 +196,18 @@ export default function ActiveTask() {
 
         setUploadedPhotos(prev => ({ ...prev, [proofType]: imageUrl }));
 
+        // L8: Show upload progress indicator
+        setUploadProgress(0);
+        const progressInterval = setInterval(() => {
+          setUploadProgress(prev => prev != null ? Math.min(prev + 15, 90) : null);
+        }, 200);
+
         uploadProofPhoto.mutate({
           id: task.id!,
           data: { imageUrl, proofType, lat: lat ?? undefined, lng: lng ?? undefined, address: address ?? undefined },
         }, {
-          onSuccess: () => toast.success("Proof photo uploaded!"),
-          onError: () => toast.error("Failed to upload proof photo"),
+          onSuccess: () => { clearInterval(progressInterval); setUploadProgress(100); setTimeout(() => setUploadProgress(null), 500); toast.success("Proof photo uploaded!"); },
+          onError: () => { clearInterval(progressInterval); setUploadProgress(null); toast.error("Failed to upload proof photo"); },
         });
       };
       reader.readAsDataURL(file);
@@ -196,8 +222,10 @@ export default function ActiveTask() {
     if (val && idx < 5) document.getElementById(`otp-active-${idx + 1}`)?.focus();
   };
 
+  // L11: Cash payment confirmation dialog
   const handleConfirmCash = async () => {
     if (!task || cashConfirmed || cashConfirming) return;
+    if (!window.confirm(`Confirm you received Rs ${task.price ?? 0} cash from the client? This cannot be undone.`)) return;
     setCashConfirming(true);
     try {
       const token = localStorage.getItem("golineless_runner_token") || "";
@@ -223,6 +251,8 @@ export default function ActiveTask() {
   const handleVerifyOtp = () => {
     const otp = otpDigits.join("");
     if (otp.length !== 6) { toast.error("Enter 6-digit OTP"); return; }
+    // M14 FIX: Confirmation dialog before OTP submission
+    if (!window.confirm("Verify OTP? This will complete the task and mark it as done.")) return;
     haptic([50, 30, 50]);
     verifyOtp.mutate({ id: task.id, data: { otp } }, {
       onSuccess: (data: { runnerEarning?: number }) => {
@@ -245,6 +275,20 @@ export default function ActiveTask() {
     </div>
   );
 
+  // L8: Upload progress overlay
+  const uploadProgressUI = uploadProgress != null && (
+    <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center backdrop-blur-sm">
+      <div className="bg-white/10 border border-white/20 rounded-2xl p-6 text-center w-64">
+        <div className="w-10 h-10 border-4 border-t-transparent rounded-full animate-spin mx-auto mb-3" style={{ borderColor: GOLD, borderTopColor: "transparent" }} />
+        <p className="text-white text-sm font-bold mb-2">Uploading photo...</p>
+        <div className="h-2 bg-white/10 rounded-full overflow-hidden">
+          <div className="h-full rounded-full transition-all duration-300" style={{ width: `${uploadProgress}%`, background: GOLD_GRAD }} />
+        </div>
+        <p className="text-white/40 text-[10px] mt-1">{uploadProgress}%</p>
+      </div>
+    </div>
+  );
+
   if (!task) return (
     <div className="min-h-screen flex flex-col items-center justify-center pb-20" style={{ background: BG }}>
       <Moon size={48} className="text-white/20 mb-4" />
@@ -259,6 +303,7 @@ export default function ActiveTask() {
 
   return (
     <div className="min-h-screen pb-24" style={{ background: BG }}>
+      {uploadProgressUI}
       {/* Header */}
       <div className="px-4 pt-4 pb-3 border-b border-white/10">
         <div className="flex items-center justify-between">
@@ -364,6 +409,17 @@ export default function ActiveTask() {
               <h3 className="text-white font-semibold text-sm">Start Travel</h3>
             </div>
             <p className="text-white/50 text-xs mb-3">Head towards the task location to begin</p>
+            {/* M1 FIX: Navigate to maps */}
+            {(task.locationLat || task.taskLat) && (
+              <a
+                href={`https://www.google.com/maps/dir/?api=1&destination=${task.taskLat || task.locationLat},${task.taskLng || task.locationLng}`}
+                target="_blank"
+                rel="noreferrer"
+                className="w-full py-2.5 rounded-xl border border-white/20 text-white/80 text-xs font-semibold flex items-center justify-center gap-2 mb-2 hover:bg-white/5 transition-colors"
+              >
+                <Navigation size={12} /> Open in Maps
+              </a>
+            )}
             <button
               onClick={() => handleStatusUpdate("on_the_way")}
               disabled={updateStatus.isPending}
@@ -742,6 +798,59 @@ export default function ActiveTask() {
               style={{ background: "linear-gradient(135deg, #22C55E, #16A34A)" }}
             >
               {verifyOtp.isPending ? "Verifying..." : completed ? "Task Complete! ✓" : "Complete Task"}
+            </button>
+          </div>
+        )}
+
+        {/* M3 FIX: Emergency/SOS button for senior care or emergency tasks */}
+        {(task.seniorInvolved || (task.urgency as string) === "emergency") && (
+          <div className="bg-white/8 border border-red-500/15 rounded-2xl p-4">
+            <div className="flex items-center gap-2 mb-2">
+              <AlertTriangle size={16} className="text-red-400" />
+              <h3 className="text-white font-semibold text-sm">Emergency</h3>
+            </div>
+            <p className="text-white/50 text-xs mb-3">{task.seniorInvolved ? "Senior care task — stay alert and follow safety protocols" : "Emergency task — prioritize safety"}</p>
+            <div className="flex gap-2">
+              <a
+                href="tel:112"
+                className="flex-1 py-2.5 rounded-xl border border-red-500/40 text-red-400 font-semibold text-sm flex items-center justify-center gap-2 hover:bg-red-400/10 transition-colors"
+              >
+                <Phone size={14} /> Call 112
+              </a>
+              <a
+                href="tel:108"
+                className="flex-1 py-2.5 rounded-xl border border-amber-500/40 text-amber-400 font-semibold text-sm flex items-center justify-center gap-2 hover:bg-amber-400/10 transition-colors"
+              >
+                <Phone size={14} /> Call 108
+              </a>
+            </div>
+          </div>
+        )}
+
+        {/* H11 FIX: Allow cancellation from all active states */}
+        {(task.status === "assigned" || task.status === "on_the_way" || task.status === "reached_pickup" || task.status === "reached_task_location" || task.status === "at_location") && (
+          <div className="bg-white/8 border border-red-500/10 rounded-2xl p-4">
+            <button
+              onClick={async () => {
+                if (!window.confirm("Are you sure you want to cancel this task? This may affect your trust score.")) return;
+                try {
+                  const token = localStorage.getItem("golineless_runner_token") || "";
+                  const res = await fetch(`/api/tasks/${task.id}/cancel`, {
+                    method: "POST",
+                    headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+                  });
+                  if (res.ok) {
+                    toast.success("Task cancelled");
+                    navigate("/runner/feed");
+                  } else {
+                    const data = await res.json();
+                    toast.error(data.error || "Failed to cancel task");
+                  }
+                } catch { toast.error("Network error"); }
+              }}
+              className="w-full py-3 rounded-xl border border-red-400/30 text-red-400 font-semibold text-sm hover:bg-red-400/10 transition-colors"
+            >
+              Cancel Task
             </button>
           </div>
         )}

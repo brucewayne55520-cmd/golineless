@@ -65,6 +65,8 @@ export const adminSettingsTable = pgTable("admin_settings", {
   // UPI Configuration
   upiId: text("upi_id").notNull().default("golineless@upi"),
   upiPayeeName: text("upi_payee_name").notNull().default("Go LineLess"),
+  // S2: Specializations config — admin defines available runner specializations
+  availableSpecializations: text("available_specializations").array().notNull().default(["hospital", "senior", "bank", "documentation", "emergency", "female"]),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 });
 

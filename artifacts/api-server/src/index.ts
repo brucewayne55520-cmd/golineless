@@ -176,6 +176,9 @@ const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(",") || ["http://local
 const io = new SocketIOServer(httpServer, {
   cors: { origin: allowedOrigins, methods: ["GET", "POST"], credentials: true },
   path: "/api/socket.io",
+  // L3: Socket heartbeat/keepalive for reliable connections
+  pingInterval: 25000,
+  pingTimeout: 60000,
 });
 setIo(io);
 

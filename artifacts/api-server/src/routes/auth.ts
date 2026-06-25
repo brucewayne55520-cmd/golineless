@@ -1,7 +1,7 @@
 import { Router, type IRouter } from "express";
 import { db, usersTable, runnersTable, userSessionsTable, runnerSessionsTable, adminsTable, adminSessionsTable, z } from "@workspace/db";
 import { eq } from "drizzle-orm";
-import { generateToken, verifyPassword, extractToken, hashPassword } from "../lib/auth";
+import { generateToken, verifyPassword, extractToken, hashPassword, setAuthCookie, clearAuthCookie } from "../lib/auth";
 import { validateNeonToken } from "../lib/neon-auth";
 import { sendOtp, verifyOtp } from "../lib/sms";
 import { sendEmail } from "../lib/email";
@@ -94,6 +94,7 @@ router.post("/auth/verify-otp", validateBody(verifyOtpSchema), async (req, res):
     await db.insert(runnerSessionsTable).values({ runnerId: runner.id, token, expiresAt });
 
     const { otp: _, otpExpiresAt: __, ...safeRunner } = runner;
+    setAuthCookie(res, token);
     res.json({ token, role: "runner", runner: safeRunner });
   } else {
     const [user] = await db.select().from(usersTable).where(eq(usersTable.phone, phone));
@@ -104,6 +105,7 @@ router.post("/auth/verify-otp", validateBody(verifyOtpSchema), async (req, res):
     await db.insert(userSessionsTable).values({ userId: user.id, token, expiresAt });
 
     const { otp: _, otpExpiresAt: __, ...safeUser } = user;
+    setAuthCookie(res, token);
     res.json({ token, role: "user", user: safeUser });
   }
 });
@@ -116,6 +118,7 @@ router.post("/auth/logout", async (req, res): Promise<void> => {
     await db.delete(userSessionsTable).where(eq(userSessionsTable.token, token)).catch(() => {});
     await db.delete(runnerSessionsTable).where(eq(runnerSessionsTable.token, token)).catch(() => {});
   }
+  clearAuthCookie(res);
   res.json({ message: "Logged out" });
 });
 
@@ -148,10 +151,12 @@ router.post("/auth/signup", validateBody(signupSchema), async (req, res): Promis
   if (role === "runner") {
     await db.insert(runnerSessionsTable).values({ runnerId: record.id, token, expiresAt });
     const { passwordHash: _, otp: __, otpExpiresAt: ___, ...safeRunner } = record;
+    setAuthCookie(res, token);
     res.json({ token, role: "runner", runner: safeRunner });
   } else {
     await db.insert(userSessionsTable).values({ userId: record.id, token, expiresAt });
     const { passwordHash: _, otp: __, otpExpiresAt: ___, ...safeUser } = record;
+    setAuthCookie(res, token);
     res.json({ token, role: "user", user: safeUser });
   }
 });
@@ -180,10 +185,12 @@ router.post("/auth/login", validateBody(loginSchema), async (req, res): Promise<
   if (role === "runner") {
     await db.insert(runnerSessionsTable).values({ runnerId: record.id, token, expiresAt });
     const { passwordHash: _, otp: __, otpExpiresAt: ___, ...safeRunner } = record;
+    setAuthCookie(res, token);
     res.json({ token, role: "runner", runner: safeRunner });
   } else {
     await db.insert(userSessionsTable).values({ userId: record.id, token, expiresAt });
     const { passwordHash: _, otp: __, otpExpiresAt: ___, ...safeUser } = record;
+    setAuthCookie(res, token);
     res.json({ token, role: "user", user: safeUser });
   }
 });

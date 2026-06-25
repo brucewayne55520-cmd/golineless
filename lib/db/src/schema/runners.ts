@@ -54,6 +54,7 @@ export const runnersTable = pgTable("runners", {
   lateArrivals: integer("late_arrivals").notNull().default(0),
   onTimeArrivals: integer("on_time_arrivals").notNull().default(0),
   repeatClients: integer("repeat_clients").notNull().default(0),
+  specializations: text("specializations").array().notNull().default([]),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 });

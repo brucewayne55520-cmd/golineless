@@ -91,9 +91,28 @@ export async function getRunnerFromToken(token: string) {
 }
 
 export function extractToken(req: Request): string | null {
+  // L6: Check httpOnly cookie first (cookie-parser sets req.cookies), then Authorization header
+  const cookies = (req as unknown as { cookies?: Record<string, string> }).cookies;
+  if (cookies?.token) return cookies.token;
   const auth = req.headers.authorization;
   if (auth?.startsWith("Bearer ")) return auth.slice(7);
   return null;
+}
+
+// L6: Set httpOnly auth cookie on response
+export function setAuthCookie(res: import("express").Response, token: string): void {
+  res.cookie("token", token, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: process.env.NODE_ENV === "production" ? "strict" : "lax",
+    maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
+    path: "/",
+  });
+}
+
+// L6: Clear auth cookie on logout
+export function clearAuthCookie(res: import("express").Response): void {
+  res.cookie("token", "", { httpOnly: true, maxAge: 0, path: "/" });
 }
 
 export async function requireUser(req: Request, res: Response, next: NextFunction): Promise<void> {

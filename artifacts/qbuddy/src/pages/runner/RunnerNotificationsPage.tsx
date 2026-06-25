@@ -90,7 +90,7 @@ export default function RunnerNotificationsPage() {
       {/* Header */}
       <div className="bg-white/5 border-b border-white/10 px-4 py-4 flex items-center justify-between sticky top-0 z-10">
         <div className="flex items-center gap-3">
-          <button onClick={() => navigate("/")} className="w-8 h-8 rounded-xl bg-white/10 flex items-center justify-center">
+          <button onClick={() => navigate("/runner/feed")} className="w-8 h-8 rounded-xl bg-white/10 flex items-center justify-center">
             <ChevronLeft size={18} className="text-white/60" />
           </button>
           <div>

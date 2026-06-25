@@ -56,6 +56,7 @@ router.get("/runners/me/earnings", requireRunner, async (req, res): Promise<void
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
 
   // Fix #21: SQL aggregation instead of loading all completed tasks into memory
+  // M15: Also compute actual taskEarnings vs waitingEarnings split
   const [agg, reviewAgg] = await Promise.all([
     db.select({
       lifetime: sql<number>`COALESCE(SUM(${tasksTable.runnerEarning}::numeric), 0)`,
@@ -63,6 +64,8 @@ router.get("/runners/me/earnings", requireRunner, async (req, res): Promise<void
       today: sql<number>`COALESCE(SUM(CASE WHEN ${tasksTable.completedAt} >= ${todayStart} THEN ${tasksTable.runnerEarning}::numeric ELSE 0 END), 0)`,
       thisWeek: sql<number>`COALESCE(SUM(CASE WHEN ${tasksTable.completedAt} >= ${weekStart} THEN ${tasksTable.runnerEarning}::numeric ELSE 0 END), 0)`,
       thisMonth: sql<number>`COALESCE(SUM(CASE WHEN ${tasksTable.completedAt} >= ${monthStart} THEN ${tasksTable.runnerEarning}::numeric ELSE 0 END), 0)`,
+      taskEarnings: sql<number>`COALESCE(SUM(${tasksTable.runnerEarning}::numeric), 0)`,
+      waitingEarnings: sql<number>`COALESCE(SUM(${tasksTable.waitingEarnings}::numeric), 0)`,
     }).from(tasksTable).where(and(eq(tasksTable.runnerId, runner.id), eq(tasksTable.status, "completed"))),
     db.select({
       avgRating: sql<number | null>`AVG(${reviewsTable.rating})`,
@@ -74,6 +77,8 @@ router.get("/runners/me/earnings", requireRunner, async (req, res): Promise<void
   res.json({
     today: Number(r.today), thisWeek: Number(r.thisWeek), thisMonth: Number(r.thisMonth),
     lifetime: Number(r.lifetime), totalTasks: r.totalTasks,
+    taskEarnings: Number(r.taskEarnings),
+    waitingEarnings: Number(r.waitingEarnings),
     avgRating: reviewAgg[0]?.avgRating ? Number(reviewAgg[0].avgRating).toFixed(1) : null,
     pendingPayout: Number(r.today),
   });
@@ -117,6 +122,12 @@ router.post("/runners/kyc", requireRunner, async (req, res): Promise<void> => {
     uploadDataUrl(aadhaarBack, "kyc/runners"),
     selfie ? uploadDataUrl(selfie, "kyc/runners") : Promise.resolve(selfie),
   ]);
+
+  // M12: Validate Aadhaar number format (12 digits)
+  if (aadhaarNumber && !/^\d{12}$/.test(aadhaarNumber)) {
+    res.status(400).json({ error: "Aadhaar number must be exactly 12 digits" });
+    return;
+  }
 
   const kycUpdates: Record<string, unknown> = {
     fullName,
@@ -514,6 +525,94 @@ router.post("/runners/me/payout-request", requireRunner, async (req, res): Promi
     message: `Payout request of Rs ${requestAmount} submitted. Admin will review and process it.`,
     pendingEarnings: pendingAmount - requestAmount,
   });
+});
+
+// GET /runners/me/reviews — list reviews for the logged-in runner
+router.get("/runners/me/reviews", requireRunner, async (req, res): Promise<void> => {
+  const runner = req.runner!;
+  const { limit = "20", offset = "0" } = req.query as Record<string, string>;
+
+  const reviews = await db
+    .select({
+      id: reviewsTable.id,
+      taskId: reviewsTable.taskId,
+      userId: reviewsTable.userId,
+      rating: reviewsTable.rating,
+      review: reviewsTable.review,
+      createdAt: reviewsTable.createdAt,
+    })
+    .from(reviewsTable)
+    .where(eq(reviewsTable.runnerId, runner.id))
+    .orderBy(desc(reviewsTable.createdAt))
+    .limit(Number(limit))
+    .offset(Number(offset));
+
+  // Fetch user names for each review
+  const enriched = await Promise.all(reviews.map(async (r) => {
+    const [user] = r.userId ? await db.select({ name: usersTable.name }).from(usersTable).where(eq(usersTable.id, r.userId)) : [null];
+    return { ...r, userName: user?.name ?? "Client" };
+  }));
+
+  res.json(enriched);
+});
+
+// GET /runners/me/stats — aggregated stats endpoint (E4)
+router.get("/runners/me/stats", requireRunner, async (req, res): Promise<void> => {
+  const runner = req.runner!;
+  const now = new Date();
+  const weekStart = new Date(now); weekStart.setDate(now.getDate() - 7); weekStart.setHours(0, 0, 0, 0);
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+
+  const [weekAgg, monthAgg, totalAgg] = await Promise.all([
+    db.select({
+      count: count(),
+      avgResponse: sql<number | null>`AVG(${tasksTable.timeToAcceptance})`,
+    }).from(tasksTable).where(and(
+      eq(tasksTable.runnerId, runner.id),
+      eq(tasksTable.status, "completed"),
+      gte(tasksTable.completedAt, weekStart),
+    )),
+    db.select({
+      total: count(),
+      cancelled: sql<number>`SUM(CASE WHEN ${tasksTable.status} = 'cancelled' THEN 1 ELSE 0 END)`,
+    }).from(tasksTable).where(and(
+      eq(tasksTable.runnerId, runner.id),
+      gte(tasksTable.createdAt, monthStart),
+    )),
+    db.select({
+      totalTasks: count(),
+      completedTasks: sql<number>`SUM(CASE WHEN ${tasksTable.status} = 'completed' THEN 1 ELSE 0 END)`,
+      totalEarnings: sql<number>`COALESCE(SUM(CASE WHEN ${tasksTable.status} = 'completed' THEN ${tasksTable.runnerEarning}::numeric ELSE 0 END), 0)`,
+    }).from(tasksTable).where(eq(tasksTable.runnerId, runner.id)),
+  ]);
+
+  const w = weekAgg[0];
+  const m = monthAgg[0];
+  const t = totalAgg[0];
+  res.json({
+    tasksThisWeek: w?.count ?? 0,
+    avgResponseTimeSeconds: w?.avgResponse != null ? Math.round(Number(w.avgResponse)) : null,
+    cancellationRate: m?.total ? Math.round(((Number(m.cancelled) ?? 0) / m.total) * 100) : 0,
+    totalTasks: t?.totalTasks ?? 0,
+    completedTasks: Number(t?.completedTasks ?? 0),
+    totalEarnings: Number(t?.totalEarnings ?? 0),
+    completionRate: t?.totalTasks ? Math.round((Number(t.completedTasks ?? 0) / t.totalTasks) * 100) : 0,
+  });
+});
+
+// PATCH /runners/me/specializations — toggle specialization badges
+router.patch("/runners/me/specializations", requireRunner, async (req, res): Promise<void> => {
+  const runner = req.runner!;
+  const { specializations } = req.body; // string[]
+  if (!Array.isArray(specializations)) {
+    res.status(400).json({ error: "specializations must be an array of strings" }); return;
+  }
+  // Use raw SQL since specializations is a text[] column not yet in drizzle types
+  const filteredSpecs = specializations.filter(s => typeof s === "string");
+  await db.execute(
+    sql`UPDATE runners SET specializations = ${filteredSpecs}::text[] WHERE id = ${runner.id}`
+  );
+  res.json({ specializations: filteredSpecs });
 });
 
 export default router;

@@ -1,9 +1,9 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback, useRef, useEffect } from "react";
 import { useLocation } from "wouter";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
-import { MapPin, Calendar, Search, CheckCircle, Clock, Zap, Shield, Star, TrendingUp, Navigation, Timer, Wifi, Camera, CreditCard, User, Loader2 } from "lucide-react";
-import { useListAvailableTasks, useAcceptTask, useGetRunnerMe, useToggleOnlineStatus, useGetRunnerReadiness } from "@workspace/api-client-react";
+import { MapPin, Calendar, Search, CheckCircle, Clock, Zap, Shield, Star, TrendingUp, Navigation, Timer, Wifi, Camera, CreditCard, User, Loader2, ChevronDown, RotateCw, X } from "lucide-react";
+import { useListAvailableTasks, useAcceptTask, useGetRunnerMe, useToggleOnlineStatus, useGetRunnerReadiness, useGetRunnerEarnings } from "@workspace/api-client-react";
 import type { Task, Runner } from "@workspace/api-client-react";
 import { RunnerBottomNav } from "@/components/BottomNav";
 import { CategoryIcon } from "@/components/CategoryIcon";
@@ -12,6 +12,16 @@ import { NAVY, NAVY_GRAD, GOLD, GOLD_GRAD } from "@/lib/theme";
 import { EmptyState } from "@/components/EmptyState";
 
 const BG = "#080E1E";
+
+// Shared haversine distance calculator (km)
+function haversineDistance(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  const toRad = (d: number) => (d * Math.PI) / 180;
+  const R = 6371;
+  const dLat = toRad(lat2 - lat1);
+  const dLng = toRad(lng2 - lng1);
+  const a = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
 
 function ReadinessBanner({ runner }: { runner: Runner }) {
   const { data: score, isLoading, isError } = useGetRunnerReadiness();
@@ -89,7 +99,7 @@ function getTrustLevel(tasks: number, rating: number): { label: string; color: s
   return { label: "New Comrade", color: "#9CA3AF", icon: "○" };
 }
 
-function TaskCard({ task, onAccept, acceptingId }: { task: Task; onAccept: (id: number) => void; acceptingId: number | null }) {
+function TaskCard({ task, onAccept, acceptingId, expanded, detail, loadingDetail, onToggleExpand, distance }: { task: Task; onAccept: (id: number) => void; acceptingId: number | null; expanded?: boolean; detail?: Task | null; loadingDetail?: boolean; onToggleExpand?: () => void; distance?: number | null }) {
   const runnerCut = Math.round(Number(task.price ?? 0) * 0.7);
 
   return (
@@ -143,6 +153,12 @@ function TaskCard({ task, onAccept, acceptingId }: { task: Task; onAccept: (id: 
               <Clock size={9} /> {task.distanceBand} km
             </span>
           )}
+          {/* M14: Show actual computed distance */}
+          {distance != null && (
+            <span className="bg-white/8 border border-white/10 text-[#C9A84C] text-[10px] font-bold px-2 py-1 rounded-lg flex items-center gap-1">
+              📍 {distance} km away
+            </span>
+          )}
           {task.estimatedDurationMinutes && (
             <span className="bg-white/8 border border-white/10 text-white/50 text-[10px] font-semibold px-2 py-1 rounded-lg flex items-center gap-1">
               <Timer size={9} /> ~{task.estimatedDurationMinutes} min
@@ -169,17 +185,45 @@ function TaskCard({ task, onAccept, acceptingId }: { task: Task; onAccept: (id: 
               {new Date(task.scheduledAt).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}
             </span>
           )}
+          {/* L13: Show payment method */}
+          {task.paymentMethod && (
+            <span className={`text-[10px] font-semibold px-2 py-1 rounded-lg flex items-center gap-1 ${task.paymentMethod === "cash" ? "bg-green-500/15 border border-green-500/30 text-green-400" : "bg-blue-500/15 border border-blue-500/30 text-blue-400"}`}>
+              {task.paymentMethod === "cash" ? "💵 Cash" : "💳 Online"}
+            </span>
+          )}
         </div>
+
+        {/* M6: Task detail preview */}
+        {onToggleExpand && (
+          <button onClick={onToggleExpand} className="w-full text-center py-1.5 text-white/30 text-[10px] font-semibold hover:text-white/50 transition-colors">
+            {expanded ? "▲ Hide details" : "▼ View full details"}
+          </button>
+        )}
+        {expanded && (
+          <div className="px-4 pb-3 pt-1 border-t border-white/5">
+            {loadingDetail ? (
+              <div className="flex items-center gap-2 py-2">
+                <Loader2 size={12} className="animate-spin text-white/30" />
+                <span className="text-white/30 text-[10px]">Loading details...</span>
+              </div>
+            ) : detail ? (
+              <div className="space-y-1.5 text-[10px] text-white/50">
+                {detail.locationName && <p><span className="text-white/30">Address:</span> {detail.locationName}</p>}
+                {detail.specialInstructions && <p><span className="text-white/30">Instructions:</span> {detail.specialInstructions}</p>}
+                {detail.paymentMethod && <p><span className="text-white/30">Payment:</span> {detail.paymentMethod === "cash" ? "Cash on delivery" : "Online"}</p>}
+                {detail.scheduledAt && <p><span className="text-white/30">Scheduled:</span> {new Date(detail.scheduledAt).toLocaleString("en-IN")}</p>}
+                {(detail.urgency as string) === "emergency" && <p className="text-red-400 font-bold">⚠ EMERGENCY TASK</p>}
+              </div>
+            ) : null}
+          </div>
+        )}
 
         {/* Actions */}
         <div className="flex gap-2.5">
-          <button className="flex-1 py-2.5 rounded-xl border border-white/15 text-white/50 text-sm font-semibold hover:bg-white/5 transition-colors">
-            Skip
-          </button>
           <button
             onClick={() => onAccept(task.id)}
             disabled={acceptingId === task.id}
-            className="flex-[2] py-2.5 rounded-xl text-[#0A1628] text-sm font-black flex items-center justify-center gap-1.5 transition-all hover:shadow-lg disabled:opacity-60"
+            className="flex-1 py-2.5 rounded-xl text-[#0A1628] text-sm font-black flex items-center justify-center gap-1.5 transition-all hover:shadow-lg disabled:opacity-60"
             style={{ background: GOLD_GRAD }}
           >
             <CheckCircle size={14} />
@@ -194,7 +238,7 @@ function TaskCard({ task, onAccept, acceptingId }: { task: Task; onAccept: (id: 
 export default function RunnerFeed() {
   const [, navigate] = useLocation();
   const { data: runner, refetch: refetchRunner } = useGetRunnerMe();
-  const { data: tasks, isLoading, refetch } = useListAvailableTasks({ query: { queryKey: ["availableTasks"], refetchInterval: 30000, retry: false } });
+  const { data: tasks, isLoading, refetch, isFetching } = useListAvailableTasks({ query: { queryKey: ["availableTasks"], refetchInterval: 30000, retry: false } });
   const toggleOnline = useToggleOnlineStatus();
   const acceptTask = useAcceptTask({
     request: {
@@ -204,38 +248,124 @@ export default function RunnerFeed() {
     },
   });
   const [accepting, setAccepting] = useState<number | null>(null);
+  // E5+L1: Socket ref for real-time dispatch notifications
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const socketRef = useRef<any>(null);
+
+  // Debounced refetch to avoid excessive API calls when many tasks dispatched rapidly
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const debounceRef = useRef<any>(null);
+
+  useEffect(() => {
+    try {
+      const init = async () => {
+        const { io } = await import("socket.io-client");
+        const sock = io(window.location.origin, {
+          path: "/api/socket.io",
+          reconnection: true,
+          reconnectionDelay: 1000,
+          reconnectionAttempts: 10,
+          // L3: Heartbeat handled server-side via pingInterval/pingTimeout
+        });
+        sock.on("connect_error", () => { /* L12: swallow socket init errors */ });
+        // E5: Listen for new task broadcasts dispatched to this runner
+        sock.on("new_task_broadcast", () => {
+          // L7: Vibrate device on new task notification
+          try { navigator.vibrate?.(200); } catch { /* noop */ }
+          // H4: Play dispatch audio cue
+          try {
+            const audio = new Audio("data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdH2JkI+Ig3dxa3F4hYyOiYB4dG9xeIWJj4uBe3VycXmGiI6KgHl1cnB5hoiOioB5dXJxeYaIjoqAeXVycHmGiI6KgHl1cnB5hoiOioB5dXJweYaIjoqAeXVycHmGiI6KgHl1cnB5hoiOioB5dXJweY==");
+            audio.volume = 0.3;
+            audio.play().catch(() => {});
+          } catch { /* noop */ }
+          // Debounce refetch to avoid flooding API when many tasks arrive at once
+          if (debounceRef.current) clearTimeout(debounceRef.current);
+          debounceRef.current = setTimeout(() => refetch(), 500);
+        });
+        socketRef.current = sock;
+      };
+      init();
+    } catch { /* L12: Socket init error boundary */ }
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+      socketRef.current?.disconnect();
+    };
+  }, []);
+
+  // L1: Join comrades room when runner is identified and socket is connected
+  useEffect(() => {
+    if (runner?.id && socketRef.current?.connected) {
+      socketRef.current.emit("join_comrades_room", { runnerId: runner.id });
+    } else if (runner?.id && socketRef.current) {
+      // Wait for socket to connect before joining room (use once to avoid listener leak)
+      socketRef.current.once("connect", () => {
+        socketRef.current?.emit("join_comrades_room", { runnerId: runner.id });
+      });
+    }
+  }, [runner?.id]);
+
+  const { data: earningsData } = useGetRunnerEarnings();
+  const earningsToday = earningsData?.today ?? 0;
+
+  // M6: Expanded task detail state
+  const [expandedTaskId, setExpandedTaskId] = useState<number | null>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [expandedTaskDetail, setExpandedTaskDetail] = useState<any>(null);
+  const [loadingDetail, setLoadingDetail] = useState(false);
+
+  const fetchTaskDetail = useCallback(async (taskId: number) => {
+    setLoadingDetail(true);
+    try {
+      const token = localStorage.getItem("golineless_runner_token") || "";
+      const res = await fetch(`/api/tasks/${taskId}`, { headers: { Authorization: `Bearer ${token}` } });
+      if (res.ok) setExpandedTaskDetail(await res.json());
+    } catch { /* ignore */ } finally { setLoadingDetail(false); }
+  }, []);
+
+  const toggleExpand = useCallback((taskId: number) => {
+    if (expandedTaskId === taskId) { setExpandedTaskId(null); setExpandedTaskDetail(null); return; }
+    setExpandedTaskId(taskId);
+    fetchTaskDetail(taskId);
+  }, [expandedTaskId, fetchTaskDetail]);
 
   const isOnline = runner?.isOnline ?? false;
   const totalTasks = runner?.totalTasks ?? 0;
   const rating = runner?.rating ? Number(runner.rating) : 0;
   const trust = getTrustLevel(totalTasks, rating);
 
-  // Fix #51: Sort tasks by distance from runner's current position
+  // Fix #51 + M14: Sort tasks by distance, compute distance per task
+  const getTaskDistance = useCallback((task: Task) => {
+    const runnerLat = runner?.currentLat ? Number(runner.currentLat) : null;
+    const runnerLng = runner?.currentLng ? Number(runner.currentLng) : null;
+    const tLat = task.locationLat ? Number(task.locationLat) : null;
+    const tLng = task.locationLng ? Number(task.locationLng) : null;
+    if (runnerLat == null || runnerLng == null || tLat == null || tLng == null) return null;
+    return Math.round(haversineDistance(runnerLat, runnerLng, tLat, tLng) * 10) / 10;
+  }, [runner?.currentLat, runner?.currentLng]);
+
   const sortedTasks = useMemo(() => {
     if (!tasks || tasks.length === 0) return [];
     const runnerLat = runner?.currentLat ? Number(runner.currentLat) : null;
     const runnerLng = runner?.currentLng ? Number(runner.currentLng) : null;
     if (runnerLat == null || runnerLng == null) return tasks;
 
-    const toRad = (d: number) => (d * Math.PI) / 180;
-    const haversine = (lat1: number, lng1: number, lat2: number, lng2: number) => {
-      const R = 6371;
-      const dLat = toRad(lat2 - lat1);
-      const dLng = toRad(lng2 - lng1);
-      const a = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
-      return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    };
-
     return [...tasks].sort((a, b) => {
       const aLat = a.locationLat ? Number(a.locationLat) : null;
       const aLng = a.locationLng ? Number(a.locationLng) : null;
       const bLat = b.locationLat ? Number(b.locationLat) : null;
       const bLng = b.locationLng ? Number(b.locationLng) : null;
-      const distA = aLat != null && aLng != null ? haversine(runnerLat, runnerLng, aLat, aLng) : Infinity;
-      const distB = bLat != null && bLng != null ? haversine(runnerLat, runnerLng, bLat, bLng) : Infinity;
+      const distA = aLat != null && aLng != null ? haversineDistance(runnerLat, runnerLng, aLat, aLng) : Infinity;
+      const distB = bLat != null && bLng != null ? haversineDistance(runnerLat, runnerLng, bLat, bLng) : Infinity;
       return distA - distB;
     });
   }, [tasks, runner?.currentLat, runner?.currentLng]);
+
+  // M5: Pagination state for infinite scroll (must be after sortedTasks)
+  const [page, setPage] = useState(0);
+  const PAGE_SIZE = 20;
+  const allTasks = sortedTasks;
+  const paginatedTasks = allTasks.slice(0, (page + 1) * PAGE_SIZE);
+  const hasMore = allTasks.length > (page + 1) * PAGE_SIZE;
 
   const handleToggle = () => {
     toggleOnline.mutate({ data: { isOnline: !isOnline } }, {
@@ -249,6 +379,8 @@ export default function RunnerFeed() {
     acceptTask.mutate({ id: Number(taskId) }, {
       onSuccess: () => {
         toast.success("Task accepted! Let's go!");
+        // C8+M7 FIX: Invalidate queries so active task loads immediately
+        refetch();
         navigate("/runner/active");
       },
       onError: () => { toast.error("Failed to accept task"); setAccepting(null); },
@@ -290,7 +422,7 @@ export default function RunnerFeed() {
               <div className="flex-1">
                 <div className="flex items-center justify-between mb-1">
                   <span className="text-white text-xs font-bold">{trust.label}</span>
-                  <span className="text-xs font-bold" style={{ color: GOLD }}>{formatCurrency(0)} today</span>
+                  <span className="text-xs font-bold" style={{ color: GOLD }}>{formatCurrency(earningsToday)} today</span>
                 </div>
                 <div className="flex items-center gap-3">
                   <div className="flex items-center gap-1">
@@ -303,7 +435,7 @@ export default function RunnerFeed() {
                   </div>
                   <div className="flex items-center gap-1">
                     <TrendingUp size={10} className="text-blue-400" />
-                    <span className="text-white/60 text-[10px]">70% earnings</span>
+                    <span className="text-white/60 text-[10px]">lifetime earnings</span>
                   </div>
                 </div>
               </div>
@@ -346,10 +478,27 @@ export default function RunnerFeed() {
           </button>
         </div>
 
+        {/* M4: Pull-to-refresh indicator + refresh button */}
+        {isFetching && !isLoading && (
+          <div className="flex items-center justify-center gap-2 py-2 mb-2">
+            <RotateCw size={12} className="animate-spin text-[#C9A84C]" />
+            <span className="text-white/40 text-[10px]">Refreshing...</span>
+          </div>
+        )}
+
         <div className="space-y-3">
           {isLoading ? (
             Array.from({ length: 3 }).map((_, i) => (
-              <div key={i} className="h-44 bg-white/5 rounded-2xl animate-pulse" />
+              <div key={i} className="bg-white/8 border border-white/10 rounded-2xl p-4 animate-pulse">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="w-11 h-11 rounded-xl bg-white/10" />
+                  <div className="flex-1 space-y-2"><div className="h-4 w-24 bg-white/10 rounded" /><div className="h-2 w-16 bg-white/10 rounded" /></div>
+                  <div className="h-6 w-16 bg-white/10 rounded-lg" />
+                </div>
+                <div className="h-2 w-full bg-white/10 rounded mb-2" /><div className="h-2 w-3/4 bg-white/10 rounded mb-3" />
+                <div className="flex gap-2"><div className="h-6 w-20 bg-white/10 rounded-lg" /><div className="h-6 w-16 bg-white/10 rounded-lg" /><div className="h-6 w-24 bg-white/10 rounded-lg" /></div>
+                <div className="h-10 w-full bg-white/10 rounded-xl mt-3" />
+              </div>
             ))
           ) : !tasks || tasks.length === 0 ? (
             <>
@@ -366,17 +515,30 @@ export default function RunnerFeed() {
               )}
             </>
           ) : (
-            sortedTasks.map((task: Task, i: number) => (
+            paginatedTasks.map((task: Task) => (
               <TaskCard
                 key={task.id}
                 task={task}
                 onAccept={handleAccept}
                 acceptingId={accepting}
+                expanded={expandedTaskId === task.id}
+                detail={expandedTaskId === task.id ? expandedTaskDetail : null}
+                loadingDetail={expandedTaskId === task.id && loadingDetail}
+                onToggleExpand={() => toggleExpand(task.id)}
+                distance={getTaskDistance(task)}
               />
             ))
           )}
+          {/* M5: Load more button */}
+          {hasMore && !isLoading && (
+            <button onClick={() => setPage(p => p + 1)} className="w-full py-2.5 text-white/40 text-xs font-semibold flex items-center justify-center gap-1.5 hover:text-white/60 transition-colors">
+              <ChevronDown size={14} /> Load more tasks ({allTasks.length - paginatedTasks.length} remaining)
+            </button>
+          )}
         </div>
       </div>
+
+
 
       {/* Trust badge */}
       {runner?.kycStatus === "verified" && (

@@ -479,7 +479,7 @@ router.patch("/admin/runners/:id/kyc", requireAdmin, async (req, res): Promise<v
 
   // Fix #67: Admin activity log — track KYC actions in audit trail
   await db.insert(paymentAuditLogTable).values({
-    taskId: 0,
+    taskId: null,
     previousStatus: null,
     newStatus: action,
     actor: req.admin?.username ?? "admin",
@@ -560,7 +560,7 @@ router.patch("/admin/users/:id/kyc", requireAdmin, async (req, res): Promise<voi
 
   // Audit log
   await db.insert(paymentAuditLogTable).values({
-    taskId: 0,
+    taskId: null,
     previousStatus: existing.kycStatus,
     newStatus: action === "approve" ? "verified" : "rejected",
     actor: req.admin?.username ?? "admin",
