@@ -96,15 +96,15 @@
 
 ## 🟡 MEDIUM PRIORITY (Missing features / incomplete logic)
 
-### M1. No "Open in Maps" / navigation integration
+### ✅ M1. No "Open in Maps" / navigation integration — **FIXED**
 - **File**: `artifacts/qbuddy/src/pages/runner/ActiveTask.tsx`
-- **Issue**: No button to open Google Maps or similar for directions to the task/pickup location.
-- **Fix**: Add a "Navigate" button that opens `https://www.google.com/maps/dir/?api=1&destination={lat},{lng}`.
+- **Fix Applied**: Added Google Maps link (`google.com/maps/dir/?api=1&destination={lat},{lng}`) for directions to task location.
+- **Status**: ✅ Fixed, typechecked
 
-### M2. No task cancellation from runner side
+### ✅ M2. No task cancellation from runner side — **FIXED**
 - **File**: `artifacts/qbuddy/src/pages/runner/ActiveTask.tsx`
-- **Issue**: Runner cannot cancel an assigned task from the UI. The backend supports it (`POST /tasks/:id/cancel` accepts runner tokens) but the frontend has no cancel button.
-- **Fix**: Add a "Cancel Task" button with confirmation dialog for `assigned`/`on_the_way` statuses.
+- **Fix Applied**: Added "Cancel Task" button with confirmation dialog for all active states (assigned, on_the_way, reached_pickup, reached_task_location, at_location).
+- **Status**: ✅ Fixed, typechecked
 
 ### ✅ M3. No emergency/SOS button — **FIXED**
 - **File**: `artifacts/qbuddy/src/pages/runner/ActiveTask.tsx`
@@ -161,10 +161,10 @@
 - **Fix Applied**: `openKycModal()` pre-fills form with existing runner data (name, bank account, IFSC, emergency contact).
 - **Status**: ✅ Fixed, typechecked
 
-### M14. No confirmation before OTP submission
+### ✅ M14. No confirmation before OTP submission — **FIXED**
 - **File**: `artifacts/qbuddy/src/pages/runner/ActiveTask.tsx`
-- **Issue**: Runner taps "Complete Task" and OTP is verified immediately. No confirmation dialog. Wrong OTP triggers brute force lockout after 5 attempts.
-- **Fix**: Add a confirmation dialog: "Verify OTP? This will complete the task." before calling `handleVerifyOtp`.
+- **Fix Applied**: Added `window.confirm("Verify OTP? This will complete the task and mark it as done.")` before calling `handleVerifyOtp`.
+- **Status**: ✅ Fixed, typechecked
 
 ### ✅ M15. Earnings breakdown uses estimated values — **FIXED**
 - **File**: `artifacts/api-server/src/routes/runners.ts` + `RunnerEarnings.tsx`
@@ -254,17 +254,20 @@
 
 ## ⚙️ BACKEND MISSING ENDPOINTS
 
-### E1. `GET /runners/me/reviews` — Runner views their reviews
-- Runner has no way to see reviews/ratings from clients.
-- **Implementation**: Query `reviewsTable` by `runnerId`, return with user name and task info.
+### ✅ E1. `GET /runners/me/reviews` — Runner views their reviews — **FIXED**
+- **File**: `artifacts/api-server/src/routes/runners.ts`
+- **Fix Applied**: Created endpoint that queries `reviewsTable` by `runnerId`, enriches with user names.
+- **Status**: ✅ Fixed, typechecked
 
-### E2. `PATCH /runners/me/specializations` — Toggle specialization badges
-- Runner cannot select their specializations (hospital expert, senior care, etc.)
-- **Implementation**: Add `specializations` column to `runnersTable` (text array), create PATCH endpoint.
+### ✅ E2. `PATCH /runners/me/specializations` — Toggle specialization badges — **FIXED**
+- **File**: `artifacts/api-server/src/routes/runners.ts`
+- **Fix Applied**: Created endpoint using Drizzle update to persist specializations array.
+- **Status**: ✅ Fixed, typechecked
 
-### E3. `POST /runners/me/tasks/:id/cancel` — Runner cancels active task
-- Backend supports it via `POST /tasks/:id/cancel` but there's no dedicated runner-friendly endpoint.
-- **Implementation**: The existing endpoint already works, just needs frontend UI.
+### ✅ E3. Runner cancel button frontend — **FIXED**
+- **File**: `artifacts/qbuddy/src/pages/runner/ActiveTask.tsx`
+- **Fix Applied**: Added Cancel Task button with confirmation dialog for all active states (same as M2).
+- **Status**: ✅ Fixed, typechecked
 
 ### ✅ E4. `GET /runners/me/stats` — Comprehensive runner stats — **FIXED**
 - **File**: `artifacts/api-server/src/routes/runners.ts`
@@ -280,9 +283,10 @@
 
 ## 🗄️ DB SCHEMA GAPS
 
-### S1. Missing `specializations` column on `runnersTable`
-- Profile shows specialization badges but no column to persist selections.
-- **Migration**: `ALTER TABLE runners ADD COLUMN IF NOT EXISTS specializations text[] DEFAULT '{}';`
+### ✅ S1. Missing `specializations` column on `runnersTable` — **FIXED**
+- **File**: `lib/db/src/schema/runners.ts`
+- **Fix Applied**: Added `specializations: text("specializations").array().notNull().default([])` to schema.
+- **Status**: ✅ Fixed, typechecked
 
 ### ✅ S2. Specializations config on admin_settings — **FIXED**
 - **File**: `lib/db/src/schema/locations.ts`
@@ -307,6 +311,8 @@
 | ⚙️ Missing Endpoints | 5 (all fixed ✅) |
 | 🗄️ DB Schema Gaps | 3 (all fixed ✅) |
 | **TOTAL** | **54 (all fixed ✅)** |
+
+> **Last verified: All 54 items confirmed implemented in codebase. No remaining work.**
 
 ---
 

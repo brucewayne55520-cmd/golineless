@@ -42,17 +42,20 @@ export const CATEGORY_PRICES: Record<string, number> = {
   emergency: 299,
 };
 
+// ═══════════════════════════════════════════════════════════
+// STATUS COLORS — Bold & Vibrant palette
+// ═══════════════════════════════════════════════════════════
 export const STATUS_COLORS: Record<string, string> = {
-  pending: "bg-yellow-100 text-yellow-700 border-yellow-300",
-  assigned: "bg-blue-100 text-blue-700 border-blue-300",
-  on_the_way: "bg-purple-100 text-purple-700 border-purple-300",
-  at_location: "bg-green-100 text-green-700 border-green-300",
-  in_progress: "bg-indigo-100 text-indigo-700 border-indigo-300",
-  waiting_started: "bg-amber-100 text-amber-700 border-amber-300",
-  waiting_paused: "bg-orange-100 text-orange-700 border-orange-300",
-  waiting_completed: "bg-teal-100 text-teal-700 border-teal-300",
-  completed: "bg-emerald-100 text-emerald-700 border-emerald-300",
-  cancelled: "bg-red-100 text-red-700 border-red-300",
+  pending: "bg-amber-50 text-amber-700 border-amber-200",
+  assigned: "bg-blue-50 text-blue-700 border-blue-200",
+  on_the_way: "bg-violet-50 text-violet-700 border-violet-200",
+  at_location: "bg-emerald-50 text-emerald-700 border-emerald-200",
+  in_progress: "bg-indigo-50 text-indigo-700 border-indigo-200",
+  waiting_started: "bg-orange-50 text-orange-700 border-orange-200",
+  waiting_paused: "bg-rose-50 text-rose-700 border-rose-200",
+  waiting_completed: "bg-teal-50 text-teal-700 border-teal-200",
+  completed: "bg-green-50 text-green-700 border-green-200",
+  cancelled: "bg-red-50 text-red-700 border-red-200",
 };
 
 export const STATUS_LABELS: Record<string, string> = {
@@ -69,12 +72,12 @@ export const STATUS_LABELS: Record<string, string> = {
 };
 
 export const STATUS_BORDER: Record<string, string> = {
-  pending: "border-l-yellow-400",
+  pending: "border-l-amber-400",
   assigned: "border-l-blue-400",
-  on_the_way: "border-l-purple-400",
-  at_location: "border-l-green-400",
+  on_the_way: "border-l-violet-400",
+  at_location: "border-l-emerald-400",
   in_progress: "border-l-indigo-400",
-  completed: "border-l-emerald-400",
+  completed: "border-l-green-400",
   cancelled: "border-l-red-400",
 };
 
@@ -150,11 +153,11 @@ export function applyWatermark(
       ctx.font = `${fontSize}px monospace`;
 
       // Semi-transparent bar at bottom
-      ctx.fillStyle = "rgba(0,0,0,0.65)";
+      ctx.fillStyle = "rgba(10,22,40,0.8)";
       ctx.fillRect(0, canvas.height - bottomPad, canvas.width, bottomPad);
 
       // Text details
-      ctx.fillStyle = "#C9A84C";
+      ctx.fillStyle = "#D4A843";
       const dateStr = meta.timestamp ? new Date(meta.timestamp).toLocaleString("en-IN", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "";
       const line1 = `Go LineLess  |  Task #${meta.taskId || "—"}  |  ${meta.proofType?.replace(/_/g, " ") || "Proof"}`;
       const line2 = `${dateStr}  ${meta.address || (meta.lat && meta.lng ? `${meta.lat.toFixed(4)}, ${meta.lng.toFixed(4)}` : "")}`;

@@ -25,18 +25,22 @@ export default function RunnerEarnings() {
   }, []);
 
   const [requestingPayout, setRequestingPayout] = useState(false);
+  const [payoutAmount, setPayoutAmount] = useState("");
 
+  // H5: Payout request with custom amount input
   const handleRequestPayout = async () => {
     setRequestingPayout(true);
     try {
-      // M4 FIX: Use customFetch for consistency with other API calls
+      const body: Record<string, unknown> = {};
+      if (payoutAmount.trim()) body.amount = Number(payoutAmount);
       const data = await customFetch<{ message?: string; error?: string }>('/api/runners/me/payout-request', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
       });
       if (data.error) { toast.error(data.error); return; }
       toast.success(data.message || 'Payout requested');
-      // Refetch payouts
+      setPayoutAmount("");
       customFetch<NonNullable<typeof payouts>>("/api/runners/me/payouts")
         .then(setPayouts)
         .catch(() => {});
@@ -44,9 +48,27 @@ export default function RunnerEarnings() {
     setRequestingPayout(false);
   };
 
+  // H10: Type for payouts data (defined at module scope to avoid recreation per render)
+
   const e = earnings!;
   const dailyData = (daily ?? [])!;
   const completedTasks = (tasks ?? [])!;
+
+  // L11: Export earnings report as CSV
+  const handleExportReport = () => {
+    if (!completedTasks.length) { toast.error("No completed tasks to export"); return; }
+    const rows = [["Category","Date","Amount","Status"]];
+    completedTasks.forEach((t: Task) => {
+      rows.push([t.category, t.completedAt ? new Date(t.completedAt).toLocaleDateString("en-IN") : "", String(t.runnerEarning ?? 0), "completed"]);
+    });
+    const csv = rows.map(r => r.join(",")).join("\n");
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = `earnings-report-${new Date().toISOString().slice(0,10)}.csv`;
+    a.click(); URL.revokeObjectURL(url);
+    toast.success("Earnings report downloaded!");
+  };
 
   // M8: Task history filters
   const [filterCategory, setFilterCategory] = useState("all");
@@ -106,7 +128,18 @@ export default function RunnerEarnings() {
         </div>
       </div>
 
+      {/* H5: Payout amount input */}
       <div className="mx-4 mt-3">
+        <div className="flex gap-2 mb-2">
+          <input
+            type="number"
+            value={payoutAmount}
+            onChange={(e) => setPayoutAmount(e.target.value)}
+            placeholder="Amount (optional — full balance)"
+            className="flex-1 bg-white/10 border border-white/20 rounded-xl px-3 py-2.5 text-white text-sm placeholder-white/30 focus:outline-none"
+            min="0"
+          />
+        </div>
         <button
           onClick={handleRequestPayout}
           disabled={requestingPayout || !(e?.lifetime && Number(e.lifetime) > 0)}
@@ -217,8 +250,16 @@ export default function RunnerEarnings() {
         </div>
       )}
 
+      {/* L11: Export earnings report */}
       <div className="mx-4 mt-4">
-        <h3 className="text-white font-bold mb-3">Task History</h3>
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="text-white font-bold">Task History</h3>
+          {completedTasks.length > 0 && (
+            <button onClick={handleExportReport} className="text-[#C9A84C] text-[10px] font-bold px-2 py-1 rounded-lg bg-[#C9A84C]/10 hover:bg-[#C9A84C]/20 transition-colors">
+              Export CSV
+            </button>
+          )}
+        </div>
 
         {/* M8: Filters */}
         {completedTasks.length > 0 && (

@@ -1,11 +1,12 @@
 import { useState } from "react";
 import { Bell, Check, CheckCheck, Clock, Shield, Package, AlertTriangle, CreditCard, Star, ChevronLeft, CheckCircle2 } from "lucide-react";
 import { useLocation } from "wouter";
-import { useListNotifications } from "@workspace/api-client-react";
+import { useListNotifications, useGetRunnerMe } from "@workspace/api-client-react";
 import type { Notification } from "@workspace/api-client-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { RunnerBottomNav } from "@/components/BottomNav";
 import { customFetch } from "@workspace/api-client-react";
+import { useNotificationSocket } from "@/hooks/useNotificationSocket";
 
 const TYPE_ICONS: Record<string, typeof Bell> = {
   kyc_approved: Shield,
@@ -56,6 +57,10 @@ export default function RunnerNotificationsPage() {
   const { token } = useAuth();
   const { data: notifications, isLoading, refetch } = useListNotifications();
   const [markingId, setMarkingId] = useState<number | null>(null);
+
+  const { data: runner } = useGetRunnerMe();
+  // M9: Real-time notification updates via socket (needs runnerId to join room)
+  useNotificationSocket(runner?.id);
 
   const notifs = notifications as Notification[] ?? [];
   const unreadCount = notifs.filter(n => !n.isRead).length;

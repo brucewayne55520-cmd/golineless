@@ -22,10 +22,10 @@ export default function AdminPilot() {
   };
 
   if (isLoading) return (
-    <div className="flex min-h-screen" style={{ background: "#0A1628" }}>
+    <div className="flex min-h-screen gl-navy-deep">
       <AdminSidebar />
       <main className="flex-1 p-6">
-        <div className="grid grid-cols-4 gap-4 mb-5">{[1,2,3,4].map(i => <div key={i} className="h-32 bg-white rounded-2xl animate-pulse shadow-sm" />)}</div>
+        <div className="grid grid-cols-4 gap-4 mb-5">{[1,2,3,4].map(i => <div key={i} className="h-32 bg-white/10 rounded-2xl animate-pulse" />)}</div>
       </main>
     </div>
   );
@@ -37,7 +37,7 @@ export default function AdminPilot() {
     { label: "Acceptance Rate", val: `${data?.acceptanceRate ?? 0}%`, Icon: Percent, color: "#8B5CF6", bg: "#F5F3FF" },
     { label: "Completion Rate", val: `${data?.completedRate ?? 0}%`, Icon: CheckCircle2, color: "#059669", bg: "#ECFDF5" },
     { label: "Revenue Today", val: formatCurrency(data?.revenueToday ?? 0), Icon: Wallet, color: "#D97706", bg: "#FFFBEB" },
-    { label: "Avg Rating", val: data?.avgRating ?? "N/A", Icon: Star, color: "#C9A84C", bg: "#FEF9EC" },
+    { label: "Avg Rating", val: data?.avgRating ?? "N/A", Icon: Star, color: "#D4A843", bg: "#FEF9EC" },
     { label: "Avg Wait Saved", val: `${data?.avgWaitSaved ?? 0}m`, Icon: Clock, color: "#0EA5E9", bg: "#F0F9FF" },
   ];
 
@@ -49,14 +49,14 @@ export default function AdminPilot() {
   ];
 
   return (
-    <div className="flex min-h-screen" style={{ background: "#0A1628" }}>
+    <div className="flex min-h-screen gl-navy-deep">
       <AdminSidebar />
       <main className="flex-1 overflow-y-auto">
         {/* Header */}
         <div className="px-6 py-4 border-b border-white/10 flex items-center justify-between">
           <div className="flex items-center gap-4">
             <div>
-              <h1 className="text-xl font-black text-white">Pilot Command Center</h1>
+              <h1 className="text-xl font-bold text-white">Pilot Command Center</h1>
               <p className="text-white/40 text-xs mt-0.5">Go LineLess · Ahmedabad Pilot · {new Date().toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "long" })}</p>
             </div>
             {/* Pilot Mode Toggle */}
@@ -92,8 +92,8 @@ export default function AdminPilot() {
                     <m.Icon size={18} style={{ color: m.color }} />
                   </div>
                 </div>
-                <p className="text-2xl font-black" style={{ color: m.color }}>{m.val}</p>
-                <p className="text-[10px] font-medium text-gray-500 mt-0.5">{m.label}</p>
+                <p className="text-2xl font-bold" style={{ color: m.color }}>{m.val}</p>
+                <p className="text-[10px] font-medium text-[#9CA3AF] mt-0.5">{m.label}</p>
               </motion.div>
             ))}
           </motion.div>
@@ -127,7 +127,7 @@ export default function AdminPilot() {
             style={{ background: NAVY_GRAD }}
           >
             <div className="absolute top-0 right-0 w-64 h-64 rounded-full opacity-10" style={{ background: `radial-gradient(circle, ${GOLD}, transparent)`, transform: "translate(30%,-30%)" }} />
-            <h3 className="font-black text-white/80 text-sm mb-4 flex items-center gap-2">
+            <h3 className="font-bold text-white/80 text-sm mb-4 flex items-center gap-2">
               <Activity size={14} /> Pilot Status
             </h3>
             <div className="grid grid-cols-4 gap-4">
@@ -159,8 +159,8 @@ export default function AdminPilot() {
               className="rounded-2xl p-5 mt-5"
               style={{ background: "rgba(255,255,255,0.03)" }}
             >
-              <h3 className="font-black text-white/80 text-sm mb-4 flex items-center gap-2">
-                <Target size={14} className="text-green-400" /> Pilot KPI Tracker
+              <h3 className="font-bold text-white/80 text-sm mb-4 flex items-center gap-2">
+                <Target size={14} className="text-[#10B981]" /> Pilot KPI Tracker
               </h3>
               <div className="grid grid-cols-3 gap-6 mb-4">
                 {(Object.entries(kpiData.goals || {}) as [string, { current: number; target: number }][]).map(([key, goal]) => (

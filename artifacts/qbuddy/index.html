@@ -18,7 +18,10 @@
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="Go LineLess — Life Without Waiting" />
     <meta name="twitter:description" content="Ahmedabad's on-demand task assistance platform. Book verified runners for real-world errands with live tracking." />
+    <meta name="twitter:image" content="https://golineless.com/og-image.png" />
+    <meta name="theme-color" content="#1A1A2E" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <!-- Primary LocalBusiness schema -->
     <script type="application/ld+json">
     {
       "@context": "https://schema.org",
@@ -34,6 +37,11 @@
         "addressRegion": "Gujarat",
         "addressCountry": "IN"
       },
+      "geo": {
+        "@type": "GeoCoordinates",
+        "latitude": "23.0225",
+        "longitude": "72.5714"
+      },
       "areaServed": {
         "@type": "City",
         "name": "Ahmedabad"
@@ -45,6 +53,97 @@
         "lowPrice": 89,
         "highPrice": 499,
         "priceCurrency": "INR"
+      }
+    }
+    </script>
+    <!-- WebSite schema with SearchAction for sitelinks searchbox -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebSite",
+      "name": "Go LineLess",
+      "url": "https://golineless.com",
+      "potentialAction": {
+        "@type": "SearchAction",
+        "target": "https://golineless.com/search?q={search_term_string}",
+        "query-input": "required name=search_term_string"
+      }
+    }
+    </script>
+    <!-- FAQ schema for common questions -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "What is Go LineLess?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Go LineLess is Ahmedabad's on-demand task assistance platform. We connect you with verified human runners who stand in hospital queues, pick up medicines, visit banks, handle govt office work, and assist seniors — so you don't have to wait in line."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "How much does Go LineLess cost?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Tasks start from Rs 89 and go up to Rs 499 depending on the category, distance, and urgency. Waiting charges may apply after the first 15 free minutes."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "How do I track my runner?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Once a runner accepts your task, you can track their live location on the app. Runners upload photo proof at each stage — arrival, progress, and completion."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "What areas does Go LineLess serve?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Go LineLess currently serves Ahmedabad, Gujarat. We cover areas including Juhapura, Sarkhej, Prahladnagar, Makarba, Paldi, Vasna, Jamalpur, and Kalupur."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "How do I become a Go LineLess runner?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Download the Go LineLess app, sign up as a Comrade, complete KYC verification (Aadhaar + selfie), finish the training modules, and start accepting tasks in your area."
+          }
+        }
+      ]
+    }
+    </script>
+    <!-- Service schema for specific service offerings -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "Service",
+      "serviceType": "Task Assistance",
+      "provider": {
+        "@type": "LocalBusiness",
+        "name": "Go LineLess"
+      },
+      "areaServed": {
+        "@type": "City",
+        "name": "Ahmedabad"
+      },
+      "hasOfferCatalog": {
+        "@type": "OfferCatalog",
+        "name": "Go LineLess Services",
+        "itemListElement": [
+          { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "Hospital Queue Assistance" } },
+          { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "Medicine Pickup" } },
+          { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "Bank Visit Assistance" } },
+          { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "Government Office Work" } },
+          { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "Senior Citizen Care" } },
+          { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "Errand Running" } }
+        ]
       }
     }
     </script>

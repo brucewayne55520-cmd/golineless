@@ -2,14 +2,15 @@ import { useState, useMemo, useCallback, useRef, useEffect } from "react";
 import { useLocation } from "wouter";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
-import { MapPin, Calendar, Search, CheckCircle, Clock, Zap, Shield, Star, TrendingUp, Navigation, Timer, Wifi, Camera, CreditCard, User, Loader2, ChevronDown, RotateCw, X } from "lucide-react";
-import { useListAvailableTasks, useAcceptTask, useGetRunnerMe, useToggleOnlineStatus, useGetRunnerReadiness, useGetRunnerEarnings } from "@workspace/api-client-react";
+import { MapPin, Calendar, Search, CheckCircle, Clock, Zap, Shield, Star, TrendingUp, Navigation, Timer, Wifi, Camera, CreditCard, User, Loader2, ChevronDown, RotateCw, X, Briefcase } from "lucide-react";
+import { useListAvailableTasks, useAcceptTask, useGetRunnerMe, useToggleOnlineStatus, useGetRunnerReadiness, useGetRunnerEarnings, useGetActiveTask } from "@workspace/api-client-react";
 import type { Task, Runner } from "@workspace/api-client-react";
 import { RunnerBottomNav } from "@/components/BottomNav";
 import { CategoryIcon } from "@/components/CategoryIcon";
 import { CATEGORY_NAMES, formatCurrency } from "@/lib/utils";
 import { NAVY, NAVY_GRAD, GOLD, GOLD_GRAD } from "@/lib/theme";
 import { EmptyState } from "@/components/EmptyState";
+import { useGpsTracking } from "@/hooks/useGpsTracking";
 
 const BG = "#080E1E";
 
@@ -297,7 +298,6 @@ export default function RunnerFeed() {
     if (runner?.id && socketRef.current?.connected) {
       socketRef.current.emit("join_comrades_room", { runnerId: runner.id });
     } else if (runner?.id && socketRef.current) {
-      // Wait for socket to connect before joining room (use once to avoid listener leak)
       socketRef.current.once("connect", () => {
         socketRef.current?.emit("join_comrades_room", { runnerId: runner.id });
       });
@@ -329,6 +329,13 @@ export default function RunnerFeed() {
   }, [expandedTaskId, fetchTaskDetail]);
 
   const isOnline = runner?.isOnline ?? false;
+
+  // H9: Check for active task to show back-to-active banner (only when online)
+  const { data: activeTask } = useGetActiveTask({ query: { queryKey: ["activeTask"], refetchInterval: isOnline ? 30000 : false, retry: false, enabled: isOnline } });
+
+  // C2+H1+M1: Use shared GPS tracking hook to emit location every 10s while online
+  useGpsTracking({ enabled: isOnline, taskId: null, runnerId: runner?.id, socketRef });
+
   const totalTasks = runner?.totalTasks ?? 0;
   const rating = runner?.rating ? Number(runner.rating) : 0;
   const trust = getTrustLevel(totalTasks, rating);
@@ -461,6 +468,25 @@ export default function RunnerFeed() {
               {runner.kycStatus === "rejected" ? "Resubmit KYC →" : "Complete KYC →"}
             </button>
           </p>
+        </div>
+      )}
+
+      {/* H9: Active task banner */}
+      {activeTask && (
+        <div className="mx-4 mt-4">
+          <button
+            onClick={() => navigate("/runner/active")}
+            className="w-full bg-green-500/15 border border-green-500/30 rounded-2xl px-4 py-3 flex items-center gap-3 hover:bg-green-500/20 transition-colors"
+          >
+            <div className="w-10 h-10 rounded-xl bg-green-500/20 flex items-center justify-center flex-shrink-0">
+              <Briefcase size={18} className="text-green-400" />
+            </div>
+            <div className="flex-1 text-left">
+              <p className="text-green-400 font-bold text-sm">Active Task in Progress</p>
+              <p className="text-green-400/60 text-xs">Task #{activeTask.id} · {activeTask.status?.replace(/_/g, " ")}</p>
+            </div>
+            <span className="text-green-400 text-xs font-bold">→ Go</span>
+          </button>
         </div>
       )}
 

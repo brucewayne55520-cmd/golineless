@@ -13,32 +13,59 @@ export default function AdminSettings() {
     if (settings) setForm(settings);
   }, [settings]);
 
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
+
+  const validateForm = (): boolean => {
+    const errors: Record<string, string> = {};
+    // M7: Validate numeric fields
+    if (form?.runnerPayoutPercent != null && (form.runnerPayoutPercent < 0 || form.runnerPayoutPercent > 100)) {
+      errors.runnerPayoutPercent = "Must be between 0 and 100";
+    }
+    if (form?.freeWaitingMinutes != null && form.freeWaitingMinutes < 0) {
+      errors.freeWaitingMinutes = "Must be 0 or more";
+    }
+    if (form?.waitingChargePerMinute != null && form.waitingChargePerMinute < 0) {
+      errors.waitingChargePerMinute = "Must be 0 or more";
+    }
+    // M14: Validate UPI ID format (user@provider pattern)
+    if (form?.upiId && !/^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+$/.test(form.upiId)) {
+      errors.upiId = "Invalid UPI ID format (e.g. name@upi)";
+    }
+    setFormErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
   const handleSave = () => {
     if (!form) return;
+    if (!validateForm()) { toast.error("Please fix validation errors"); return; }
     updateSettings.mutate({ data: form as import("@workspace/api-client-react").AdminSettingsUpdate }, {
       onSuccess: () => { toast.success("Settings saved!"); refetch(); },
       onError: () => toast.error("Failed to save"),
     });
   };
 
-  const set = <K extends keyof AdminSettings>(key: K, val: AdminSettings[K]) => setForm((prev: AdminSettings | null) => ({ ...prev, [key]: val }));
+  const set = <K extends keyof AdminSettings>(key: K, val: AdminSettings[K]) => {
+    // Clear per-field error on edit
+    setFormErrors(prev => { const next = { ...prev }; delete next[key]; return next; });
+    setForm((prev: AdminSettings | null) => ({ ...prev, [key]: val }));
+  };
 
   return (
-    <div className="flex min-h-screen bg-gray-50">
+    <div className="flex min-h-screen gl-surface dark:bg-[#0A0E1A]">
       <AdminSidebar />
       <main className="flex-1 overflow-y-auto p-6">
         <div className="mb-5">
-          <h1 className="text-2xl font-black text-[#1A1A2E]">Settings</h1>
+          <h1 className="text-2xl font-bold text-[#0A1628] dark:text-[#F5F0E8]">Settings</h1>
         </div>
 
         {isLoading || !form ? (
           <div className="max-w-2xl space-y-4">
-            {[1,2,3,4].map(i => <div key={i} className="h-24 bg-gray-200 rounded-2xl animate-pulse" />)}
+            {[1,2,3,4].map(i => <div key={i} className="h-24 bg-[#E5E0D8] rounded-2xl animate-pulse" />)}
           </div>
         ) : (
           <div className="max-w-2xl space-y-5">
-            <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
-              <h2 className="font-bold text-[#1A1A2E] mb-4">App Info</h2>
+            <div className="bg-white dark:bg-[#111827] rounded-2xl p-5 gl-shadow-md border border-[#E5E0D8] dark:border-[#1F2937]">
+              <h2 className="font-bold text-[#0A1628] dark:text-[#F5F0E8] mb-4">App Info</h2>
               <div className="space-y-3">
                 {[
                   { key: "appName" as const, label: "App Name" },
@@ -48,19 +75,19 @@ export default function AdminSettings() {
                   { key: "whatsappNumber" as const, label: "WhatsApp Number" },
                 ].map(f => (
                   <div key={f.key}>
-                    <label className="text-xs font-medium text-gray-500 mb-1 block">{f.label}</label>
+                    <label className="text-xs font-medium text-[#6B7280] mb-1 block">{f.label}</label>
                     <input
                       value={form[f.key] ?? ""}
                       onChange={e => set(f.key, e.target.value)}
-                      className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#6C3FD4]"
+                      className="w-full border border-[#E5E0D8] dark:border-[#374151] rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#0A1628] bg-white dark:bg-[#1F2937] dark:text-[#F5F0E8] gl-transition"
                     />
                   </div>
                 ))}
               </div>
             </div>
 
-            <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
-              <h2 className="font-bold text-[#1A1A2E] mb-4">Platform Settings</h2>
+            <div className="bg-white dark:bg-[#111827] rounded-2xl p-5 gl-shadow-md border border-[#E5E0D8] dark:border-[#1F2937]">
+              <h2 className="font-bold text-[#0A1628] dark:text-[#F5F0E8] mb-4">Platform Settings</h2>
               <div className="space-y-3">
                 {[
                   { key: "runnerPayoutPercent" as const, label: "Runner Payout %", type: "number" },
@@ -69,20 +96,20 @@ export default function AdminSettings() {
                   { key: "maxTasksPerRunnerPerDay" as const, label: "Max Tasks/Runner/Day", type: "number" },
                 ].map(f => (
                   <div key={f.key}>
-                    <label className="text-xs font-medium text-gray-500 mb-1 block">{f.label}</label>
+                    <label className="text-xs font-medium text-[#6B7280] mb-1 block">{f.label}</label>
                     <input
                       type={f.type}
                       value={form[f.key] ?? ""}
                       onChange={e => set(f.key, Number(e.target.value))}
-                      className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#6C3FD4]"
+                      className="w-full border border-[#E5E0D8] dark:border-[#374151] rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#0A1628] bg-white dark:bg-[#1F2937] dark:text-[#F5F0E8] gl-transition"
                     />
                   </div>
                 ))}
               </div>
             </div>
 
-            <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
-              <h2 className="font-bold text-[#1A1A2E] mb-4">Phase 6: Revenue Settings</h2>
+            <div className="bg-white dark:bg-[#111827] rounded-2xl p-5 gl-shadow-md border border-[#E5E0D8] dark:border-[#1F2937]">
+              <h2 className="font-bold text-[#0A1628] dark:text-[#F5F0E8] mb-4">Phase 6: Revenue Settings</h2>
               <div className="space-y-3">
                 {[
                   { key: "freeWaitingMinutes" as const, label: "Free Waiting Minutes", type: "number" },
@@ -100,15 +127,15 @@ export default function AdminSettings() {
                       step={f.step}
                       value={form[f.key] ?? ""}
                       onChange={e => set(f.key, Number(e.target.value))}
-                      className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#6C3FD4]"
+                      className="w-full border border-[#E5E0D8] dark:border-[#374151] rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#0A1628] bg-white dark:bg-[#1F2937] dark:text-[#F5F0E8] gl-transition"
                     />
                   </div>
                 ))}
               </div>
             </div>
 
-            <div className="bg-white rounded-2xl p-5 shadow-sm border border-red-100">
-              <h2 className="font-bold text-red-500 mb-4">Danger Zone</h2>
+            <div className="bg-white dark:bg-[#111827] rounded-2xl p-5 gl-shadow-md border border-[#FEF2F2] dark:border-[#7F1D1D]">
+              <h2 className="font-bold text-[#DC2626] mb-4">Danger Zone</h2>
               <label className="flex items-center gap-3 cursor-pointer">
                 <div
                   onClick={() => set("maintenanceMode", !form.maintenanceMode)}
@@ -117,35 +144,35 @@ export default function AdminSettings() {
                   <div className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${form.maintenanceMode ? "translate-x-6" : "translate-x-0.5"}`} />
                 </div>
                 <div>
-                  <span className="font-medium text-gray-700">Maintenance Mode</span>
+                  <span className="font-medium text-[#374151] dark:text-[#D1D5DB]">Maintenance Mode</span>
                   {form.maintenanceMode && <p className="text-xs text-red-500">App is in maintenance mode. Users cannot book tasks.</p>}
                 </div>
               </label>
             </div>
 
-            <div className="bg-white rounded-2xl p-5 shadow-sm border border-blue-100">
-              <h2 className="font-bold text-blue-700 mb-4">UPI Configuration</h2>
-              <p className="text-xs text-gray-500 mb-4">Configure the UPI ID shown to users for cash payments. Users will see this when paying via UPI QR code.</p>
+            <div className="bg-white dark:bg-[#111827] rounded-2xl p-5 gl-shadow-md border border-[#EEF2FF] dark:border-[#4338CA]">
+              <h2 className="font-bold text-[#4F46E5] mb-4">UPI Configuration</h2>
+              <p className="text-xs text-[#6B7280] mb-4">Configure the UPI ID shown to users for cash payments. Users will see this when paying via UPI QR code.</p>
               <div className="space-y-3">
                 <div>
-                  <label className="text-xs font-medium text-gray-500 mb-1 block">UPI ID</label>
+                  <label className="text-xs font-medium text-[#6B7280] mb-1 block">UPI ID</label>
                   <input
                     value={form.upiId ?? "golineless@upi"}
                     onChange={e => set("upiId", e.target.value)}
                     placeholder="e.g. golineless@upi"
-                    className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className={`w-full border rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 ${formErrors.upiId ? "border-[#FECACA] focus:ring-[#DC2626]" : "border-[#E5E0D8] dark:border-[#374151] focus:ring-[#4F46E5]"} bg-white dark:bg-[#1F2937] dark:text-[#F5F0E8] gl-transition`}
                   />
-                  <p className="text-[10px] text-gray-400 mt-1">This is your Google Pay / PhonePe / Paytm UPI ID</p>
+                  {formErrors.upiId ? <p className="text-[10px] text-[#DC2626] mt-1">{formErrors.upiId}</p> : <p className="text-[10px] text-[#9CA3AF] mt-1">This is your Google Pay / PhonePe / Paytm UPI ID</p>}
                 </div>
                 <div>
-                  <label className="text-xs font-medium text-gray-500 mb-1 block">Payee Name</label>
+                  <label className="text-xs font-medium text-[#6B7280] mb-1 block">Payee Name</label>
                   <input
                     value={form.upiPayeeName ?? "Go LineLess"}
                     onChange={e => set("upiPayeeName", e.target.value)}
                     placeholder="e.g. Go LineLess"
                     className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
-                  <p className="text-[10px] text-gray-400 mt-1">Name shown in UPI payment confirmation</p>
+                  <p className="text-[10px] text-[#9CA3AF] mt-1">Name shown in UPI payment confirmation</p>
                 </div>
               </div>
             </div>
@@ -153,8 +180,8 @@ export default function AdminSettings() {
             <button
               onClick={handleSave}
               disabled={updateSettings.isPending}
-              className="w-full py-4 rounded-2xl text-white font-bold text-lg"
-              style={{ background: "linear-gradient(135deg, #6C3FD4, #9B6FF7)" }}
+              className="w-full py-4 rounded-2xl text-[#0A1628] font-bold text-lg gl-transition hover:gl-shadow-xl active:scale-[0.98]"
+              style={{ background: "linear-gradient(135deg, #D4A843, #E8C96A)" }}
             >
               {updateSettings.isPending ? "Saving..." : "Save Settings"}
             </button>

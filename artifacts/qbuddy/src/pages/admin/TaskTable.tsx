@@ -6,6 +6,9 @@ interface Props {
   tasks: Task[];
   isLoading: boolean;
   onSelect: (task: Required<Task>) => void;
+  selectedIds?: Set<number>;
+  onToggleSelect?: (id: number) => void;
+  onToggleSelectAll?: () => void;
 }
 
 const HEADERS = ["#", "User", "Category", "Location", "Runner", "Price", "Status", "Date", "Action"];
@@ -15,7 +18,7 @@ function LoadingSkeleton() {
     <>
       {Array.from({ length: 5 }).map((_, i) => (
         <tr key={i}>
-          {Array.from({ length: 9 }).map((_, j) => (
+          {Array.from({ length: 10 }).map((_, j) => (
             <td key={j} className="px-4 py-3"><div className="h-4 bg-gray-100 rounded animate-pulse" /></td>
           ))}
         </tr>
@@ -26,13 +29,22 @@ function LoadingSkeleton() {
 
 function EmptyState() {
   return (
-    <tr><td colSpan={9} className="text-center py-12 text-gray-400">No tasks found</td></tr>
+    <tr><td colSpan={10} className="text-center py-12 text-gray-400">No tasks found</td></tr>
   );
 }
 
-function TaskRow({ task, onSelect }: { task: Required<Task>; onSelect: (t: Required<Task>) => void }) {
+function TaskRow({ task, onSelect, selected, onToggle }: { task: Required<Task>; onSelect: (t: Required<Task>) => void; selected?: boolean; onToggle?: (id: number) => void }) {
   return (
-    <tr className="border-b border-gray-50 hover:bg-gray-50 cursor-pointer" onClick={() => onSelect(task)}>
+    <tr className={`border-b border-gray-50 cursor-pointer ${selected ? "bg-blue-50" : "hover:bg-gray-50"}`} onClick={() => onSelect(task)}>
+      <td className="px-4 py-3">
+        <input
+          type="checkbox"
+          checked={selected}
+          onChange={() => onToggle?.(Number(task.id))}
+          onClick={e => e.stopPropagation()}
+          className="rounded"
+        />
+      </td>
       <td className="px-4 py-3 text-gray-500">#{task.id}</td>
       <td className="px-4 py-3 font-medium text-[#1A1A2E]">{task.user?.name ?? task.user?.phone ?? "—"}</td>
       <td className="px-4 py-3">{CATEGORY_NAMES[task.category] ?? task.category}</td>
@@ -50,13 +62,18 @@ function TaskRow({ task, onSelect }: { task: Required<Task>; onSelect: (t: Requi
   );
 }
 
-export default function TaskTable({ tasks, isLoading, onSelect }: Props) {
+export default function TaskTable({ tasks, isLoading, onSelect, selectedIds, onToggleSelect, onToggleSelectAll }: Props) {
+  const allSelected = tasks.length > 0 && selectedIds && tasks.every(t => selectedIds.has(Number(t.id)));
+
   return (
     <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-gray-100">
+              <th className="px-4 py-3">
+                <input type="checkbox" checked={allSelected} onChange={onToggleSelectAll} className="rounded" />
+              </th>
               {HEADERS.map(h => (
                 <th key={h} className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">{h}</th>
               ))}
@@ -68,7 +85,15 @@ export default function TaskTable({ tasks, isLoading, onSelect }: Props) {
             ) : tasks.length === 0 ? (
               <EmptyState />
             ) : (
-              tasks.map(task => <TaskRow key={task.id} task={task as Required<Task>} onSelect={onSelect} />)
+              tasks.map(task => (
+                <TaskRow
+                  key={task.id}
+                  task={task as Required<Task>}
+                  onSelect={onSelect}
+                  selected={selectedIds?.has(Number(task.id))}
+                  onToggle={onToggleSelect}
+                />
+              ))
             )}
           </tbody>
         </table>

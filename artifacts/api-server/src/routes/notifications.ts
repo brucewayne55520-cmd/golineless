@@ -92,4 +92,7 @@ router.post("/notifications/read-all", async (req, res): Promise<void> => {
   res.json({ message: "All notifications marked as read" });
 });
 
+// B9: POST /admin/notifications/broadcast — duplicate removed (canonical endpoint is in admin.ts)
+// The admin.ts version includes audit logging. This file only handles user/runner notification CRUD.
+
 export default router;

@@ -1,8 +1,7 @@
 import { Router, type IRouter } from "express";
-import { db, tasksTable, runnersTable, usersTable, subscriptionsTable, notificationsTable, runnerLocationsTable, adminSettingsTable, reviewsTable, runnerPayoutsTable, paymentAuditLogTable } from "@workspace/db";
+import { db, tasksTable, runnersTable, usersTable, subscriptionsTable, notificationsTable, adminSettingsTable, adminsTable, supportTicketsTable, reviewsTable, runnerPayoutsTable, paymentAuditLogTable } from "@workspace/db";
 import { eq, and, gte, desc, count, sql, inArray } from "drizzle-orm";
-import { requireAdmin } from "../lib/auth";
-import { calculatePilotMetrics } from "../lib/revenue-engine";
+import { requireAdmin, getUserFromToken, getRunnerFromToken, extractToken, hashPassword } from "../lib/auth";
 import { logger } from "../lib/logger";
 import { validateBody } from "../lib/validate";
 import { decrypt, isEncrypted } from "../lib/crypto";
@@ -24,62 +23,154 @@ function getCachedStats<T>(key: string, ttlMs: number, compute: () => Promise<T>
 }
 
 // GET /admin/stats
+// C1 FIX: SQL aggregation instead of loading ALL tasks + runners into memory
 router.get("/admin/stats", requireAdmin, async (_req, res): Promise<void> => {
   const today = new Date(); today.setHours(0, 0, 0, 0);
+  const weekStart = new Date(); weekStart.setDate(weekStart.getDate() - 7);
+  const monthStart = new Date(); monthStart.setDate(1);
 
-  // Fix #1: Parallel targeted queries instead of full-table loads (~90% less memory)
-  const cacheKey = `admin_stats_${today.toISOString().split('T')[0]}`;
+  const cacheKey = `admin_stats_v2_${today.toISOString().split('T')[0]}`;
   const result = await getCachedStats(cacheKey, 30_000, async () => {
-  const [
-    todayTasksData, activeTasks, completedTasks, allRunners,
-    totalTaskCount, categoryStats, queueTasks,
-    totalCancelledCount, uniqueUsersResult, uniqueComradesResult, totalPendingCount,
-    recentReviewsResult,
-  ] = await Promise.all([
-    db.select().from(tasksTable).where(gte(tasksTable.createdAt, today)),
-    db.select().from(tasksTable).where(inArray(tasksTable.status, ["pending","assigned","on_the_way","at_location","in_progress"])),
-    db.select().from(tasksTable).where(eq(tasksTable.status, "completed")),
-    db.select().from(runnersTable),
-    db.select({ count: count() }).from(tasksTable),
-    db.select({ category: tasksTable.category, status: tasksTable.status, cnt: count() }).from(tasksTable).groupBy(tasksTable.category, tasksTable.status),
-    db.select().from(tasksTable).where(sql`(${tasksTable.queueType} IS NOT NULL AND ${tasksTable.queueType} != '') OR (${tasksTable.tokenNumber} IS NOT NULL AND ${tasksTable.tokenNumber} != '')`),
-    db.select({ count: count() }).from(tasksTable).where(eq(tasksTable.status, "cancelled")),
-    db.select({ cnt: sql<number>`COUNT(DISTINCT ${tasksTable.userId})` }).from(tasksTable),
-    db.select({ cnt: sql<number>`COUNT(DISTINCT ${tasksTable.runnerId})` }).from(tasksTable).where(sql`${tasksTable.runnerId} IS NOT NULL`),
-    db.select({ count: count() }).from(tasksTable).where(eq(tasksTable.status, "pending")),
-    db.select({ cnt: count() }).from(reviewsTable).where(gte(reviewsTable.createdAt, new Date(Date.now() - 7 * 24 * 60 * 60 * 1000))),
-  ]);
+    const [
+      todayAgg, activeAgg, completedAgg, runnerAgg,
+      totalTaskCount, categoryStats, queueTaskRows,
+      cancelledCount, uniqueUsersResult, uniqueComradesResult, pendingCount,
+      recentReviewsResult, weekRevenue, monthRevenue,
+      trustTop5, trustBottom5, runnerOnlineOnTask,
+      pilotTaskAgg, pilotUserCount,
+    ] = await Promise.all([
+      // Today's tasks aggregated
+      db.select({
+        count: count(),
+        completed: sql<number>`COUNT(CASE WHEN ${tasksTable.status} = 'completed' THEN 1 END)`,
+        cancelled: sql<number>`COUNT(CASE WHEN ${tasksTable.status} = 'cancelled' THEN 1 END)`,
+        gmvToday: sql<number>`COALESCE(SUM(CASE WHEN ${tasksTable.status} = 'completed' THEN ${tasksTable.price}::numeric ELSE 0 END), 0)`,
+        platformRevenue: sql<number>`COALESCE(SUM(CASE WHEN ${tasksTable.status} = 'completed' THEN ${tasksTable.platformFee}::numeric ELSE 0 END), 0)`,
+        runnerPayouts: sql<number>`COALESCE(SUM(CASE WHEN ${tasksTable.status} = 'completed' THEN ${tasksTable.runnerEarning}::numeric ELSE 0 END), 0)`,
+      }).from(tasksTable).where(gte(tasksTable.createdAt, today)),
+      // Active tasks aggregated + stuck count (age > 3 hours)
+      db.select({
+        count: sql<number>`COUNT(CASE WHEN ${tasksTable.status} IN ('pending','assigned','on_the_way','at_location','in_progress') THEN 1 END)`,
+        stuck: sql<number>`COUNT(CASE WHEN ${tasksTable.status} IN ('assigned','on_the_way','in_progress') AND ${tasksTable.createdAt} < NOW() - INTERVAL '3 hours' THEN 1 END)`,
+      }).from(tasksTable),
+      // ALL completed tasks aggregated (no row-level load)
+      db.select({
+        count: count(),
+        taskRevenue: sql<number>`COALESCE(SUM(${tasksTable.price}::numeric), 0)`,
+        waitingRevenue: sql<number>`COALESCE(SUM(${tasksTable.waitingChargeAmount}::numeric), 0)`,
+        priorityRevenue: sql<number>`COALESCE(SUM(${tasksTable.priorityFee}::numeric), 0)`,
+        subscriptionRevenue: sql<number>`COALESCE(SUM(${tasksTable.platformFee}::numeric), 0)`,
+        avgWaitTimeAll: sql<number>`COALESCE(ROUND(AVG(CASE WHEN ${tasksTable.totalWaitingMinutes} > 0 THEN ${tasksTable.totalWaitingMinutes} END)), 0)`,
+      }).from(tasksTable).where(eq(tasksTable.status, "completed")),
+      // Runner aggregation
+      db.select({
+        total: count(),
+        kycPending: sql<number>`COUNT(CASE WHEN ${runnersTable.kycStatus} = 'pending' THEN 1 END)`,
+        onlineVerified: sql<number>`COUNT(CASE WHEN ${runnersTable.isOnline} = true AND ${runnersTable.kycStatus} = 'verified' THEN 1 END)`,
+        offline: sql<number>`COUNT(CASE WHEN ${runnersTable.isOnline} = false OR ${runnersTable.kycStatus} != 'verified' THEN 1 END)`,
+        avgTrustScore: sql<number>`COALESCE(ROUND(AVG(CASE WHEN ${runnersTable.kycStatus} = 'verified' THEN ${runnersTable.trustScore} END)), 0)`,
+        riskComrades: sql<number>`COUNT(CASE WHEN ${runnersTable.kycStatus} = 'verified' AND (${runnersTable.trustScore} < 60 OR ${runnersTable.trustScore} IS NULL) THEN 1 END)`,
+      }).from(runnersTable),
+      // Total task count
+      db.select({ count: count() }).from(tasksTable),
+      // Category stats (GROUP BY)
+      db.select({ category: tasksTable.category, status: tasksTable.status, cnt: count() }).from(tasksTable).groupBy(tasksTable.category, tasksTable.status),
+      // Queue tasks — need individual rows for gap calculation
+      db.select({
+        id: tasksTable.id, status: tasksTable.status, category: tasksTable.category,
+        tokenNumber: tasksTable.tokenNumber, currentToken: tasksTable.currentToken,
+      }).from(tasksTable).where(sql`(
+        (${tasksTable.queueType} IS NOT NULL AND ${tasksTable.queueType} != '') OR
+        (${tasksTable.tokenNumber} IS NOT NULL AND ${tasksTable.tokenNumber} != '')
+      )`),
+      // Cancelled count
+      db.select({ count: count() }).from(tasksTable).where(eq(tasksTable.status, "cancelled")),
+      // Unique users
+      db.select({ cnt: sql<number>`COUNT(DISTINCT ${tasksTable.userId})` }).from(tasksTable),
+      // Unique comrades
+      db.select({ cnt: sql<number>`COUNT(DISTINCT ${tasksTable.runnerId})` }).from(tasksTable).where(sql`${tasksTable.runnerId} IS NOT NULL`),
+      // Pending count
+      db.select({ count: count() }).from(tasksTable).where(eq(tasksTable.status, "pending")),
+      // Recent reviews (7 days)
+      db.select({ cnt: count() }).from(reviewsTable).where(gte(reviewsTable.createdAt, new Date(Date.now() - 7 * 24 * 60 * 60 * 1000))),
+      // Revenue this week
+      db.select({
+        revenueThisWeek: sql<number>`COALESCE(SUM(CASE WHEN ${tasksTable.completedAt} >= ${weekStart} THEN ${tasksTable.price}::numeric ELSE 0 END), 0)`,
+      }).from(tasksTable).where(eq(tasksTable.status, "completed")),
+      // Revenue this month
+      db.select({
+        revenueThisMonth: sql<number>`COALESCE(SUM(CASE WHEN ${tasksTable.completedAt} >= ${monthStart} THEN ${tasksTable.price}::numeric ELSE 0 END), 0)`,
+      }).from(tasksTable).where(eq(tasksTable.status, "completed")),
+      // Top 5 trusted comrades
+      db.select({
+        id: runnersTable.id, name: runnersTable.name, phone: runnersTable.phone,
+        trustScore: runnersTable.trustScore, trustBadge: runnersTable.trustBadge,
+        tasksCompleted: runnersTable.tasksCompleted,
+      }).from(runnersTable)
+        .where(eq(runnersTable.kycStatus, "verified"))
+        .orderBy(desc(runnersTable.trustScore))
+        .limit(5),
+      // Bottom 5 trust scores
+      db.select({
+        id: runnersTable.id, name: runnersTable.name, phone: runnersTable.phone,
+        trustScore: runnersTable.trustScore, trustBadge: runnersTable.trustBadge,
+        tasksCompleted: runnersTable.tasksCompleted,
+      }).from(runnersTable)
+        .where(eq(runnersTable.kycStatus, "verified"))
+        .orderBy(runnersTable.trustScore)
+        .limit(5),
+      // Count distinct runners currently on task
+      db.select({
+        cnt: sql<number>`COUNT(DISTINCT ${tasksTable.runnerId})`,
+      }).from(tasksTable)
+        .where(and(
+          inArray(tasksTable.status, ["on_the_way","at_location","in_progress"]),
+          sql`${tasksTable.runnerId} IS NOT NULL`,
+        )),
+      // Pilot metrics: task aggregates (no full row load)
+      db.select({
+        total: count(),
+        completed: sql<number>`COUNT(CASE WHEN ${tasksTable.status} = 'completed' THEN 1 END)`,
+        uniqueUsers: sql<number>`COUNT(DISTINCT ${tasksTable.userId})`,
+        uniqueComrades: sql<number>`COUNT(DISTINCT ${tasksTable.runnerId})`,
+        avgAcceptanceTime: sql<number>`COALESCE(ROUND(AVG(CASE WHEN ${tasksTable.timeToAcceptance} IS NOT NULL THEN ${tasksTable.timeToAcceptance} END)), 0)`,
+        avgWaitTime: sql<number>`COALESCE(ROUND(AVG(CASE WHEN ${tasksTable.totalWaitingMinutes} > 0 THEN ${tasksTable.totalWaitingMinutes} END)), 0)`,
+      }).from(tasksTable),
+      // Pilot metrics: user count
+      db.select({ count: count() }).from(usersTable),
+    ]);
 
-  return {
-    todayTasksData, activeTasks, completedTasks, allRunners,
-    totalTaskCount, categoryStats, queueTasks,
-    totalCancelledCount, uniqueUsersResult, uniqueComradesResult, totalPendingCount,
-    recentReviewsResult,
-  };
+    return {
+      todayAgg, activeAgg, completedAgg, runnerAgg,
+      totalTaskCount, categoryStats, queueTaskRows,
+      cancelledCount, uniqueUsersResult, uniqueComradesResult, pendingCount,
+      recentReviewsResult, weekRevenue, monthRevenue,
+      trustTop5, trustBottom5, runnerOnlineOnTask,
+      pilotTaskAgg, pilotUserCount,
+    };
   });
 
-  const { todayTasksData, activeTasks, completedTasks, allRunners, totalTaskCount, categoryStats, queueTasks, totalCancelledCount, uniqueUsersResult, uniqueComradesResult, totalPendingCount, recentReviewsResult } = result;
+  // Destructure arrays and extract [0] for single-row results
+  const [t] = result.todayAgg;
+  const [active] = result.activeAgg;
+  const [c] = result.completedAgg;
+  const [r] = result.runnerAgg;
+  const [onTaskRow] = result.runnerOnlineOnTask;
 
-  const totalTasksToday = todayTasksData.length;
-  const activeNow = activeTasks.length;
-  const completedToday = todayTasksData.filter(t => t.status === "completed").length;
-  const cancelledToday = todayTasksData.filter(t => t.status === "cancelled").length;
-  const gmvToday = todayTasksData.filter(t => t.status === "completed").reduce((s, t) => s + Number(t.price || 0), 0);
-  const platformRevenue = todayTasksData.filter(t => t.status === "completed").reduce((s, t) => s + Number(t.platformFee || 0), 0);
-  const runnerPayouts = todayTasksData.filter(t => t.status === "completed").reduce((s, t) => s + Number(t.runnerEarning || 0), 0);
+  const totalTasksToday = Number(t.count);
+  const activeNow = Number(active.count);
+  const completedToday = Number(t.completed);
+  const cancelledToday = Number(t.cancelled);
+  const gmvToday = Number(t.gmvToday);
+  const platformRevenue = Number(t.platformRevenue);
+  const runnerPayouts = Number(t.runnerPayouts);
+  const stuckTasks = Number(active.stuck);
+  const newReviews = Number(result.recentReviewsResult[0]?.cnt ?? 0);
+  const totalRunnersOnline = Number(r.onlineVerified);
+  const totalRunnersOnTask = Number(onTaskRow.cnt ?? 0);
+  const totalRunnersOffline = Number(r.offline);
 
-  const kycPending = allRunners.filter(r => r.kycStatus === "pending").length;
-  const stuckTasks = activeTasks.filter(t => {
-    if (!["assigned","on_the_way","in_progress"].includes(t.status)) return false;
-    const ageHours = (Date.now() - new Date(t.createdAt).getTime()) / 3600000;
-    return ageHours > 3;
-  }).length;
-  const newReviews = recentReviewsResult[0]?.cnt ?? 0;
-  const totalRunnersOnline = allRunners.filter(r => r.isOnline && r.kycStatus === "verified").length;
-  const totalRunnersOnTask = allRunners.filter(r => r.isOnline && activeTasks.some(t => t.runnerId === r.id && ["on_the_way","at_location","in_progress"].includes(t.status))).length;
-  const totalRunnersOffline = allRunners.filter(r => !r.isOnline || r.kycStatus !== "verified").length;
-
-  // Hub-specific stats — computed from categoryStats (SQL GROUP BY) instead of full-table filter
+  // Hub-specific stats from categoryStats (SQL GROUP BY)
   const hubCategories: Record<string, string[]> = {
     healthcare: ["hospital","medicine"],
     documentation: ["document","govt_office"],
@@ -90,7 +181,7 @@ router.get("/admin/stats", requireAdmin, async (_req, res): Promise<void> => {
   const hubStats: Record<string, { pending: number; active: number; completed: number; total: number }> = {};
   for (const [hub, cats] of Object.entries(hubCategories)) {
     const stats = { pending: 0, active: 0, completed: 0, total: 0 };
-    for (const s of categoryStats) {
+    for (const s of result.categoryStats) {
       if (cats.includes(s.category)) {
         if (s.status === "pending") stats.pending += s.cnt;
         if (["assigned","on_the_way","at_location","in_progress"].includes(s.status)) stats.active += s.cnt;
@@ -101,8 +192,8 @@ router.get("/admin/stats", requireAdmin, async (_req, res): Promise<void> => {
     hubStats[hub] = stats;
   }
 
-  // Phase 4: Queue Intelligence Metrics — queueTasks loaded via targeted SQL query
-  const activeQueueTasks = queueTasks.filter(t =>
+  // Queue Intelligence Metrics — queueTaskRows is a small targeted query
+  const activeQueueTasks = result.queueTaskRows.filter(t =>
     ["assigned","on_the_way","at_location","in_progress","waiting_started"].includes(t.status) && t.currentToken
   );
   const queueGaps = activeQueueTasks.map(t => {
@@ -116,52 +207,52 @@ router.get("/admin/stats", requireAdmin, async (_req, res): Promise<void> => {
   const bankQueueTasks = activeQueueTasks.filter(t => t.category === "bank").length;
   const govtQueueTasks = activeQueueTasks.filter(t => t.category === "govt_office").length;
 
-  // Phase 5: Trust Score Metrics
-  const verifiedRunners = allRunners.filter(r => r.kycStatus === "verified");
-  const topComrades = verifiedRunners
-    .sort((a, b) => (b.trustScore ?? 0) - (a.trustScore ?? 0))
-    .slice(0, 5)
-    .map(r => ({ id: r.id, name: r.name ?? r.phone, trustScore: r.trustScore ?? 50, trustBadge: r.trustBadge ?? "improving", tasksCompleted: r.tasksCompleted ?? 0 }));
-  const lowestTrust = verifiedRunners
-    .sort((a, b) => (a.trustScore ?? 50) - (b.trustScore ?? 50))
-    .slice(0, 5)
-    .map(r => ({ id: r.id, name: r.name ?? r.phone, trustScore: r.trustScore ?? 50, trustBadge: r.trustBadge ?? "improving", tasksCompleted: r.tasksCompleted ?? 0 }));
-  const riskComrades = verifiedRunners.filter(r => (r.trustScore ?? 50) < 60).length;
-  const avgTrustScore = verifiedRunners.length > 0
-    ? Math.round(verifiedRunners.reduce((s, r) => s + (r.trustScore ?? 50), 0) / verifiedRunners.length)
-    : 0;
+  // Revenue Analytics — from SQL aggregation (no full-table row load)
+  const taskRevenue = Number(c.taskRevenue);
+  const waitingRevenue = Number(c.waitingRevenue);
+  const priorityRevenue = Number(c.priorityRevenue);
+  const subscriptionRevenue = Number(c.subscriptionRevenue);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const revenueThisWeek = Number(result.weekRevenue[0]?.revenueThisWeek ?? 0);
+  const revenueThisMonth = Number(result.monthRevenue[0]?.revenueThisMonth ?? 0);
 
-  // Phase 6: Revenue Analytics — uses completedTasks from targeted SQL query
-  const taskRevenue = completedTasks.reduce((s, t) => s + Number(t.price || 0), 0);
-  const waitingRevenue = completedTasks.reduce((s, t) => s + Number(t.waitingChargeAmount || 0), 0);
-  const priorityRevenue = completedTasks.reduce((s, t) => s + Number(t.priorityFee || 0), 0);
-  const subscriptionRevenue = completedTasks.reduce((s, t) => s + Number(t.platformFee || 0), 0);
-  const weekStart = new Date(); weekStart.setDate(weekStart.getDate() - 7);
-  const monthStart = new Date(); monthStart.setDate(1);
-  const revenueThisWeek = completedTasks.filter(t => t.completedAt && new Date(t.completedAt) >= weekStart).reduce((s, t) => s + Number(t.price || 0), 0);
-  const revenueThisMonth = completedTasks.filter(t => t.completedAt && new Date(t.completedAt) >= monthStart).reduce((s, t) => s + Number(t.price || 0), 0);
+  // Pilot Monitoring Metrics — from SQL
+  const totalTasks = Number(result.totalTaskCount[0].count);
+  const completedCount = Number(c.count);
+  const pendingTasks = Number(result.pendingCount[0].count);
+  const cancelledTasks = Number(result.cancelledCount[0].count);
+  const activeTaskCount = activeNow;
+  const successRate = totalTasks > 0 ? Math.round((completedCount / totalTasks) * 100) : 0;
+  const acceptanceRate = totalTasks > 0 ? Math.round(((totalTasks - pendingTasks) / totalTasks) * 100) : 0;
+  const completionRate = totalTasks > 0 ? Math.round((completedCount / totalTasks) * 100) : 0;
+  const cancellationRate = totalTasks > 0 ? Math.round((cancelledTasks / totalTasks) * 100) : 0;
 
-  // Phase 7.2: Pilot Monitoring Metrics — uses targeted counts instead of full-table filter
-  const totalTasks = totalTaskCount[0].count;
-  const successRate = totalTasks > 0 ? Math.round((completedTasks.length / totalTasks) * 100) : 0;
-  const acceptanceRate = totalTasks > 0 ? Math.round(((totalTasks - totalPendingCount[0].count) / totalTasks) * 100) : 0;
-  const completionRate = totalTasks > 0 ? Math.round((completedTasks.length / totalTasks) * 100) : 0;
-  const cancellationRate = totalTasks > 0 ? Math.round((totalCancelledCount[0].count / totalTasks) * 100) : 0;
-  const tasksWithWait = completedTasks.filter(t => t.totalWaitingMinutes && t.totalWaitingMinutes > 0);
-  const avgWaitTimeAll = tasksWithWait.length > 0
-    ? Math.round(tasksWithWait.reduce((s, t) => s + (t.totalWaitingMinutes || 0), 0) / tasksWithWait.length)
-    : 0;
+  // Trust Score Metrics — from SQL LIMIT queries (no full runner table load)
+  const topComrades = result.trustTop5.map(r => ({
+    id: r.id, name: r.name ?? r.phone, trustScore: r.trustScore ?? 50,
+    trustBadge: r.trustBadge ?? "improving", tasksCompleted: r.tasksCompleted ?? 0,
+  }));
+  const lowestTrust = result.trustBottom5.map(r => ({
+    id: r.id, name: r.name ?? r.phone, trustScore: r.trustScore ?? 50,
+    trustBadge: r.trustBadge ?? "improving", tasksCompleted: r.tasksCompleted ?? 0,
+  }));
 
-  // Phase 6: Pilot Launch Metrics — merge targeted datasets for pilot calculation
-  const pilotTaskMap = new Map<number, typeof tasksTable.$inferSelect>();
-  for (const t of todayTasksData) pilotTaskMap.set(t.id, t);
-  for (const t of activeTasks) pilotTaskMap.set(t.id, t);
-  for (const t of completedTasks) pilotTaskMap.set(t.id, t);
-  const pilotMetrics = calculatePilotMetrics([...pilotTaskMap.values()], allRunners, await db.select().from(usersTable));
+  // Pilot Launch Metrics — computed from SQL aggregates instead of loading all rows
+  const pilotMetrics = {
+    activeUsers: Number(result.pilotTaskAgg[0]?.uniqueUsers ?? 0),
+    activeComrades: Number(result.pilotTaskAgg[0]?.uniqueComrades ?? 0),
+    completedTasks: Number(result.pilotTaskAgg[0]?.completed ?? 0),
+    totalUsers: Number(result.pilotUserCount[0]?.count ?? 0),
+    totalVerifiedRunners: Number(r.total) - Number(r.kycPending),
+    avgAcceptanceTime: Number(result.pilotTaskAgg[0]?.avgAcceptanceTime ?? 0),
+    avgQueueTime: Number(result.pilotTaskAgg[0]?.avgWaitTime ?? 0),
+    avgTrustScore: Number(r.avgTrustScore),
+  };
 
   res.json({
     totalTasksToday, activeNow, completedToday, cancelledToday, gmvToday, platformRevenue, runnerPayouts,
-    pendingPayouts: runnerPayouts, kycPending, stuckTasks, newReviews,
+    pendingPayouts: runnerPayouts, kycPending: Number(r.kycPending), stuckTasks, newReviews,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     totalRunnersOnline, totalRunnersOnTask, totalRunnersOffline,
     hubStats,
     queueMetrics: {
@@ -174,8 +265,8 @@ router.get("/admin/stats", requireAdmin, async (_req, res): Promise<void> => {
       govtQueueTasks,
     },
     trustMetrics: {
-      avgTrustScore,
-      riskComrades,
+      avgTrustScore: Number(r.avgTrustScore),
+      riskComrades: Number(r.riskComrades),
       topComrades,
       lowestTrust,
     },
@@ -195,14 +286,14 @@ router.get("/admin/stats", requireAdmin, async (_req, res): Promise<void> => {
       acceptanceRate,
       completionRate,
       cancellationRate,
-      avgWaitTimeAll,
+      avgWaitTimeAll: Number(c.avgWaitTimeAll ?? 0),
       totalTasks,
-      completedTasks: completedTasks.length,
-      cancelledTasks: totalCancelledCount[0].count,
-      pendingTasks: totalPendingCount[0].count,
-      activeTasks: activeTasks.length,
-      uniqueUsers: uniqueUsersResult[0].cnt,
-      uniqueComrades: uniqueComradesResult[0].cnt,
+      completedTasks: completedCount,
+      cancelledTasks,
+      pendingTasks,
+      activeTasks: activeTaskCount,
+      uniqueUsers: Number(result.uniqueUsersResult[0].cnt),
+      uniqueComrades: Number(result.uniqueComradesResult[0].cnt),
     }
   });
 });
@@ -294,47 +385,36 @@ router.get("/admin/tasks", requireAdmin, async (req, res): Promise<void> => {
 });
 
 // GET /admin/tasks/dispatch-stats
+// H12 FIX: SQL aggregation instead of loading ALL active tasks + user/runner lookups
 router.get("/admin/tasks/dispatch-stats", requireAdmin, async (_req, res): Promise<void> => {
-  const allTasks = await db.select().from(tasksTable)
+  // Single SQL aggregation — no row-level load, no user/runner batch lookups
+  const [stats] = await db.select({
+    broadcastTasks: sql<number>`COUNT(CASE WHEN ${tasksTable.status} = 'pending' THEN 1 END)`,
+    assignedTasks: sql<number>`COUNT(CASE WHEN ${tasksTable.status} = 'assigned' THEN 1 END)`,
+    inProgressTasks: sql<number>`COUNT(CASE WHEN ${tasksTable.status} IN ('on_the_way','at_location','in_progress') THEN 1 END)`,
+    stuckTasks: sql<number>`COUNT(CASE WHEN ${tasksTable.status} IN ('assigned','on_the_way','in_progress') AND ${tasksTable.createdAt} < NOW() - INTERVAL '3 hours' THEN 1 END)`,
+    total: count(),
+  }).from(tasksTable).where(inArray(tasksTable.status, [
+    "pending","assigned","on_the_way","at_location","in_progress"
+  ]));
+
+  // Fetch only the most recent 10 active tasks for display context (not all 50+)
+  const recentTasks = await db.select({
+    id: tasksTable.id, category: tasksTable.category, status: tasksTable.status,
+    description: tasksTable.description, locationName: tasksTable.locationName,
+    userId: tasksTable.userId, runnerId: tasksTable.runnerId, createdAt: tasksTable.createdAt,
+  }).from(tasksTable)
     .where(inArray(tasksTable.status, ["pending","assigned","on_the_way","at_location","in_progress"]))
     .orderBy(desc(tasksTable.createdAt))
-    .limit(50);
-
-  // Fix #20: Batch user/runner lookups instead of N+1 individual queries
-  const dispatchUserIds = [...new Set(allTasks.filter(t => t.userId).map(t => t.userId!))];
-  const dispatchRunnerIds = [...new Set(allTasks.filter(t => t.runnerId).map(t => t.runnerId!))];
-  const [batchUsers2, batchRunners2] = await Promise.all([
-    dispatchUserIds.length > 0 ? db.select().from(usersTable).where(inArray(usersTable.id, dispatchUserIds)) : Promise.resolve([]),
-    dispatchRunnerIds.length > 0 ? db.select().from(runnersTable).where(inArray(runnersTable.id, dispatchRunnerIds)) : Promise.resolve([]),
-  ]);
-  const userMap2 = new Map(batchUsers2.map(u => [u.id, u]));
-  const runnerMap2 = new Map(batchRunners2.map(r => [r.id, r]));
-
-  const enriched = allTasks.map(task => {
-    const user = task.userId ? userMap2.get(task.userId) ?? null : null;
-    const runner = task.runnerId ? runnerMap2.get(task.runnerId) ?? null : null;
-    const safeUser = user ? (({ otp, otpExpiresAt, ...u }) => u)(user) : null;
-    const safeRunner = runner ? (({ otp, otpExpiresAt, aadhaarNumber, ...r }) => r)(runner) : null;
-    return { ...task, user: safeUser, runner: safeRunner };
-  });
-
-  const stuckTasks = enriched.filter(t => {
-    if (!["assigned","on_the_way","in_progress"].includes(t.status)) return false;
-    const ageHours = (Date.now() - new Date(t.createdAt).getTime()) / 3600000;
-    return ageHours > 3;
-  });
-
-  const broadcastTasks = enriched.filter(t => t.status === "pending").length;
-  const assignedTasks = enriched.filter(t => t.status === "assigned").length;
-  const inProgressTasks = enriched.filter(t => ["on_the_way","at_location","in_progress"].includes(t.status)).length;
+    .limit(10);
 
   res.json({
-    tasks: enriched,
-    broadcastTasks,
-    assignedTasks,
-    inProgressTasks,
-    stuckTasks: stuckTasks.length,
-    total: allTasks.length,
+    tasks: recentTasks,
+    broadcastTasks: Number(stats.broadcastTasks),
+    assignedTasks: Number(stats.assignedTasks),
+    inProgressTasks: Number(stats.inProgressTasks),
+    stuckTasks: Number(stats.stuckTasks),
+    total: Number(stats.total),
   });
 });
 
@@ -376,6 +456,49 @@ router.get("/admin/fraud-flags", requireAdmin, async (_req, res): Promise<void> 
     total: flags.length,
     highSeverity: flags.filter(f => f.severity === "high").length,
     mediumSeverity: flags.filter(f => f.severity === "medium").length,
+  });
+});
+
+// DELETE /admin/tasks/:id — soft-delete task (set status to deleted)
+router.delete("/admin/tasks/:id", requireAdmin, async (req, res): Promise<void> => {
+  const id = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id, 10);
+  const [existing] = await db.select().from(tasksTable).where(eq(tasksTable.id, id));
+  if (!existing) { res.status(404).json({ error: "Task not found" }); return; }
+  if (existing.status === "completed" || existing.status === "cancelled") {
+    res.status(400).json({ error: `Cannot delete task with status '${existing.status}'` }); return;
+  }
+  await db.update(tasksTable).set({ status: "cancelled", internalNotes: (existing.internalNotes ? existing.internalNotes + "\n" : "") + `[Soft-deleted by admin]` }).where(eq(tasksTable.id, id));
+  // Audit log
+  await db.insert(paymentAuditLogTable).values({
+    taskId: id, previousStatus: existing.status, newStatus: "cancelled",
+    actor: req.admin?.username ?? "admin", actorType: "admin",
+    reason: `Admin soft-deleted task #${id}`,
+    metadata: JSON.stringify({ taskId: id, action: "soft_delete", previousStatus: existing.status }),
+  });
+  res.json({ message: "Task soft-deleted", id, previousStatus: existing.status });
+});
+
+// GET /admin/payments/summary — payment overview with totals
+router.get("/admin/payments/summary", requireAdmin, async (_req, res): Promise<void> => {
+  const [agg] = await db.select({
+    totalRevenue: sql<number>`COALESCE(SUM(CASE WHEN ${tasksTable.status} = 'completed' THEN ${tasksTable.price}::numeric ELSE 0 END), 0)`,
+    totalPlatformFees: sql<number>`COALESCE(SUM(CASE WHEN ${tasksTable.status} = 'completed' THEN ${tasksTable.platformFee}::numeric ELSE 0 END), 0)`,
+    totalRunnerPayouts: sql<number>`COALESCE(SUM(CASE WHEN ${tasksTable.status} = 'completed' THEN ${tasksTable.runnerEarning}::numeric ELSE 0 END), 0)`,
+    totalWaitingCharges: sql<number>`COALESCE(SUM(CASE WHEN ${tasksTable.status} = 'completed' THEN ${tasksTable.waitingChargeAmount}::numeric ELSE 0 END), 0)`,
+    cashTasks: sql<number>`COUNT(CASE WHEN ${tasksTable.paymentMethod} = 'cash' AND ${tasksTable.status} = 'completed' THEN 1 END)`,
+    onlineTasks: sql<number>`COUNT(CASE WHEN ${tasksTable.paymentMethod} = 'online' AND ${tasksTable.status} = 'completed' THEN 1 END)`,
+    cashPaid: sql<number>`COUNT(CASE WHEN ${tasksTable.paymentMethod} = 'cash' AND ${tasksTable.paymentStatus} = 'paid' THEN 1 END)`,
+    cashPending: sql<number>`COUNT(CASE WHEN ${tasksTable.paymentMethod} = 'cash' AND ${tasksTable.paymentStatus} != 'paid' THEN 1 END)`,
+  }).from(tasksTable);
+  res.json({
+    totalRevenue: Number(agg.totalRevenue),
+    totalPlatformFees: Number(agg.totalPlatformFees),
+    totalRunnerPayouts: Number(agg.totalRunnerPayouts),
+    totalWaitingCharges: Number(agg.totalWaitingCharges),
+    cashTasks: Number(agg.cashTasks),
+    onlineTasks: Number(agg.onlineTasks),
+    cashPaid: Number(agg.cashPaid),
+    cashPending: Number(agg.cashPending),
   });
 });
 
@@ -673,22 +796,31 @@ router.get("/admin/analytics", requireAdmin, async (req, res): Promise<void> => 
 });
 
 // GET /admin/runners/active-locations
+// C7 FIX: SQL JOIN instead of loading ALL tasks + ALL verified runners into memory
 router.get("/admin/runners/active-locations", requireAdmin, async (_req, res): Promise<void> => {
-  const runners = await db.select().from(runnersTable).where(eq(runnersTable.kycStatus, "verified"));
-  const tasks = await db.select().from(tasksTable);
+  // Fetch verified runners with their active task in a single SQL query
+  const rows = await db.execute(sql`
+    SELECT
+      r.id as runner_id, r.name, r.phone, r.avatar, r.rating, r.is_online,
+      r.current_lat, r.current_lng,
+      t.id as task_id, t.category as task_category, t.status as task_status
+    FROM runners r
+    LEFT JOIN tasks t ON t.runner_id = r.id
+      AND t.status IN ('assigned', 'on_the_way', 'at_location', 'in_progress')
+    WHERE r.kyc_status = 'verified'
+  `);
 
-  const markers = runners.map(r => {
-    const activeTask = tasks.find(t => t.runnerId === r.id && ["on_the_way","at_location","in_progress","assigned"].includes(t.status));
+  const markers = (rows.rows as Record<string, unknown>[]).map(r => {
     let status: "available" | "on_task" | "offline";
-    if (!r.isOnline) status = "offline";
-    else if (activeTask) status = "on_task";
+    if (!r.is_online) status = "offline";
+    else if (r.task_id) status = "on_task";
     else status = "available";
     return {
-      runnerId: r.id, name: r.name ?? r.phone, phone: r.phone,
+      runnerId: r.runner_id, name: r.name ?? r.phone, phone: r.phone,
       avatar: r.avatar, rating: r.rating ? Number(r.rating) : null,
-      lat: r.currentLat ? Number(r.currentLat) : null,
-      lng: r.currentLng ? Number(r.currentLng) : null,
-      status, currentTaskId: activeTask?.id ?? null, currentTaskCategory: activeTask?.category ?? null,
+      lat: r.current_lat ? Number(r.current_lat) : null,
+      lng: r.current_lng ? Number(r.current_lng) : null,
+      status, currentTaskId: r.task_id ?? null, currentTaskCategory: r.task_category ?? null,
     };
   });
   res.json(markers);
@@ -1163,6 +1295,265 @@ router.get("/admin/kyc/stale", requireAdmin, async (_req, res): Promise<void> =>
     })),
     totalStale: staleUsers.length + staleRunners.length,
   });
+});
+
+// ========================================================================
+// PHASE 3: Admin Account Management, General PATCH, Broadcast, Support
+// ========================================================================
+
+// B2-B3: GET /admin/admins — list all admin accounts (superadmin only)
+router.get("/admin/admins", requireAdmin, async (req, res): Promise<void> => {
+  if (req.admin?.role !== "superadmin") {
+    res.status(403).json({ error: "Only superadmin can list admin accounts" }); return;
+  }
+  const admins = await db.select({
+    id: adminsTable.id, username: adminsTable.username, name: adminsTable.name,
+    role: adminsTable.role, isActive: adminsTable.isActive,
+    lastLoginAt: adminsTable.lastLoginAt, createdAt: adminsTable.createdAt,
+  }).from(adminsTable).orderBy(desc(adminsTable.createdAt));
+  res.json(admins);
+});
+
+// B2-B3: POST /admin/admins — create a new admin account (superadmin only)
+router.post("/admin/admins", requireAdmin, async (req, res): Promise<void> => {
+  if (req.admin?.role !== "superadmin") {
+    res.status(403).json({ error: "Only superadmin can create admin accounts" }); return;
+  }
+  const { username, password, name, role = "admin" } = req.body;
+  if (!username || !password) {
+    res.status(400).json({ error: "username and password are required" }); return;
+  }
+  if (password.length < 8) {
+    res.status(400).json({ error: "Password must be at least 8 characters" }); return;
+  }
+  const validRoles = ["superadmin", "admin", "support", "ops"];
+  if (!validRoles.includes(role)) {
+    res.status(400).json({ error: `Invalid role. Must be one of: ${validRoles.join(", ")}` }); return;
+  }
+  // Check unique username
+  const [existing] = await db.select().from(adminsTable).where(eq(adminsTable.username, username));
+  if (existing) {
+    res.status(400).json({ error: "Username already exists" }); return;
+  }
+  // FIX: Use hashPassword() from auth.ts for consistent scrypt hashing (not raw SHA-256)
+  const pwHash = hashPassword(password);
+  const [admin] = await db.insert(adminsTable).values({
+    username, passwordHash: pwHash, name: name || username, role, isActive: true,
+  }).returning();
+  // Audit log
+  await db.insert(paymentAuditLogTable).values({
+    taskId: null, previousStatus: null, newStatus: "admin_created",
+    actor: req.admin!.username, actorType: "admin",
+    reason: `Created admin account '${username}' with role '${role}'`,
+    metadata: JSON.stringify({ adminId: admin.id, username, role }),
+  });
+  res.json({ id: admin.id, username: admin.username, name: admin.name, role: admin.role });
+});
+
+// PATCH /admin/runners/:id — general runner update (name, phone, area, city, etc.)
+const adminRunnerPatchSchema = z.object({
+  name: z.string().max(200).optional(),
+  phone: z.string().max(15).optional(),
+  email: z.string().email().optional().nullable(),
+  city: z.string().max(100).optional(),
+  area: z.string().max(100).optional(),
+  gender: z.string().max(20).optional(),
+  trustScore: z.number().int().min(0).max(100).optional(),
+  trustBadge: z.string().max(50).optional(),
+  dispatchAllowed: z.boolean().optional(),
+  isOnline: z.boolean().optional(),
+  specializations: z.array(z.string()).optional(),
+}).passthrough();
+
+router.patch("/admin/runners/:id", requireAdmin, validateBody(adminRunnerPatchSchema), async (req, res): Promise<void> => {
+  const id = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id, 10);
+  const { name, phone, email, city, area, gender, trustScore, trustBadge,
+    dispatchAllowed, isOnline, specializations } = req.body;
+  const updates: Record<string, unknown> = {};
+  if (name !== undefined) updates.name = name;
+  if (phone !== undefined) updates.phone = phone;
+  if (email !== undefined) updates.email = email;
+  if (city !== undefined) updates.city = city;
+  if (area !== undefined) updates.area = area;
+  if (gender !== undefined) updates.gender = gender;
+  if (trustScore !== undefined) updates.trustScore = trustScore;
+  if (trustBadge !== undefined) updates.trustBadge = trustBadge;
+  if (dispatchAllowed !== undefined) updates.dispatchAllowed = dispatchAllowed;
+  if (isOnline !== undefined) updates.isOnline = isOnline;
+  const specsToUpdate = Array.isArray(specializations) ? specializations : null;
+
+  if (Object.keys(updates).length === 0 && !specsToUpdate) {
+    res.status(400).json({ error: "No fields to update" }); return;
+  }
+  const [existing] = await db.select().from(runnersTable).where(eq(runnersTable.id, id));
+  if (!existing) { res.status(404).json({ error: "Runner not found" }); return; }
+  // Regular field updates via Drizzle
+  if (Object.keys(updates).length > 0) {
+    await db.update(runnersTable).set(updates).where(eq(runnersTable.id, id));
+  }
+  // B7 FIX: Use raw SQL for text[] array update (Drizzle .set() doesn't handle arrays correctly)
+  if (specsToUpdate) {
+    await db.execute(sql`UPDATE runners SET specializations = ${specsToUpdate}::text[] WHERE id = ${id}`);
+  }
+  // Always re-fetch once at the end
+  const [updated] = await db.select().from(runnersTable).where(eq(runnersTable.id, id));
+  // Audit log
+  const updatedFields = [...Object.keys(updates), ...(specsToUpdate ? ["specializations"] : [])];
+  await db.insert(paymentAuditLogTable).values({
+    taskId: null, previousStatus: null, newStatus: "runner_updated",
+    actor: req.admin!.username, actorType: "admin",
+    reason: `Admin updated runner #${id}: ${updatedFields.join(", ")}`,
+    metadata: JSON.stringify({ runnerId: id, fields: updatedFields }),
+  });
+  const { otp, otpExpiresAt, aadhaarNumber, ...safe } = updated;
+  res.json({ ...safe, rating: safe.rating ? Number(safe.rating) : null });
+});
+
+// PATCH /admin/users/:id — general user update (name, phone, area, city, etc.)
+const adminUserPatchSchema = z.object({
+  name: z.string().max(200).optional(),
+  phone: z.string().max(15).optional(),
+  email: z.string().email().optional().nullable(),
+  city: z.string().max(100).optional(),
+  area: z.string().max(100).optional(),
+  language: z.string().max(10).optional(),
+}).passthrough();
+
+router.patch("/admin/users/:id", requireAdmin, validateBody(adminUserPatchSchema), async (req, res): Promise<void> => {
+  const id = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id, 10);
+  const { name, phone, email, city, area, language } = req.body;
+  const updates: Record<string, unknown> = {};
+  if (name !== undefined) updates.name = name;
+  if (phone !== undefined) updates.phone = phone;
+  if (email !== undefined) updates.email = email;
+  if (city !== undefined) updates.city = city;
+  if (area !== undefined) updates.area = area;
+  if (language !== undefined) updates.language = language;
+
+  if (Object.keys(updates).length === 0) {
+    res.status(400).json({ error: "No fields to update" }); return;
+  }
+  const [existing] = await db.select().from(usersTable).where(eq(usersTable.id, id));
+  if (!existing) { res.status(404).json({ error: "User not found" }); return; }
+  const [updated] = await db.update(usersTable).set(updates).where(eq(usersTable.id, id)).returning();
+  // Audit log
+  await db.insert(paymentAuditLogTable).values({
+    taskId: null, previousStatus: null, newStatus: "user_updated",
+    actor: req.admin!.username, actorType: "admin",
+    reason: `Admin updated user #${id}: ${Object.keys(updates).join(", ")}`,
+    metadata: JSON.stringify({ userId: id, fields: Object.keys(updates) }),
+  });
+  const { otp, otpExpiresAt, aadhaarNumber, aadhaarFront, aadhaarBack, ...safe } = updated;
+  res.json(safe);
+});
+
+// B5: POST /admin/broadcast — send notification to all users/runners/admins or filtered subset
+router.post("/admin/broadcast", requireAdmin, async (req, res): Promise<void> => {
+  const { title, message, targetRole, type = "broadcast" } = req.body;
+  if (!title || !message) {
+    res.status(400).json({ error: "title and message are required" }); return;
+  }
+  const role = targetRole || "all";
+  const validTargets = ["all", "user", "runner"];
+  if (!validTargets.includes(role)) {
+    res.status(400).json({ error: `targetRole must be one of: ${validTargets.join(", ")}` }); return;
+  }
+  let totalNotifs = 0;
+  const batchSize = 500;
+
+  // B5 FIX: Batch insert using Drizzle's array support (500 at a time) instead of N individual inserts
+  const insertBatch = async (notifs: { type: string; title: string; message: string; isRead: boolean; userId?: number; runnerId?: number }[]) => {
+    if (notifs.length === 0) return;
+    await db.insert(notificationsTable).values(notifs);
+    totalNotifs += notifs.length;
+  };
+
+  if (role === "all" || role === "user") {
+    const [cnt] = await db.select({ count: count() }).from(usersTable);
+    const totalUsers = Number(cnt.count);
+    for (let offset = 0; offset < totalUsers; offset += batchSize) {
+      const users = await db.select({ id: usersTable.id }).from(usersTable).limit(batchSize).offset(offset);
+      await insertBatch(users.map(u => ({ type, title, message, isRead: false, userId: u.id })));
+    }
+  }
+  if (role === "all" || role === "runner") {
+    const [cnt] = await db.select({ count: count() }).from(runnersTable);
+    const totalRunners = Number(cnt.count);
+    for (let offset = 0; offset < totalRunners; offset += batchSize) {
+      const runners = await db.select({ id: runnersTable.id }).from(runnersTable).limit(batchSize).offset(offset);
+      await insertBatch(runners.map(r => ({ type, title, message, isRead: false, runnerId: r.id })));
+    }
+  }
+
+  // Audit log
+  await db.insert(paymentAuditLogTable).values({
+    taskId: null, previousStatus: null, newStatus: "broadcast_sent",
+    actor: req.admin!.username, actorType: "admin",
+    reason: `Broadcast '${title}' to ${role} — ${totalNotifs} notifications sent`,
+    metadata: JSON.stringify({ title, targetRole: role, totalNotifs }),
+  });
+
+  res.json({ success: true, totalNotifications: totalNotifs, targetRole: role });
+});
+
+// H7: POST /support — self-service support ticket creation for users/runners
+// Mounted at POST /api/support via the admin router + /api prefix
+router.post("/support", async (req, res): Promise<void> => {
+  const token = extractToken(req);
+  if (!token) { res.status(401).json({ error: "Authentication required" }); return; }
+  let userId: number | null = null;
+  let runnerId: number | null = null;
+  let actorName = "anonymous";
+  let actorType: "user" | "runner" = "user";
+
+  const user = await getUserFromToken(token);
+  if (user) {
+    userId = user.id;
+    actorName = user.name || `User #${userId}`;
+    actorType = "user";
+  } else {
+    const runner = await getRunnerFromToken(token);
+    if (runner) {
+      runnerId = runner.id;
+      actorName = runner.name || `Runner #${runnerId}`;
+      actorType = "runner";
+    } else {
+      res.status(401).json({ error: "Invalid token" }); return;
+    }
+  }
+
+  const { subject, description, category = "general", taskId } = req.body;
+  if (!subject || !description) {
+    res.status(400).json({ error: "subject and description are required" }); return;
+  }
+  const validCategories = ["general", "complaint", "refund", "escalation", "other"];
+  if (!validCategories.includes(category)) {
+    res.status(400).json({ error: `category must be one of: ${validCategories.join(", ")}` }); return;
+  }
+  // Generate unique ticket ID using timestamp + random hex to avoid collisions
+  const ticketId = `GL-SUP-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
+  const [ticket] = await db.insert(supportTicketsTable).values({
+    ticketId,
+    taskId: taskId || null,
+    userId: userId || null,
+    runnerId: runnerId || null,
+    subject,
+    description,
+    category,
+    status: "open",
+    priority: "normal",
+  }).returning();
+
+  // Notify admins via audit log (no userId/runnerId = won't appear in user feeds)
+  // The audit log entry is queryable from the admin audit-log page
+  await db.insert(paymentAuditLogTable).values({
+    taskId: null, previousStatus: null, newStatus: "support_ticket_created",
+    actor: actorName, actorType,
+    reason: `Support ticket ${ticketId}: ${subject}`,
+    metadata: JSON.stringify({ ticketId, category, subject, description: description.slice(0, 200) }),
+  });
+
+  res.json({ ticket: { id: ticket.id, ticketId, subject, category, status: "open" }, message: "Support ticket created. Our team will respond within 24 hours." });
 });
 
 export default router;

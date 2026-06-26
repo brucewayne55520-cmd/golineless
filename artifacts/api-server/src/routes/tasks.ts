@@ -140,15 +140,30 @@ router.get("/tasks", async (req, res): Promise<void> => {
 });
 
 // GET /tasks/available - for runners (Comrades)
+// B6: Exclude dismissed tasks — runners who tapped "dismiss" should not see those tasks again
 router.get("/tasks/available", requireRunner, async (req, res): Promise<void> => {
+  const runner = req.runner!;
+  const { limit = "20", offset = "0" } = req.query as Record<string, string>;
+
   const tasks = await db
     .select()
     .from(tasksTable)
     .where(eq(tasksTable.status, "pending"))
     .orderBy(desc(tasksTable.createdAt))
-    .limit(20);
+    .limit(Number(limit) + 50); // fetch extra to filter dismissed
 
-  const enriched = await Promise.all(tasks.map(async (task) => {
+  // B6: Filter out tasks this runner has previously declined/dismissed
+  // Use proofPhotos metadata or a simple heuristic: tasks where runner was notified but didn't accept within 5 minutes
+  const availableTasks = tasks.filter(task => {
+    // Exclude tasks where this runner already declined (tracked via fraudFlags)
+    const flags = Array.isArray(task.fraudFlags) ? task.fraudFlags : [];
+    const dismissed = flags.some((f: string) => {
+      try { const parsed = JSON.parse(f); return parsed.type === "runner_dismissed" && parsed.runnerId === runner.id; } catch { return false; }
+    });
+    return !dismissed;
+  });
+
+  const enriched = await Promise.all(availableTasks.slice(0, Number(limit)).map(async (task) => {
     const [user] = task.userId ? await db.select().from(usersTable).where(eq(usersTable.id, task.userId)) : [null];
     const safeUser = user ? (({ otp, otpExpiresAt, phone, ...rest }) => rest)(user) : null;
     return { ...task, user: safeUser, runner: null };
@@ -1775,6 +1790,50 @@ router.get("/tasks/:id/timeline", async (req, res): Promise<void> => {
   }
 
   res.status(401).json({ error: "Invalid or expired token" });
+});
+
+// POST /tasks/:id/escalate — H2: SOS/Emergency escalation endpoint
+router.post("/tasks/:id/escalate", requireRunner, async (req, res): Promise<void> => {
+  const runner = req.runner!;
+  const id = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id, 10);
+  const { reason, severity } = req.body;
+  const validSeverities = ["low", "medium", "high"];
+  const safeSeverity = validSeverities.includes(severity) ? severity : "high";
+
+  const [task] = await db.select().from(tasksTable).where(eq(tasksTable.id, id));
+  if (!task) { res.status(404).json({ error: "Task not found" }); return; }
+  if (task.runnerId !== runner.id) { res.status(403).json({ error: "Not assigned to this task" }); return; }
+
+  const now = new Date();
+  const timelineEntries = task.taskTimeline ? [...task.taskTimeline] : [];
+  const escalateLabel = `Emergency escalated by ${runner.name || "Comrade"}: ${reason || "No reason provided"}`;
+  timelineEntries.push(makeTimelineEntry("escalated", escalateLabel, { severity: safeSeverity, runnerId: runner.id }));
+
+  recordTimelineEvent(id, "escalated", escalateLabel, now, { severity: safeSeverity, runnerId: runner.id });
+
+  await db.update(tasksTable).set({ taskTimeline: timelineEntries }).where(eq(tasksTable.id, id));
+
+  // Notify admin
+  getIo().to("admin_fleet").emit("task_escalated", {
+    taskId: id, runnerId: runner.id, runnerName: runner.name || "Comrade",
+    reason: reason || "No reason",    severity: safeSeverity,
+    timestamp: now.toISOString(),
+  });
+
+  // Notify user if available
+  if (task.userId) {
+    await db.insert(notificationsTable).values({
+      userId: task.userId, type: "task_escalated",
+      title: "Task Escalated",
+      message: `${runner.name || "Your Comrade"} has escalated the task. Our team is reviewing.`,
+      taskId: task.id,
+    });
+  }
+
+  // Record fraud flag for tracking
+  recordFraudFlag({ taskId: id, runnerId: runner.id, type: "emergency_escalation", reason: `${safeSeverity}: ${reason || "No reason"}` });
+
+  res.json({ message: "Escalation submitted. Admin team has been notified.", taskId: id });
 });
 
 export default router;

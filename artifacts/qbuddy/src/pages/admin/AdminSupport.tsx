@@ -1,9 +1,9 @@
 import { useState } from "react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 import AdminSidebar from "@/components/AdminSidebar";
 import { useListSupportTickets, useGetSupportStats, useUpdateSupportTicket } from "@workspace/api-client-react";
-import { Ticket, Clock, CheckCircle2, AlertCircle } from "lucide-react";
+import { Ticket, Clock, CheckCircle2, AlertCircle, X } from "lucide-react";
 import { NAVY } from "@/lib/theme";
 const STATUS_COLORS: Record<string, string> = { open: "#3B82F6", in_progress: "#F59E0B", resolved: "#10B981", closed: "#6B7280" };
 const PRIORITY_COLORS: Record<string, string> = { low: "#9CA3AF", normal: "#3B82F6", high: "#F59E0B", urgent: "#EF4444" };
@@ -25,56 +25,56 @@ export default function AdminSupport() {
   };
 
   return (
-    <div className="flex min-h-screen" style={{ background: "#F0F2F8" }}>
+    <div className="flex min-h-screen gl-surface dark:bg-[#0A0E1A]">
       <AdminSidebar />
       <main className="flex-1 overflow-y-auto p-6">
-        <h1 className="text-xl font-black text-[#0A1628] mb-5">Customer Support Center</h1>
+        <h1 className="text-xl font-bold text-[#0A1628] dark:text-[#F5F0E8] mb-5">Customer Support Center</h1>
 
         {stats && (
           <div className="grid grid-cols-4 gap-4 mb-5">
-            <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 text-center">
+            <div className="bg-white dark:bg-[#111827] rounded-2xl p-4 gl-shadow-md border border-[#E5E0D8] dark:border-[#1F2937] text-center gl-transition">
               <Ticket size={18} className="mx-auto mb-1" style={{ color: NAVY }} />
               <p className="text-2xl font-black" style={{ color: NAVY }}>{stats.total}</p>
-              <p className="text-[10px] text-gray-400">Total Tickets</p>
+              <p className="text-[10px] text-[#9CA3AF]">Total Tickets</p>
             </div>
             <div className="bg-white rounded-2xl p-4 shadow-sm border border-blue-100 text-center">
               <AlertCircle size={18} className="mx-auto mb-1 text-blue-500" />
               <p className="text-2xl font-black text-blue-600">{stats.open}</p>
-              <p className="text-[10px] text-gray-400">Open</p>
+              <p className="text-[10px] text-[#9CA3AF]">Open</p>
             </div>
             <div className="bg-white rounded-2xl p-4 shadow-sm border border-green-100 text-center">
               <CheckCircle2 size={18} className="mx-auto mb-1 text-green-500" />
               <p className="text-2xl font-black text-green-600">{stats.resolved}</p>
-              <p className="text-[10px] text-gray-400">Resolved</p>
+              <p className="text-[10px] text-[#9CA3AF]">Resolved</p>
             </div>
             <div className="bg-white rounded-2xl p-4 shadow-sm border border-amber-100 text-center">
               <Clock size={18} className="mx-auto mb-1 text-amber-500" />
               <p className="text-2xl font-black text-amber-600">{stats.avgResolutionTime}<span className="text-sm font-medium">m</span></p>
-              <p className="text-[10px] text-gray-400">Avg Resolution</p>
+              <p className="text-[10px] text-[#9CA3AF]">Avg Resolution</p>
             </div>
           </div>
         )}
 
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-          <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
-            <h3 className="font-bold text-[#0A1628]">Support Tickets</h3>
-            <select value={filter} onChange={e => setFilter(e.target.value)} className="text-xs border rounded-lg px-2 py-1.5">
+        <div className="bg-white dark:bg-[#111827] rounded-2xl gl-shadow-md border border-[#E5E0D8] dark:border-[#1F2937] overflow-hidden">
+          <div className="px-5 py-4 border-b border-[#E5E0D8] dark:border-[#1F2937] flex items-center justify-between">
+            <h3 className="font-bold text-[#0A1628] dark:text-[#F5F0E8]">Support Tickets</h3>
+            <select value={filter} onChange={e => setFilter(e.target.value)} className="text-xs border border-[#E5E0D8] dark:border-[#374151] rounded-lg px-2 py-1.5 bg-white dark:bg-[#1F2937] dark:text-[#F5F0E8] gl-transition">
               <option value="">All</option><option value="open">Open</option><option value="in_progress">In Progress</option><option value="resolved">Resolved</option><option value="closed">Closed</option>
             </select>
           </div>
-          {loading ? <div className="p-8 text-center text-gray-400">Loading...</div> : !tickets || tickets.length === 0 ? (
-            <div className="p-8 text-center text-gray-400"><Ticket size={32} className="mx-auto mb-2 opacity-30" /><p className="font-medium">No tickets yet</p></div>
+          {loading ? <div className="p-8 text-center text-[#9CA3AF]">Loading...</div> : !tickets || tickets.length === 0 ? (
+            <div className="p-8 text-center text-[#9CA3AF]"><Ticket size={32} className="mx-auto mb-2 opacity-30" /><p className="font-medium">No tickets yet</p></div>
           ) : (
-            <div className="divide-y divide-gray-50">
+            <div className="divide-y divide-[#F3F4F6] dark:divide-[#1F2937]">
               {(Array.isArray(tickets) ? tickets : []).filter(t => !filter || t.status === filter).map((t: Required<import("@workspace/api-client-react").SupportTicket>) => (
-                <motion.div key={t.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="px-5 py-4 hover:bg-gray-50">
+                <motion.div key={t.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="px-5 py-4 hover:bg-[#FAF7F2] dark:hover:bg-[#1F2937] gl-transition">
                   <div className="flex items-start justify-between">
                     <div>
                       <div className="flex items-center gap-2">
-                        <span className="text-xs font-mono font-bold text-gray-400">{t.ticketId}</span>
-                        <span className="text-sm font-semibold text-[#0A1628]">{t.subject}</span>
+                        <span className="text-xs font-mono font-bold text-[#9CA3AF]">{t.ticketId}</span>
+                        <span className="text-sm font-semibold text-[#0A1628] dark:text-[#F5F0E8]">{t.subject}</span>
                       </div>
-                      <p className="text-xs text-gray-400 mt-1 line-clamp-2">{t.description}</p>
+                      <p className="text-xs text-[#9CA3AF] mt-1 line-clamp-2">{t.description}</p>
                     </div>
                     <div className="flex items-center gap-2 flex-shrink-0">
                       <span className="text-[10px] font-bold px-2 py-1 rounded-full" style={{ background: `${PRIORITY_COLORS[t.priority] || "#9CA3AF"}20`, color: PRIORITY_COLORS[t.priority] || "#9CA3AF" }}>{t.priority}</span>
@@ -84,11 +84,13 @@ export default function AdminSupport() {
                       </select>
                     </div>
                   </div>
-                  {t.status === "in_progress" && (
-                    <div className="mt-2 flex gap-2">
-                      <input placeholder="Resolution notes..." className="flex-1 border border-gray-200 rounded-lg px-3 py-1.5 text-xs"
-                        onKeyDown={e => { if (e.key === "Enter") updateTicket(t.id, { resolution: (e.target as HTMLInputElement).value, status: "resolved" }); }} />
-                    </div>
+                  {/* M11: Expandable resolution form for open/in_progress tickets */}
+                  {(t.status === "open" || t.status === "in_progress") && (
+                    <ResolutionForm
+                      ticketId={t.id}
+                      onResolve={(resolution) => updateTicket(t.id, { resolution, status: "resolved" })}
+                      onInProgress={() => updateTicket(t.id, { status: "in_progress" })}
+                    />
                   )}
                 </motion.div>
               ))}
@@ -97,5 +99,64 @@ export default function AdminSupport() {
         </div>
       </main>
     </div>
+  );
+}
+
+// M11: Proper resolution form with resolution notes textarea
+function ResolutionForm({ ticketId, onResolve, onInProgress }: {
+  ticketId: number;
+  onResolve: (resolution: string) => void;
+  onInProgress: () => void;
+}) {
+  const [expanded, setExpanded] = useState(false);
+  const [resolution, setResolution] = useState("");
+
+  if (!expanded) {
+    return (
+      <div className="mt-2 flex gap-2">
+        <button
+          onClick={() => { setExpanded(true); onInProgress(); }}
+          className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100 transition-colors"
+        >
+          Mark In Progress
+        </button>
+        <button
+          onClick={() => { setExpanded(true); }}
+          className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-green-50 text-green-700 border border-green-200 hover:bg-green-100 transition-colors"
+        >
+          Resolve
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, height: 0 }}
+      animate={{ opacity: 1, height: "auto" }}
+      className="mt-2 space-y-2"
+    >
+      <textarea
+        value={resolution}
+        onChange={e => setResolution(e.target.value)}
+        placeholder="Describe the resolution..."
+        className="w-full border border-[#E5E0D8] dark:border-[#374151] rounded-lg px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-[#059669] resize-none bg-white dark:bg-[#1F2937] dark:text-[#F5F0E8] gl-transition"
+        rows={3}
+      />
+      <div className="flex gap-2">
+        <button
+          onClick={() => { if (!resolution.trim()) { toast.error("Please add resolution notes"); return; } onResolve(resolution); setResolution(""); setExpanded(false); }}
+          className="flex-1 px-3 py-1.5 rounded-lg text-xs font-semibold bg-green-600 text-white hover:bg-green-700 transition-colors"
+        >
+          Mark Resolved
+        </button>
+        <button
+          onClick={() => { setExpanded(false); setResolution(""); }}
+          className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors"
+        >
+          Cancel
+        </button>
+      </div>
+    </motion.div>
   );
 }

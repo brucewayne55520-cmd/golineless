@@ -1,7 +1,8 @@
 import { Router, type IRouter } from "express";
-import { db, usersTable, runnersTable, userSessionsTable, runnerSessionsTable, adminsTable, adminSessionsTable, z } from "@workspace/db";
-import { eq } from "drizzle-orm";
-import { generateToken, verifyPassword, extractToken, hashPassword, setAuthCookie, clearAuthCookie } from "../lib/auth";
+import crypto from "crypto";
+import { db, usersTable, runnersTable, userSessionsTable, runnerSessionsTable, adminsTable, adminSessionsTable, paymentAuditLogTable, z } from "@workspace/db";
+import { eq, and, ne } from "drizzle-orm";
+import { generateToken, verifyPassword, extractToken, hashPassword, setAuthCookie, clearAuthCookie, requireAdmin } from "../lib/auth";
 import { validateNeonToken } from "../lib/neon-auth";
 import { sendOtp, verifyOtp } from "../lib/sms";
 import { sendEmail } from "../lib/email";
@@ -355,6 +356,18 @@ router.post("/admin/login", async (req, res): Promise<void> => {
     const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
     await db.insert(adminSessionsTable).values({ adminId: admin.id, token, expiresAt });
     await db.update(adminsTable).set({ lastLoginAt: new Date() }).where(eq(adminsTable.id, admin.id));
+    // H6: Log admin login to audit trail
+    try {
+      await db.insert(paymentAuditLogTable).values({
+        taskId: null,
+        previousStatus: null,
+        newStatus: "admin_login",
+        actor: admin.username,
+        actorType: "admin",
+        reason: `Admin ${admin.username} logged in`,
+        metadata: JSON.stringify({ adminId: admin.id, action: "login", role: admin.role }),
+      });
+    } catch { /* audit log is best-effort */ }
     res.json({ token, role: admin.role, admin: { id: admin.id, username: admin.username, name: admin.name, role: admin.role } });
     return;
   }
@@ -369,12 +382,105 @@ router.post("/admin/login", async (req, res): Promise<void> => {
 });
 
 // POST /admin/logout
-router.post("/admin/logout", async (req, res): Promise<void> => {
+// H6: Log admin logout to audit trail
+router.post("/admin/logout", requireAdmin, async (req, res): Promise<void> => {
   const token = extractToken(req);
   if (token) {
+    // H6: Log admin logout before deleting session
+    if (req.admin && req.admin.id > 0) {
+      try {
+        await db.insert(paymentAuditLogTable).values({
+          taskId: null,
+          previousStatus: null,
+          newStatus: "admin_logout",
+          actor: req.admin.username,
+          actorType: "admin",
+          reason: `Admin ${req.admin.username} logged out`,
+          metadata: JSON.stringify({ adminId: req.admin.id, action: "logout", role: req.admin.role }),
+        });
+      } catch { /* audit log is best-effort */ }
+    }
     await db.delete(adminSessionsTable).where(eq(adminSessionsTable.token, token)).catch(() => {});
   }
   res.json({ message: "Logged out" });
+});
+
+// H3: GET /admin/sessions — list all active sessions for the logged-in admin
+router.get("/admin/sessions", requireAdmin, async (req, res): Promise<void> => {
+  const admin = req.admin!;
+  const sessions = await db.select({
+    id: adminSessionsTable.id,
+    token: adminSessionsTable.token,
+    createdAt: adminSessionsTable.createdAt,
+    expiresAt: adminSessionsTable.expiresAt,
+  }).from(adminSessionsTable).where(eq(adminSessionsTable.adminId, admin.id));
+  res.json(sessions.map(s => ({
+    ...s,
+    isActive: s.expiresAt > new Date(),
+    token: s.token.slice(0, 8) + "..." + s.token.slice(-4), // Mask token for security
+  })));
+});
+
+// H3: DELETE /admin/sessions/:id — invalidate a specific session
+router.delete("/admin/sessions/:id", requireAdmin, async (req, res): Promise<void> => {
+  const admin = req.admin!;
+  const sessionId = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id, 10);
+  if (isNaN(sessionId)) { res.status(400).json({ error: "Invalid session ID" }); return; }
+
+  // Only allow deleting own sessions (unless superadmin)
+  const [session] = await db.select().from(adminSessionsTable).where(eq(adminSessionsTable.id, sessionId));
+  if (!session) { res.status(404).json({ error: "Session not found" }); return; }
+  if (session.adminId !== admin.id && admin.role !== "superadmin") {
+    res.status(403).json({ error: "Cannot delete other admin's session" }); return;
+  }
+  await db.delete(adminSessionsTable).where(eq(adminSessionsTable.id, sessionId));
+  res.json({ message: "Session invalidated" });
+});
+
+// B9: Session rotation — invalidate all other sessions for this user/runner on sensitive actions
+router.post("/auth/rotate-session", async (req, res): Promise<void> => {
+  const token = extractToken(req);
+  if (!token) { res.status(401).json({ error: "Unauthorized" }); return; }
+
+  // Check if it's a user session
+  const [userSession] = await db.select().from(userSessionsTable).where(eq(userSessionsTable.token, token));
+  if (userSession) {
+    // Delete all OTHER sessions for this user (keep current)
+    await db.delete(userSessionsTable).where(
+      and(
+        eq(userSessionsTable.userId, userSession.userId),
+        ne(userSessionsTable.token, token)
+      )
+    ).catch(() => {});
+    // Generate new token and replace current session
+    const newToken = crypto.randomBytes(48).toString("hex");
+    const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+    await db.delete(userSessionsTable).where(eq(userSessionsTable.token, token)).catch(() => {});
+    await db.insert(userSessionsTable).values({ userId: userSession.userId, token: newToken, expiresAt });
+    setAuthCookie(res, newToken);
+    res.json({ message: "Session rotated", token: newToken });
+    return;
+  }
+
+  // Check if it's a runner session
+  const [runnerSession] = await db.select().from(runnerSessionsTable).where(eq(runnerSessionsTable.token, token));
+  if (runnerSession) {
+    await db.delete(runnerSessionsTable).where(
+      and(
+        eq(runnerSessionsTable.runnerId, runnerSession.runnerId),
+        ne(runnerSessionsTable.token, token)
+      )
+    ).catch(() => {});
+    const newToken = crypto.randomBytes(48).toString("hex");
+    const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+    await db.delete(runnerSessionsTable).where(eq(runnerSessionsTable.token, token)).catch(() => {});
+    await db.insert(runnerSessionsTable).values({ runnerId: runnerSession.runnerId, token: newToken, expiresAt });
+    setAuthCookie(res, newToken);
+    res.json({ message: "Session rotated", token: newToken });
+    return;
+  }
+
+  res.status(401).json({ error: "No active session found" });
 });
 
 export default router;

@@ -165,10 +165,14 @@ async function notifyComrades(
   };
 
   for (const c of comrades) {
-    // Notify via socket to the comrade's personal room
-    getIo().to(`comrade_${c.runner.id}`).emit("new_task_broadcast", payload);
+    // B10: Notify via socket with retry on failure
+    try {
+      getIo().to(`comrade_${c.runner.id}`).emit("new_task_broadcast", payload);
+    } catch (err) {
+      logger.error({ err, runnerId: c.runner.id, taskId: task.id }, "Socket emit failed — notification deferred to DB only");
+    }
 
-    // Create DB notification
+    // Create DB notification (always persisted as fallback)
     await db.insert(notificationsTable).values({
       runnerId: c.runner.id,
       type: "new_task_available",
@@ -236,6 +240,19 @@ export async function startSmartDispatch(taskId: number): Promise<{ wave: number
       if (newRadius > config.maxRadius) {
         // Max radius reached — notify admin
         getIo().to("admin_fleet").emit("dispatch_max_radius", { taskId, radius: config.maxRadius });
+        // M13: Notify user that dispatch failed — no comrades found in any radius
+        try {
+          const [taskOwner] = await db.select({ userId: tasksTable.userId }).from(tasksTable).where(eq(tasksTable.id, taskId));
+          if (taskOwner?.userId) {
+            await db.insert(notificationsTable).values({
+              userId: taskOwner.userId,
+              type: "dispatch_failed",
+              title: "No Comrades Found",
+              message: `Could not find available Comrades for your ${task.category} task within ${config.maxRadius}km. Please try again later.`,
+              taskId,
+            });
+          }
+        } catch (err) { logger.error({ err, taskId }, "Failed to send dispatch failure notification"); }
         return;
       }
 
@@ -265,6 +282,8 @@ export async function startSmartDispatch(taskId: number): Promise<{ wave: number
         comradesNotified: newComrades.length,
         totalNotified: dispatch.totalNotified.size,
       });
+
+
 
       // Schedule next wave
       scheduleNextWave(newRadius, wave + 1);

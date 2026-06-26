@@ -55,6 +55,8 @@ export const runnersTable = pgTable("runners", {
   onTimeArrivals: integer("on_time_arrivals").notNull().default(0),
   repeatClients: integer("repeat_clients").notNull().default(0),
   specializations: text("specializations").array().notNull().default([]),
+  // S4: Track last activity timestamp for online status heuristic
+  lastActiveAt: timestamp("last_active_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 });

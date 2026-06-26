@@ -172,6 +172,16 @@ app.use("/api/tasks/:id/accept", dispatchLimiter);
 app.use("/api/verification/sessions/:id/photo", rateLimit({ windowMs: 60 * 1000, max: Number(process.env["RATE_LIMIT_VERIFICATION"] ?? 10), standardHeaders: true, legacyHeaders: false, message: { error: "Too many photo verification attempts. Please slow down." } }));
 app.post("/api/tasks", bookingLimiter);
 
+// B8: Rate limiting on GPS endpoints (using getRateLimit helper for consistency)
+const gpsLimiter = getRateLimit(20, 1, "GPS");
+const gpsBgLimiter = getRateLimit(30, 1, "GPS_BG");
+app.use("/api/runners/me/gps-check", gpsLimiter);
+app.use("/api/runners/me/gps-background", gpsBgLimiter);
+
+// H11: Rate limiting on admin API routes
+const adminLimiter = getRateLimit(60, 1, "ADMIN");
+app.use("/api/admin", adminLimiter);
+
 // Rate limit signup to prevent mass account creation
 const signupLimiter = rateLimit({
   windowMs: 60 * 60 * 1000, // 1 hour

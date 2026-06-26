@@ -61,7 +61,7 @@ const queryClient = new QueryClient({
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { token, role, isLoading } = useAuth();
   const [, navigate] = useLocation();
-  if (isLoading) return <div className="min-h-screen flex items-center justify-center" style={{ background: "#F8F9FC" }}><div className="w-8 h-8 border-4 rounded-full animate-spin" style={{ borderColor: "#C9A84C", borderTopColor: "transparent" }} /></div>;
+  if (isLoading) return <div className="min-h-screen flex items-center justify-center gl-surface"><div className="w-8 h-8 border-4 rounded-full animate-spin border-[#D4A843] border-t-transparent" /></div>;
   if (!token || role !== "user") { navigate("/login"); return null; }
   return <>{children}</>;
 }
@@ -69,7 +69,7 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 function RunnerProtectedRoute({ children }: { children: React.ReactNode }) {
   const { token, role, isLoading } = useAuth();
   const [, navigate] = useLocation();
-  if (isLoading) return <div className="min-h-screen flex items-center justify-center" style={{ background: "#F8F9FC" }}><div className="w-8 h-8 border-4 rounded-full animate-spin" style={{ borderColor: "#C9A84C", borderTopColor: "transparent" }} /></div>;
+  if (isLoading) return <div className="min-h-screen flex items-center justify-center gl-surface"><div className="w-8 h-8 border-4 rounded-full animate-spin border-[#D4A843] border-t-transparent" /></div>;
   if (!token || role !== "runner") { navigate("/runner/login"); return null; }
   return <>{children}</>;
 }
@@ -84,10 +84,10 @@ function AdminProtectedRoute({ children }: { children: React.ReactNode }) {
 function Router() {
   return (
     <Suspense fallback={
-      <div className="min-h-screen flex items-center justify-center" style={{ background: "#F8F9FC" }}>
+      <div className="min-h-screen flex items-center justify-center gl-surface">
         <div className="text-center">
-          <div className="w-10 h-10 border-4 rounded-full animate-spin mx-auto mb-3" style={{ borderColor: "#C9A84C", borderTopColor: "transparent" }} />
-          <p className="text-gray-400 text-sm">Loading...</p>
+          <div className="w-10 h-10 border-4 rounded-full animate-spin mx-auto mb-3 border-[#D4A843] border-t-transparent" />
+          <p className="text-[#2A3F5F] text-sm font-medium">Loading...</p>
         </div>
       </div>
     }>
@@ -149,7 +149,7 @@ function Router() {
   );
 }
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAdminLogin } from "@workspace/api-client-react";
 import { toast } from "sonner";
 import { NAVY_GRAD, GOLD_GRAD } from "@/lib/theme";
@@ -171,14 +171,13 @@ function AdminLoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4" style={{ background: NAVY_GRAD }}>
-      <div className="bg-white rounded-2xl p-8 shadow-2xl w-full max-w-sm">
+    <div className="min-h-screen flex items-center justify-center px-4" style={{ background: NAVY_GRAD }}>        <div className="bg-white rounded-2xl p-8 gl-shadow-xl w-full max-w-sm">
         <div className="text-center mb-6">
-          <div className="bg-white rounded-xl p-3 inline-block mb-4 border border-gray-100 shadow-sm">
+          <div className="gl-navy rounded-xl p-3 inline-block mb-4">
             <img src="/logo.jpg" alt="Go LineLess" className="h-14 w-auto" />
           </div>
-          <h1 className="text-2xl font-black text-[#0A1628]">Admin Panel</h1>
-          <p className="text-gray-500 text-sm mt-1">Go LineLess Command Center</p>
+          <h1 className="text-2xl font-bold text-[#0A1628]">Admin Panel</h1>
+          <p className="text-[#2A3F5F] text-sm mt-1">Go LineLess Command Center</p>
         </div>
         <form onSubmit={handleSubmit} className="space-y-4">
           <input
@@ -186,13 +185,12 @@ function AdminLoginPage() {
             placeholder="Admin password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 text-gray-800"
-            style={{ "--tw-ring-color": "#0F2557" } as React.CSSProperties}
+            className="w-full px-4 py-3 rounded-xl border border-[#E5E0D8] focus:outline-none focus:ring-2 focus:ring-[#0A1628] text-[#0A1628] bg-[#FAF7F2] gl-transition"
           />
           <button
             type="submit"
             disabled={mutation.isPending}
-            className="w-full py-3 rounded-xl font-semibold text-white"
+            className="w-full py-3 rounded-xl font-bold text-[#0A1628] gl-transition hover:gl-shadow-lg active:scale-[0.98]"
             style={{ background: GOLD_GRAD }}
           >
             {mutation.isPending ? "Verifying..." : "Enter Admin Panel"}
@@ -204,6 +202,37 @@ function AdminLoginPage() {
 }
 
 function App() {
+  // L12: Version check — poll health endpoint every 5 minutes for new deployments
+  const [updateAvailable, setUpdateAvailable] = useState(false);
+
+  useEffect(() => {
+    let lastEtag: string | null = null;
+    const checkVersion = async () => {
+      try {
+        const res = await fetch("/api/health", { cache: "no-store" });
+        if (res.ok) {
+          const etag = res.headers.get("etag") || res.headers.get("x-deployment-id");
+          if (lastEtag && etag && lastEtag !== etag) {
+            setUpdateAvailable(true);
+          }
+          if (etag) lastEtag = etag;
+          // Also check build timestamp in response body
+          const data = await res.json().catch(() => null);
+          if (data?.buildTime) {
+            const stored = localStorage.getItem("golineless_buildTime");
+            if (stored && stored !== data.buildTime) {
+              setUpdateAvailable(true);
+            }
+            localStorage.setItem("golineless_buildTime", data.buildTime);
+          }
+        }
+      } catch { /* ignore */ }
+    };
+    checkVersion();
+    const interval = setInterval(checkVersion, 5 * 60 * 1000);
+    return () => clearInterval(interval);
+  }, []);
+
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
@@ -211,6 +240,18 @@ function App() {
           <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
             <Router />
           </WouterRouter>
+          {updateAvailable && (
+            <div className="fixed bottom-20 left-1/2 -translate-x-1/2 z-[100] gl-navy border border-[#D4A843]/30 text-white px-5 py-3 rounded-2xl gl-shadow-xl flex items-center gap-3" style={{ maxWidth: "90vw" }}>
+              <span className="text-sm font-semibold">New version available</span>
+              <button
+                onClick={() => window.location.reload()}
+                className="px-3 py-1.5 rounded-xl text-xs font-bold text-[#0A1628] shrink-0 gl-transition hover:gl-shadow-gold active:scale-[0.98]"
+                style={{ background: GOLD_GRAD }}
+              >
+                Update
+              </button>
+            </div>
+          )}
         </ErrorBoundary>
         <Toaster position="top-center" richColors />
       </AuthProvider>

@@ -37,10 +37,25 @@ router.get("/runners/me", requireRunner, async (req, res): Promise<void> => {
 // PATCH /runners/me
 router.patch("/runners/me", requireRunner, async (req, res): Promise<void> => {
   const runner = req.runner!;
-  const { name, email, city, area } = req.body;
+  const { name, email, city, area, gender, fullName, bankAccount, bankIfsc, bankAccountHolder,
+    emergencyContactName, emergencyContactPhone, emergencyContactRelation } = req.body;
+  // B1 FIX: Allow updating more profile fields from the profile page
+  const updates: Record<string, unknown> = { updatedAt: new Date() };
+  if (name !== undefined) updates.name = name;
+  if (email !== undefined) updates.email = email;
+  if (city !== undefined) updates.city = city;
+  if (area !== undefined) updates.area = area;
+  if (gender !== undefined) updates.gender = gender;
+  if (fullName !== undefined) updates.fullName = fullName;
+  if (bankAccount !== undefined) updates.bankAccount = bankAccount;
+  if (bankIfsc !== undefined) updates.bankIfsc = bankIfsc;
+  if (bankAccountHolder !== undefined) updates.bankAccountHolder = bankAccountHolder;
+  if (emergencyContactName !== undefined) updates.emergencyContactName = emergencyContactName;
+  if (emergencyContactPhone !== undefined) updates.emergencyContactPhone = emergencyContactPhone;
+  if (emergencyContactRelation !== undefined) updates.emergencyContactRelation = emergencyContactRelation;
   const [updated] = await db
     .update(runnersTable)
-    .set({ name, email, city, area })
+    .set(updates)
     .where(eq(runnersTable.id, runner.id))
     .returning();
   const { otp, otpExpiresAt, aadhaarNumber, ...safe } = updated;
@@ -607,12 +622,49 @@ router.patch("/runners/me/specializations", requireRunner, async (req, res): Pro
   if (!Array.isArray(specializations)) {
     res.status(400).json({ error: "specializations must be an array of strings" }); return;
   }
-  // Use raw SQL since specializations is a text[] column not yet in drizzle types
   const filteredSpecs = specializations.filter(s => typeof s === "string");
-  await db.execute(
-    sql`UPDATE runners SET specializations = ${filteredSpecs}::text[] WHERE id = ${runner.id}`
-  );
+  // B5 FIX: Use Drizzle's array column support instead of raw SQL
+  await db.update(runnersTable).set({
+    specializations: filteredSpecs,
+  } as Record<string, unknown>).where(eq(runnersTable.id, runner.id));
   res.json({ specializations: filteredSpecs });
+});
+
+// POST /runners/me/gps-background — B2: GPS background update endpoint
+router.post("/runners/me/gps-background", requireRunner, async (req, res): Promise<void> => {
+  const runner = req.runner!;
+  const { lat, lng } = req.body;
+  if (lat != null && !isValidCoordinate(lat, "lat")) { res.status(400).json({ error: "Invalid latitude" }); return; }
+  if (lng != null && !isValidCoordinate(lng, "lng")) { res.status(400).json({ error: "Invalid longitude" }); return; }
+  const updates: Record<string, unknown> = { lastActiveAt: new Date(), updatedAt: new Date() };
+  if (lat != null) updates.currentLat = lat.toString();
+  if (lng != null) updates.currentLng = lng.toString();
+  await db.update(runnersTable).set(updates).where(eq(runnersTable.id, runner.id));
+  res.json({ ok: true });
+});
+
+// POST /runners/delete-account — Runner requests account deletion (requires password confirmation)
+router.post("/runners/delete-account", requireRunner, async (req, res): Promise<void> => {
+  const runner = req.runner!;
+  const { password } = req.body;
+  // L7 FIX: Require password confirmation for account deletion
+  if (!password) {
+    res.status(400).json({ error: "Password confirmation required to delete account" }); return;
+  }
+  const { verifyPassword } = await import("../lib/auth");
+  if (!runner.passwordHash || !await verifyPassword(password, runner.passwordHash)) {
+    res.status(403).json({ error: "Incorrect password" }); return;
+  }
+  // Soft-delete: set name to null, mark as deleted, go offline
+  await db.update(runnersTable).set({
+    name: "[Deleted Comrade]",
+    isOnline: false,
+    dispatchAllowed: false,
+  } as Record<string, unknown>).where(eq(runnersTable.id, runner.id));
+  // Delete sessions
+  const { runnerSessionsTable } = await import("@workspace/db");
+  await db.delete(runnerSessionsTable).where(eq(runnerSessionsTable.runnerId, runner.id));
+  res.json({ message: "Account deleted" });
 });
 
 export default router;

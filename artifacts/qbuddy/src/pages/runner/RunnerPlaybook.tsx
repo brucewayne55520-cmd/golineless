@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useLocation } from "wouter";
-import { BookOpen, ChevronDown, ArrowLeft, CheckCircle2, Camera, MapPin, Clock, XCircle, ShieldAlert, Search, type LucideIcon } from "lucide-react";
+import { toast } from "sonner";
+import { BookOpen, ChevronDown, ArrowLeft, CheckCircle2, Camera, MapPin, Clock, XCircle, ShieldAlert, Search, Share2, type LucideIcon } from "lucide-react";
 import type { PlaybookResponseSectionsItem } from "@workspace/api-client-react";
 import { useGetRunnerPlaybook } from "@workspace/api-client-react";
 import { NAVY, NAVY_GRAD, GOLD } from "@/lib/theme";
@@ -131,6 +132,22 @@ export default function RunnerPlaybook() {
             </motion.div>
           );
         })}
+
+        {/* L5: Share playbook button */}
+        <button
+          onClick={async () => {
+            const text = playbook?.sections?.map((s: PlaybookResponseSectionsItem) => `${s.title}\n${s.rules?.map((r: string, i: number) => `  ${i+1}. ${r}`).join("\n") || ""}`).join("\n\n") || "Go LineLess Operations Playbook";
+            if (navigator.share) {
+              try { await navigator.share({ title: "Go LineLess Playbook", text }); } catch { /* user cancelled */ }
+            } else {
+              await navigator.clipboard.writeText(text);
+              toast.success("Playbook copied to clipboard!");
+            }
+          }}
+          className="w-full py-3 rounded-xl border border-white/20 text-white/60 font-semibold text-sm flex items-center justify-center gap-2 hover:bg-white/5 transition-colors"
+        >
+          <Share2 size={14} /> Share Playbook
+        </button>
 
         {/* Offline notice */}
         <div className="bg-white/5 rounded-xl p-3 text-center">

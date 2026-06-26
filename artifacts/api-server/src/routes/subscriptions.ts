@@ -1,7 +1,7 @@
 import { Router, type IRouter } from "express";
 import { db, subscriptionPlansTable, subscriptionsTable, z } from "@workspace/db";
-import { eq, and } from "drizzle-orm";
-import { requireUser } from "../lib/auth";
+import { eq, and, desc } from "drizzle-orm";
+import { requireUser, requireAdmin } from "../lib/auth";
 import { validateBody } from "../lib/validate";
 
 const router: IRouter = Router();
@@ -84,6 +84,35 @@ router.post("/subscriptions", requireUser, validateBody(createSubscriptionSchema
   }).returning();
 
   res.status(201).json({ ...sub, amount: Number(sub.amount) });
+});
+
+// GET /admin/subscriptions — list all subscriptions (admin)
+router.get("/admin/subscriptions", requireAdmin, async (_req, res): Promise<void> => {
+  const subs = await db.select().from(subscriptionsTable).orderBy(desc(subscriptionsTable.createdAt));
+  res.json(subs.map(s => ({ ...s, amount: Number(s.amount) })));
+});
+
+// PATCH /admin/subscriptions/:id — update subscription status (admin)
+router.patch("/admin/subscriptions/:id", requireAdmin, async (req, res): Promise<void> => {
+  const id = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id, 10);
+  const { status } = req.body;
+  if (!status || !["active", "cancelled", "expired"].includes(status)) {
+    res.status(400).json({ error: "status must be active, cancelled, or expired" }); return;
+  }
+  const [existing] = await db.select().from(subscriptionsTable).where(eq(subscriptionsTable.id, id));
+  if (!existing) { res.status(404).json({ error: "Subscription not found" }); return; }
+  const [updated] = await db.update(subscriptionsTable).set({ status }).where(eq(subscriptionsTable.id, id)).returning();
+  res.json({ ...updated, amount: Number(updated.amount) });
+});
+
+// PATCH /admin/subscriptions/:id/cancel — cancel a subscription (admin)
+router.patch("/admin/subscriptions/:id/cancel", requireAdmin, async (req, res): Promise<void> => {
+  const id = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id, 10);
+  const [existing] = await db.select().from(subscriptionsTable).where(eq(subscriptionsTable.id, id));
+  if (!existing) { res.status(404).json({ error: "Subscription not found" }); return; }
+  if (existing.status !== "active") { res.status(400).json({ error: "Subscription is not active" }); return; }
+  const [updated] = await db.update(subscriptionsTable).set({ status: "cancelled" }).where(eq(subscriptionsTable.id, id)).returning();
+  res.json({ ...updated, amount: Number(updated.amount), message: "Subscription cancelled" });
 });
 
 export default router;

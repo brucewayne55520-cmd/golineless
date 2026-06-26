@@ -3,12 +3,13 @@ import { useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 import confetti from "canvas-confetti";
-import { MapPin, Camera, KeyRound, Sparkles, Moon, Navigation, Clock, CheckCircle, Phone, MessageSquare, Timer, PauseCircle, PlayCircle, Banknote, AlertTriangle, type LucideIcon } from "lucide-react";
-import { useGetActiveTask, useUpdateTaskStatus, useVerifyTaskOtp, useStartWaiting, usePauseWaiting, useEndWaiting, useUpdateQueueProgress, useUploadProofPhoto, TaskStatusUpdateStatus, ProofPhotoInputProofType } from "@workspace/api-client-react";
+import { MapPin, Camera, KeyRound, Sparkles, Moon, Navigation, Clock, CheckCircle, Phone, MessageSquare, Timer, PauseCircle, PlayCircle, Banknote, AlertTriangle, WifiOff, Share2, type LucideIcon } from "lucide-react";
+import { useGetActiveTask, useGetRunnerMe, useUpdateTaskStatus, useVerifyTaskOtp, useStartWaiting, usePauseWaiting, useEndWaiting, useUpdateQueueProgress, useUploadProofPhoto, TaskStatusUpdateStatus, ProofPhotoInputProofType } from "@workspace/api-client-react";
 import { RunnerBottomNav } from "@/components/BottomNav";
 import { CategoryIcon } from "@/components/CategoryIcon";
 import { CATEGORY_NAMES, formatCurrency } from "@/lib/utils";
 import { NAVY, NAVY_GRAD, GOLD, GOLD_GRAD } from "@/lib/theme";
+import { useGpsTracking } from "@/hooks/useGpsTracking";
 
 const BG = "#080E1E";
 
@@ -50,6 +51,7 @@ export default function ActiveTask() {
   const [, navigate] = useLocation();
   const { data: taskData, isLoading } = useGetActiveTask({ query: { queryKey: ["activeTask"], refetchInterval: 30000 } });
   const task = taskData!;
+  const { data: runner } = useGetRunnerMe();
 
   const updateStatus = useUpdateTaskStatus({ request: { headers: getAuthHeaders() } });
   const verifyOtp = useVerifyTaskOtp();
@@ -74,6 +76,10 @@ export default function ActiveTask() {
   const [queueNotes, setQueueNotes] = useState("");
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const socketRef = useRef<any>(null);
+  // M8: Socket connection status for disconnect UI banner
+  const [socketConnected, setSocketConnected] = useState(true);
+  // L14: GPS accuracy state
+  const [gpsAccuracy, setGpsAccuracy] = useState<number | null>(null);
 
   // L12 + L3: Connect socket for waiting/queue events with error boundary and reconnection
   useEffect(() => {
@@ -87,7 +93,9 @@ export default function ActiveTask() {
           reconnectionDelay: 1000,
           reconnectionAttempts: 10,
         });
-        sock.on("connect_error", () => { /* L12: swallow socket errors */ });
+        sock.on("connect", () => setSocketConnected(true));
+        sock.on("disconnect", () => setSocketConnected(false));
+        sock.on("connect_error", () => setSocketConnected(false));
         sock.emit("join_task", { taskId: task.id });
         socketRef.current = sock;
       };
@@ -95,6 +103,25 @@ export default function ActiveTask() {
     } catch { /* L12: Socket init error boundary */ }
     return () => { socketRef.current?.disconnect(); };
   }, [task?.id]);
+
+  // C1+H1+M1: Use shared GPS tracking hook to emit location every 10s
+  useGpsTracking({
+    enabled: !!task?.id,
+    taskId: task?.id,
+    runnerId: runner?.id,
+    socketRef,
+  });
+
+  // L14: Track GPS accuracy from device sensors
+  useEffect(() => {
+    if (!navigator.geolocation) return;
+    const watchId = navigator.geolocation.watchPosition(
+      (pos) => setGpsAccuracy(Math.round(pos.coords.accuracy)),
+      () => setGpsAccuracy(null),
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
+    return () => { navigator.geolocation?.clearWatch(watchId); };
+  }, []);
 
   // B4 FIX: Initialize waitingElapsed from server's waitingStartedAt on mount
   useEffect(() => {
@@ -104,6 +131,36 @@ export default function ActiveTask() {
       setWaitingActive(true);
     }
   }, [task?.status, task?.waitingStartedAt]);
+
+  // H7: Re-sync waiting timer from server every 30s
+  useEffect(() => {
+    if (task?.status !== "waiting_started" || !task.waitingStartedAt) return;
+    const interval = setInterval(() => {
+      const serverElapsed = Math.max(0, Math.floor((Date.now() - new Date(task.waitingStartedAt!).getTime()) / 1000));
+      setWaitingElapsed(serverElapsed);
+    }, 30000);
+    return () => clearInterval(interval);
+  }, [task?.status, task?.waitingStartedAt]);
+
+  // L6: Save in-progress form state to sessionStorage
+  useEffect(() => {
+    if (!task) return;
+    try {
+      sessionStorage.setItem(`task_${task.id}_otp`, JSON.stringify(otpDigits));
+      sessionStorage.setItem(`task_${task.id}_elapsed`, String(elapsed));
+    } catch { /* ignore */ }
+  }, [otpDigits, elapsed, task?.id]);
+
+  // L6: Restore saved state on mount
+  useEffect(() => {
+    if (!task) return;
+    try {
+      const savedOtp = sessionStorage.getItem(`task_${task.id}_otp`);
+      if (savedOtp) { const parsed = JSON.parse(savedOtp); if (Array.isArray(parsed) && parsed.length === 6) setOtpDigits(parsed); }
+      const savedElapsed = sessionStorage.getItem(`task_${task.id}_elapsed`);
+      if (savedElapsed) setElapsed(Number(savedElapsed) || 0);
+    } catch { /* ignore */ }
+  }, [task?.id]);
 
   // Determine current step
   useEffect(() => {
@@ -304,6 +361,20 @@ export default function ActiveTask() {
   return (
     <div className="min-h-screen pb-24" style={{ background: BG }}>
       {uploadProgressUI}
+      {/* M8: Socket disconnect banner */}
+      {!socketConnected && (
+        <div className="mx-4 mt-3 bg-amber-500/15 border border-amber-500/30 rounded-xl px-4 py-2.5 flex items-center gap-2">
+          <WifiOff size={14} className="text-amber-400 flex-shrink-0" />
+          <span className="text-amber-400 text-xs font-semibold">Connection lost. Reconnecting...</span>
+        </div>
+      )}
+      {/* L14: GPS accuracy indicator */}
+      {gpsAccuracy != null && gpsAccuracy > 50 && (
+        <div className="mx-4 mt-3 bg-yellow-500/15 border border-yellow-500/30 rounded-xl px-4 py-2.5 flex items-center gap-2">
+          <Navigation size={14} className="text-yellow-400 flex-shrink-0" />
+          <span className="text-yellow-400 text-xs font-semibold">GPS accuracy: ~{gpsAccuracy}m. Move to open area for better signal.</span>
+        </div>
+      )}
       {/* Header */}
       <div className="px-4 pt-4 pb-3 border-b border-white/10">
         <div className="flex items-center justify-between">
@@ -853,6 +924,24 @@ export default function ActiveTask() {
               Cancel Task
             </button>
           </div>
+        )}
+
+        {/* L9: Share task summary button */}
+        {task.status === "completed" && (
+          <button
+            onClick={async () => {
+              const summary = `Task #${task.id} — ${CATEGORY_NAMES[task.category]}\nStatus: Completed\nEarning: ${formatCurrency(task.runnerEarning ?? 0)}${task.completedAt ? `\nCompleted: ${new Date(task.completedAt).toLocaleDateString("en-IN")}` : ""}`;
+              if (navigator.share) {
+                try { await navigator.share({ title: "Task Summary", text: summary }); } catch { /* user cancelled */ }
+              } else {
+                await navigator.clipboard.writeText(summary);
+                toast.success("Task summary copied!");
+              }
+            }}
+            className="w-full py-3 rounded-xl border border-white/20 text-white/60 font-semibold text-sm flex items-center justify-center gap-2 hover:bg-white/5 transition-colors mb-2"
+          >
+            <Share2 size={14} /> Share Task Summary
+          </button>
         )}
 
         {/* Completion celebration */}
