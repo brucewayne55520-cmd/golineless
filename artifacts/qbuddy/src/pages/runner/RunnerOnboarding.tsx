@@ -41,8 +41,6 @@ export default function RunnerOnboarding() {
   const [onlineLoading, setOnlineLoading] = useState(false);
   const [completed, setCompleted] = useState(false);
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-
   // Initialize step from existing onboarding progress
   useEffect(() => {
     const r = runner as import("@workspace/api-client-react").Runner & { onboardingStep?: number; bankAccount?: string; bankIfsc?: string; bankAccountHolder?: string; selfie?: string };
@@ -164,7 +162,7 @@ export default function RunnerOnboarding() {
 
   const stepProgress = ((step) / (STEPS.length - 1)) * 100;
 
-  const inputClass = "w-full bg-white/10 border border-white/20 rounded-xl px-3.5 py-3 text-white text-sm focus:outline-none focus:border-[#C9A84C]/50 transition-colors placeholder-white/30";
+  const inputClass = "w-full bg-white/10 border border-white/20 rounded-xl px-3.5 py-3 text-white text-sm focus:outline-none focus:border-[#ff7b00]/50 transition-colors placeholder-white/30";
 
   if (completed) {
     return (
@@ -175,7 +173,7 @@ export default function RunnerOnboarding() {
           className="text-center max-w-sm"
         >
           <div className="w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-5 shadow-lg" style={{ background: GOLD_GRAD }}>
-            <CheckCircle2 size={40} className="text-[#0A1628]" />
+            <CheckCircle2 size={40} className="text-[#241100]" />
           </div>
           <h1 className="text-2xl font-black text-white mb-2">You're Live!</h1>
           <p className="text-white/60 text-sm mb-6">Your Comrade profile is active. Dispatching tasks near you...</p>
@@ -220,7 +218,7 @@ export default function RunnerOnboarding() {
               <div key={s.label} className="flex flex-col items-center gap-1" style={{ opacity: current || done ? 1 : 0.3 }}>
                 <div className={`w-6 h-6 rounded-full flex items-center justify-center transition-all ${done ? "" : current ? "" : "bg-white/10"}`}
                   style={done ? { background: GOLD } : current ? { borderColor: GOLD, borderWidth: 2 } : {}}>
-                  {done ? <CheckCircle2 size={12} className="text-[#0A1628]" /> : <Icon size={11} className="text-white/50" />}
+                  {done ? <CheckCircle2 size={12} className="text-[#241100]" /> : <Icon size={11} className="text-white/50" />}
                 </div>
                 <span className="text-[8px] font-semibold text-white/40">{s.label}</span>
               </div>
@@ -242,7 +240,7 @@ export default function RunnerOnboarding() {
             {step === 0 && (
               <div className="text-center py-12">
                 <div className="w-20 h-20 rounded-2xl bg-white/10 flex items-center justify-center mx-auto mb-5">
-                  <Smartphone size={36} className="text-[#C9A84C]" />
+                  <Smartphone size={36} className="text-[#ff7b00]" />
                 </div>
                 <h2 className="text-white font-black text-xl mb-2">Phone Verified ✓</h2>
                 <p className="text-white/50 text-sm mb-6">{runner?.phone || "Your number is verified"}</p>
@@ -257,8 +255,8 @@ export default function RunnerOnboarding() {
             {step === 1 && (
               <div className="py-6">
                 <div className="bg-white/8 border border-white/15 rounded-2xl p-5 mb-5">
-                  <div className="w-12 h-12 rounded-xl bg-[#C9A84C]/20 flex items-center justify-center mb-3">
-                    <User size={22} className="text-[#C9A84C]" />
+                  <div className="w-12 h-12 rounded-xl bg-[#ff7b00]/20 flex items-center justify-center mb-3">
+                    <User size={22} className="text-[#ff7b00]" />
                   </div>
                   <h2 className="text-white font-black text-lg mb-1">What's your name?</h2>
                   <p className="text-white/40 text-xs mb-4">This is how clients will see you</p>
@@ -291,7 +289,7 @@ export default function RunnerOnboarding() {
 
                   {gpsStatus === "checking" && (
                     <div className="flex items-center gap-3 bg-white/10 rounded-xl p-4">
-                      <Loader2 size={20} className="animate-spin text-[#C9A84C]" />
+                      <Loader2 size={20} className="animate-spin text-[#ff7b00]" />
                       <div>
                         <p className="text-white font-semibold text-sm">Checking location...</p>
                         <p className="text-white/40 text-xs">Please allow location access</p>
@@ -370,8 +368,8 @@ export default function RunnerOnboarding() {
                         className={inputClass}
                         maxLength={18}
                       />
-                      {bankAccount.length > 0 && (bankAccount.length < 9 || bankAccount.length > 18) && (
-                        <p className="text-red-400 text-[10px] mt-1">Must be 9-18 digits</p>
+                      {bankAccount.length > 0 && (!/^\d{9,18}$/.test(bankAccount)) && (
+                        <p className="text-red-400 text-[10px] mt-1">Must be 9-18 digits only</p>
                       )}
                     </div>
                     <div>
@@ -441,7 +439,7 @@ export default function RunnerOnboarding() {
               <div className="text-center py-6">
                 <div className="bg-white/8 border border-white/15 rounded-2xl p-6 mb-5">
                   <div className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg" style={{ background: GOLD_GRAD }}>
-                    <Wifi size={28} className="text-[#0A1628]" />
+                    <Wifi size={28} className="text-[#241100]" />
                   </div>
                   <h2 className="text-white font-black text-xl mb-2">Ready to Earn!</h2>
                   <p className="text-white/50 text-sm mb-6">
@@ -478,7 +476,7 @@ export default function RunnerOnboarding() {
                   <button
                     onClick={handleNext}
                     disabled={onlineLoading}
-                    className="w-full py-4 rounded-2xl text-[#0A1628] font-black text-lg flex items-center justify-center gap-2 shadow-xl hover:shadow-2xl transition-all disabled:opacity-60"
+                    className="w-full py-4 rounded-2xl text-[#241100] font-black text-lg flex items-center justify-center gap-2 shadow-xl hover:shadow-2xl transition-all disabled:opacity-60"
                     style={{ background: GOLD_GRAD }}
                   >
                     {onlineLoading ? (
@@ -518,7 +516,7 @@ export default function RunnerOnboarding() {
           <button
             onClick={handleNext}
             disabled={saving || (step === 2 && gpsStatus === "checking") || (step === 2 && gpsStatus === "denied")}
-            className="flex-[2] py-3.5 rounded-2xl text-[#0A1628] font-black text-sm flex items-center justify-center gap-1.5 transition-all disabled:opacity-50"
+            className="flex-[2] py-3.5 rounded-2xl text-[#241100] font-black text-sm flex items-center justify-center gap-1.5 transition-all disabled:opacity-50"
             style={{ background: GOLD_GRAD }}
           >
             {saving ? (

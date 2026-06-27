@@ -2,6 +2,7 @@ import { Router, type IRouter } from "express";
 import { db, usersTable, userSessionsTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { generateToken } from "../lib/auth";
+import { logger } from "../lib/logger";
 
 const router: IRouter = Router();
 
@@ -41,7 +42,7 @@ async function verifyGoogleToken(idToken: string): Promise<GoogleTokenPayload | 
       email_verified: payload.email_verified,
     };
   } catch (err) {
-    console.error("[Google Auth] Token verification failed", err);
+    logger.error({ err }, "[Google Auth] Token verification failed");
     return null;
   }
 }
@@ -62,7 +63,7 @@ router.post("/auth/google", async (req, res): Promise<void> => {
   }
 
   // Upsert user — find by googleId first, then by email
-  let user = (await db.select().from(usersTable).where(eq(usersTable.googleId as any, payload.sub)).limit(1))[0];
+  let user = (await db.select().from(usersTable).where(eq(usersTable.googleId, payload.sub)).limit(1))[0];
 
   if (!user && payload.email) {
     user = (await db.select().from(usersTable).where(eq(usersTable.email, payload.email)).limit(1))[0];
@@ -73,7 +74,7 @@ router.post("/auth/google", async (req, res): Promise<void> => {
     await db.update(usersTable).set({
       googleId: payload.sub,
       name: user.name || payload.name,
-    } as any).where(eq(usersTable.id, user.id));
+    } as Record<string, unknown>).where(eq(usersTable.id, user.id));
     // Re-fetch updated
     user = (await db.select().from(usersTable).where(eq(usersTable.id, user.id)).limit(1))[0];
   } else {
@@ -82,7 +83,7 @@ router.post("/auth/google", async (req, res): Promise<void> => {
       email: payload.email,
       name: payload.name,
       googleId: payload.sub,
-    } as any).returning();
+    } as Record<string, unknown>).returning();
   }
 
   // Create session
@@ -91,7 +92,7 @@ router.post("/auth/google", async (req, res): Promise<void> => {
   await db.insert(userSessionsTable).values({ userId: user.id, token: sessionToken, expiresAt });
 
   // Return safe user (strip internal fields)
-  const { passwordHash, otp, otpExpiresAt, passwordResetToken, passwordResetExpiresAt, ...safeUser } = user as any;
+  const { passwordHash, otp, otpExpiresAt, passwordResetToken, passwordResetExpiresAt, ...safeUser } = user;
 
   res.json({
     token: sessionToken,

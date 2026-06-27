@@ -59,8 +59,21 @@ export default function AdminTasks() {
     setNotes(task.internalNotes ?? "");
   };
 
-  const handleUpdate = () => {
+  const handleUpdate = async () => {
     if (!selected) return;
+    // O7 FIX: Fetch fresh task status before updating to avoid stale state
+    try {
+      const freshTask = await refetch();
+      const freshData = freshTask.data as Required<import("@workspace/api-client-react").AdminTaskList> | undefined;
+      const freshTasks = freshData?.tasks ?? [];
+      const fresh = freshTasks.find((t: Required<Task>) => t.id === selected.id);
+      if (fresh && fresh.status !== selected.status) {
+        toast.warning(`Task status changed to "${fresh.status}" by another admin. Updated view.`);
+        setSelected({ ...selected, status: fresh.status });
+        setNewStatus(fresh.status);
+        return;
+      }
+    } catch { /* refetch failed, proceed with current state */ }
     updateTask.mutate({
       id: Number(selected.id),
       data: { status: newStatus || undefined, internalNotes: notes } as import("@workspace/api-client-react").AdminTaskUpdate,
@@ -76,10 +89,10 @@ export default function AdminTasks() {
       <main className="flex-1 overflow-y-auto p-6">
         <div className="flex items-center justify-between mb-5">
           <div>
-            <h1 className="text-2xl font-bold text-[#0A1628] dark:text-[#F5F0E8]">Tasks</h1>
+            <h1 className="text-2xl font-bold text-[#241100] dark:text-[#fff2e5]">Tasks</h1>
             <p className="text-[#6B7280] text-sm">{totalCount} tasks · Page {page + 1}{selectedIds.size > 0 ? ` · ${selectedIds.size} selected` : ""}</p>
           </div>
-          <button onClick={exportCsv} disabled={pageTasks.length === 0} className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold bg-white dark:bg-[#1F2937] border border-[#E5E0D8] dark:border-[#374151] hover:bg-[#FAF7F2] dark:hover:bg-[#111827] disabled:opacity-40 gl-transition">
+          <button onClick={exportCsv} disabled={pageTasks.length === 0} className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold bg-white dark:bg-[#1F2937] border border-[#E5E0D8] dark:border-[#374151] hover:bg-[#FFF9F2] dark:hover:bg-[#111827] disabled:opacity-40 gl-transition">
             <Download size={14} /> Export CSV{selectedIds.size > 0 ? ` (${selectedIds.size})` : ""}
           </button>
         </div>

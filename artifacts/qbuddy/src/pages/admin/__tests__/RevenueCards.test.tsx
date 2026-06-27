@@ -9,7 +9,7 @@ vi.mock("@/lib/utils", () => ({
 }));
 
 const mockCards = [
-  { label: "GMV Today", val: 50000, Icon: Wallet, color: "#0F2557" },
+  { label: "GMV Today", val: 50000, Icon: Wallet, color: "#331900" },
   { label: "Platform Revenue", val: 7500, Icon: Wallet, color: "#7C3AED" },
 ];
 

@@ -164,6 +164,15 @@ app.use((req: Request, res: Response, next) => {
 });
 
 // --- Apply rate limiters per-route ---
+// A4: Separate rate limiter for OTP send (shorter window, prevents SMS abuse without blocking verify)
+const otpSendLimiter = rateLimit({
+  windowMs: 60 * 1000, // 1 minute window
+  max: Number(process.env["RATE_LIMIT_OTP_SEND"] ?? 3), // 3 OTPs per minute per IP
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Too many OTP requests. Please wait before trying again." },
+});
+app.use("/api/auth/send-otp", otpSendLimiter);
 app.use("/api/tasks/:id/verify-otp", otpLimiter);
 app.use("/api/tasks/:id/confirm-cash", otpLimiter); // (#23) Rate limit confirm-cash
 app.use("/api/tasks/:id/confirm-cash-user", rateLimit({ windowMs: 60 * 60 * 1000, max: Number(process.env["RATE_LIMIT_CONFIRM_USER"] ?? 10), standardHeaders: true, legacyHeaders: false, message: { error: "Too many confirm/dispute attempts." } })); // (#27)

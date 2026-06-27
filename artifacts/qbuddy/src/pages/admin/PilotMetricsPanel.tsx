@@ -27,7 +27,7 @@ export default function PilotMetricsPanel({ pilotMetrics }: Props) {
       className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 mb-5"
       style={{ borderLeft: `4px solid ${NAVY}` }}
     >
-      <h3 className="font-black text-[#0A1628] text-sm mb-3 flex items-center gap-2">
+      <h3 className="font-black text-[#241100] text-sm mb-3 flex items-center gap-2">
         <Zap size={14} className="text-yellow-500" /> Pilot Launch Metrics
       </h3>
       <div className="grid grid-cols-4 md:grid-cols-8 gap-3">

@@ -1,4 +1,5 @@
 import { jwtVerify, createRemoteJWKSet } from 'jose';
+import { logger } from './logger';
 
 const NEON_AUTH_BASE_URL = process.env.NEON_AUTH_URL || 'https://ep-little-star-adoyze1m.neonauth.c-2.us-east-1.aws.neon.tech/neondb/auth';
 const NEON_JWKS_URL = `${NEON_AUTH_BASE_URL}/.well-known/jwks.json`;
@@ -30,7 +31,7 @@ export async function validateNeonToken(token: string): Promise<NeonAuthUser | n
     });
     return payload as unknown as NeonAuthUser;
   } catch (error) {
-    console.error('Token validation failed:', error);
+    logger.error({ error }, 'Token validation failed');
     return null;
   }
 }

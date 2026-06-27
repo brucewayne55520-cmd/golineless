@@ -97,7 +97,7 @@ export default function UserProfile() {
 
   const statCards: { Icon: LucideIcon; label: string; val: string | number; color: string }[] = statsData ? [
     { Icon: CheckCircle2, label: "Tasks", val: statsData.totalTasks, color: "#22C55E" },
-    { Icon: Clock, label: "Hrs Saved", val: `${Math.round(statsData.hoursSaved)}h`, color: "#0F2557" },
+    { Icon: Clock, label: "Hrs Saved", val: `${Math.round(statsData.hoursSaved)}h`, color: "#331900" },
     { Icon: Wallet, label: "Value", val: formatCurrency(statsData.valueSaved), color: GOLD },
   ] : [];
 
@@ -112,10 +112,10 @@ export default function UserProfile() {
     { Icon: Info, label: "About Go LineLess" },
   ];
 
-  const inputClass = "w-full border border-gray-200 rounded-xl px-3.5 py-3 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#0F2557]/20 transition-all bg-white";
+  const inputClass = "w-full border border-gray-200 rounded-xl px-3.5 py-3 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#331900]/20 transition-all bg-white";
 
   return (
-    <div className="min-h-screen bg-[#F8F9FC] pb-24">
+    <div className="min-h-screen bg-[#FFF9F2] pb-24">
       {/* Header */}
       <div className="rounded-b-3xl p-6 text-white" style={{ background: NAVY_GRAD }}>
         <div className="flex items-center gap-4">
@@ -149,7 +149,7 @@ export default function UserProfile() {
             {statCards.map((s) => (
               <div key={s.label} className="bg-white rounded-2xl p-3 text-center shadow-sm">
                 <s.Icon size={18} className="mx-auto mb-1" style={{ color: s.color }} />
-                <div className="font-black text-[#0F2557] text-lg">{s.val}</div>
+                <div className="font-black text-[#331900] text-lg">{s.val}</div>
                 <div className="text-xs text-gray-400">{s.label}</div>
               </div>
             ))}
@@ -160,8 +160,8 @@ export default function UserProfile() {
         {sub ? (
           <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
             <div className="flex items-center gap-2 mb-2">
-              <Crown size={16} className="text-[#C9A84C]" />
-              <h3 className="font-bold text-[#0A1628]">{subData.planName} Plan</h3>
+              <Crown size={16} className="text-[#ff7b00]" />
+              <h3 className="font-bold text-[#241100]">{subData.planName} Plan</h3>
               <span className="ml-auto text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-semibold">Active</span>
             </div>
             <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
@@ -171,7 +171,7 @@ export default function UserProfile() {
           </div>
         ) : (
           <div className="bg-gray-50 rounded-2xl p-4 border border-gray-200">
-            <p className="text-sm font-semibold text-[#0F2557]">No active subscription</p>
+            <p className="text-sm font-semibold text-[#331900]">No active subscription</p>
             <p className="text-xs text-gray-500 mt-1">Subscribe to Senior Care for unlimited tasks</p>
           </div>
         )}
@@ -207,7 +207,7 @@ export default function UserProfile() {
         <div className="fixed inset-0 bg-black/60 z-50 flex items-end backdrop-blur-sm">
           <div className="bg-white w-full rounded-t-3xl p-5 max-h-[85vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-5">
-              <h2 className="font-black text-[#0A1628] text-xl">Edit Profile</h2>
+              <h2 className="font-black text-[#241100] text-xl">Edit Profile</h2>
               <button onClick={() => setEditingProfile(false)} className="w-8 h-8 rounded-xl bg-gray-100 flex items-center justify-center"><X size={18} /></button>
             </div>
             <div className="space-y-3">
@@ -245,7 +245,7 @@ export default function UserProfile() {
           <div className="bg-white w-full rounded-t-3xl p-5 max-h-[85vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-5">
               <div>
-                <h2 className="font-black text-[#0A1628] text-xl">Verify Identity</h2>
+                <h2 className="font-black text-[#241100] text-xl">Verify Identity</h2>
                 <p className="text-gray-400 text-xs mt-0.5">KYC · Step {kycStep + 1} of {KYC_STEPS.length}</p>
               </div>
               <button onClick={() => setShowKyc(false)} className="w-8 h-8 rounded-xl bg-gray-100 flex items-center justify-center"><X size={18} /></button>
@@ -257,7 +257,7 @@ export default function UserProfile() {
               ))}
             </div>
             <div className="mb-4 p-3 bg-gray-50 rounded-xl">
-              <p className="font-bold text-sm text-[#0A1628]">{KYC_STEPS[kycStep].label}</p>
+              <p className="font-bold text-sm text-[#241100]">{KYC_STEPS[kycStep].label}</p>
               <p className="text-gray-400 text-xs mt-0.5">{KYC_STEPS[kycStep].desc}</p>
             </div>
             {kycStep === 0 && (

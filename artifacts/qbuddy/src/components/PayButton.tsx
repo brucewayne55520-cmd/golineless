@@ -82,7 +82,7 @@ export function PayButton({ taskId, price, variant = "gold", label, paymentMetho
       onClick={handleClick}
       disabled={loading}
       className="text-[10px] font-bold px-2.5 py-1 rounded-lg transition-all hover:shadow-md disabled:opacity-60 disabled:cursor-not-allowed flex items-center gap-1"
-      style={{ background: GOLD_GRAD, color: "#0A1628" }}
+      style={{ background: GOLD_GRAD, color: "#241100" }}
     >
       {loading ? (
         <svg className="animate-spin h-3 w-3" viewBox="0 0 24 24" fill="none">

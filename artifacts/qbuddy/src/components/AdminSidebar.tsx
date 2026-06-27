@@ -6,33 +6,59 @@ import { cn } from "@/lib/utils";
 import type { LucideIcon } from "lucide-react";
 import { useListSupportTickets } from "@workspace/api-client-react";
 
-const NAVY = "#0A1628";
+const NAVY = "#241100";
 const NAVY_DARK = "#060E1A";
-const GOLD = "#D4A843";
+const GOLD = "#ff7b00";
 
-const navItems: { path: string; icon: LucideIcon; label: string; exact?: boolean }[] = [
-  { path: "/admin", icon: LayoutDashboard, label: "Dashboard", exact: true },
-  { path: "/admin/pilot", icon: Zap, label: "Pilot Center" },
-  { path: "/admin/operations", icon: Activity, label: "Ops Center" },
-  { path: "/admin/leaderboard", icon: Award, label: "Leaderboard" },
-  { path: "/admin/areas", icon: MapPin, label: "Areas" },
-  { path: "/admin/founder", icon: TrendingUp, label: "Founder" },
-  { path: "/admin/incident-response", icon: ShieldAlert, label: "Incidents Ops" },
-  { path: "/admin/map", icon: Map, label: "Live Map" },
-  { path: "/admin/tasks", icon: ClipboardList, label: "Tasks" },
-  { path: "/admin/runners", icon: PersonStanding, label: "Comrades" },
-  { path: "/admin/kyc", icon: Shield, label: "KYC Review" },
-  { path: "/admin/audit-log", icon: Clock, label: "Audit Log" },
-  { path: "/admin/recruitment", icon: UserPlus, label: "Recruitment" },
-  { path: "/admin/training", icon: BookOpen, label: "Training" },
-  { path: "/admin/quality", icon: Star, label: "Quality" },
-  { path: "/admin/support", icon: Ticket, label: "Support" },
-  { path: "/admin/incidents", icon: ShieldAlert, label: "Incidents" },
-  { path: "/admin/heatmap", icon: MapPin, label: "Heatmap" },
-  { path: "/admin/users", icon: Users, label: "Users" },
-  { path: "/admin/subscriptions", icon: Crown, label: "Subscriptions" },
-  { path: "/admin/analytics", icon: TrendingUp, label: "Analytics" },
-  { path: "/admin/settings", icon: Settings, label: "Settings" },
+// O12: Grouped nav items into logical sections for readability
+const navSections: { label: string; items: { path: string; icon: LucideIcon; label: string; exact?: boolean }[] }[] = [
+  {
+    label: "Overview",
+    items: [
+      { path: "/admin", icon: LayoutDashboard, label: "Dashboard", exact: true },
+      { path: "/admin/pilot", icon: Zap, label: "Pilot Center" },
+      { path: "/admin/operations", icon: Activity, label: "Ops Center" },
+      { path: "/admin/leaderboard", icon: Award, label: "Leaderboard" },
+      { path: "/admin/map", icon: Map, label: "Live Map" },
+    ],
+  },
+  {
+    label: "Operations",
+    items: [
+      { path: "/admin/tasks", icon: ClipboardList, label: "Tasks" },
+      { path: "/admin/runners", icon: PersonStanding, label: "Comrades" },
+      { path: "/admin/users", icon: Users, label: "Users" },
+      { path: "/admin/kyc", icon: Shield, label: "KYC Review" },
+      { path: "/admin/areas", icon: MapPin, label: "Areas" },
+      { path: "/admin/heatmap", icon: MapPin, label: "Heatmap" },
+    ],
+  },
+  {
+    label: "Growth",
+    items: [
+      { path: "/admin/recruitment", icon: UserPlus, label: "Recruitment" },
+      { path: "/admin/training", icon: BookOpen, label: "Training" },
+      { path: "/admin/quality", icon: Star, label: "Quality" },
+      { path: "/admin/subscriptions", icon: Crown, label: "Subscriptions" },
+      { path: "/admin/analytics", icon: TrendingUp, label: "Analytics" },
+    ],
+  },
+  {
+    label: "Support",
+    items: [
+      { path: "/admin/support", icon: Ticket, label: "Support" },
+      { path: "/admin/incidents", icon: ShieldAlert, label: "Incidents" },
+      { path: "/admin/incident-response", icon: ShieldAlert, label: "Incidents Ops" },
+    ],
+  },
+  {
+    label: "System",
+    items: [
+      { path: "/admin/founder", icon: TrendingUp, label: "Founder" },
+      { path: "/admin/audit-log", icon: Clock, label: "Audit Log" },
+      { path: "/admin/settings", icon: Settings, label: "Settings" },
+    ],
+  },
 ];
 
 function useDarkMode() {
@@ -40,6 +66,8 @@ function useDarkMode() {
   useEffect(() => {
     document.documentElement.classList.toggle("dark", dark);
     localStorage.setItem("golineless_admin_theme", dark ? "dark" : "light");
+    // O4 FIX: Clean up dark class when leaving admin pages
+    return () => { document.documentElement.classList.remove("dark"); };
   }, [dark]);
   return { dark, toggle: () => setDark(d => !d) };
 }
@@ -73,37 +101,42 @@ export default function AdminSidebar() {
 
       {/* Navigation */}
       <nav className="flex-1 py-3 overflow-y-auto px-3" aria-label="Admin navigation">
-        <div className="space-y-0.5">
-          {navItems.map((item) => {
-            const active = item.exact ? location === item.path : location.startsWith(item.path);
-            const Icon = item.icon;
-            return (
-              <button
-                key={item.path}
-                onClick={() => { navigate(item.path); setMobileOpen(false); }}
-                aria-current={active ? "page" : undefined}
-                className={cn(
-                  "w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] font-medium transition-all duration-150 text-left group relative",
-                  active
-                    ? "bg-white/[0.12] text-white"
-                    : "text-white/45 hover:bg-white/[0.06] hover:text-white/75"
-                )}
-              >
-                {active && (
-                  <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-r-full" style={{ background: GOLD }} />
-                )}
-                <Icon size={16} className={cn("flex-shrink-0 transition-colors", active ? "text-white" : "text-white/30 group-hover:text-white/50")} aria-hidden="true" />
-                <span className="flex-1">{item.label}</span>
-                {item.path === "/admin/support" && openTicketCount > 0 && (
-                  <span className="px-1.5 py-0.5 rounded-md text-[9px] font-bold bg-red-500/90 text-white min-w-[18px] text-center leading-tight">
-                    {openTicketCount}
-                  </span>
-                )}
-                {active && <div className="w-1.5 h-1.5 rounded-full" style={{ background: GOLD }} />}
-              </button>
-            );
-          })}
-        </div>
+        {navSections.map((section) => (
+          <div key={section.label} className="mb-3">
+            <p className="text-[9px] font-bold uppercase tracking-wider text-white/20 px-3 mb-1.5 mt-3 first:mt-0">{section.label}</p>
+            <div className="space-y-0.5">
+              {section.items.map((item) => {
+                const active = item.exact ? location === item.path : location.startsWith(item.path);
+                const Icon = item.icon;
+                return (
+                  <button
+                    key={item.path}
+                    onClick={() => { navigate(item.path); setMobileOpen(false); }}
+                    aria-current={active ? "page" : undefined}
+                    className={cn(
+                      "w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] font-medium transition-all duration-150 text-left group relative",
+                      active
+                        ? "bg-white/[0.12] text-white"
+                        : "text-white/45 hover:bg-white/[0.06] hover:text-white/75"
+                    )}
+                  >
+                    {active && (
+                      <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-r-full" style={{ background: GOLD }} />
+                    )}
+                    <Icon size={16} className={cn("flex-shrink-0 transition-colors", active ? "text-white" : "text-white/30 group-hover:text-white/50")} aria-hidden="true" />
+                    <span className="flex-1">{item.label}</span>
+                    {item.path === "/admin/support" && openTicketCount > 0 && (
+                      <span className="px-1.5 py-0.5 rounded-md text-[9px] font-bold bg-red-500/90 text-white min-w-[18px] text-center leading-tight">
+                        {openTicketCount}
+                      </span>
+                    )}
+                    {active && <div className="w-1.5 h-1.5 rounded-full" style={{ background: GOLD }} />}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        ))}
       </nav>
 
       {/* Footer */}

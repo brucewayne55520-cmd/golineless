@@ -1,5 +1,5 @@
-import { db, tasksTable, runnersTable, reviewsTable } from "@workspace/db";
-import { eq, and, desc, inArray } from "drizzle-orm";
+import { db, tasksTable, runnersTable, reviewsTable, taskTimelineEventsTable } from "@workspace/db";
+import { eq, and, desc, inArray, sql, asc } from "drizzle-orm";
 
 // Badge thresholds
 const BADGES = [
@@ -104,57 +104,91 @@ export async function recalculateTrustScore(runnerId: number): Promise<{ trustSc
  * Called after task completion, cancellation, or review.
  */
 export async function updateRunnerMetrics(runnerId: number): Promise<void> {
-  const allRunnerTasks = await db
-    .select()
+  // A8 FIX: Use SQL aggregation instead of loading all tasks into memory
+  const [counts] = await db
+    .select({
+      accepted: sql<number>`count(*)::int`,
+      completed: sql<number>`count(*) filter (where ${tasksTable.status} = 'completed')::int`,
+      cancelled: sql<number>`count(*) filter (where ${tasksTable.status} = 'cancelled')::int`,
+    })
     .from(tasksTable)
     .where(eq(tasksTable.runnerId, runnerId));
 
-  const accepted = allRunnerTasks.length;
-  const completed = allRunnerTasks.filter(t => t.status === "completed").length;
-  const cancelled = allRunnerTasks.filter(t => t.status === "cancelled").length;
+  const accepted = counts?.accepted ?? 0;
+  const completed = counts?.completed ?? 0;
+  const cancelled = counts?.cancelled ?? 0;
 
-  // Response time: time between task created and accepted
-  const acceptedTasks = allRunnerTasks.filter(t => t.acceptedAt);
-  let avgResponseTime: number | null = null;
-  if (acceptedTasks.length > 0) {
-    const totalResponse = acceptedTasks.reduce((sum, t) => {
-      const created = new Date(t.createdAt).getTime();
-      const acceptedDate = new Date(t.acceptedAt!).getTime();
-      return sum + (acceptedDate - created) / 1000;
-    }, 0);
-    avgResponseTime = Math.round(totalResponse / acceptedTasks.length);
-  }
+  // Response time: avg difference between createdAt and acceptedAt
+  const [respRow] = await db
+    .select({
+      avgResp: sql<string | null>`avg(extract(epoch from (${tasksTable.acceptedAt} - ${tasksTable.createdAt})))::text`,
+    })
+    .from(tasksTable)
+    .where(and(eq(tasksTable.runnerId, runnerId), sql`${tasksTable.acceptedAt} IS NOT NULL`));
+  const avgResponseTime = respRow?.avgResp ? Math.round(Number(respRow.avgResp)) : null;
 
-  // Late/on time arrivals based on timeline
+  // A8/D4 FIX: Use normalized taskTimelineEventsTable instead of JSON.parse on old taskTimeline array
+  // Get distinct task IDs for this runner that have timeline events
+  const runnerTaskIds = await db
+    .select({ taskId: tasksTable.id })
+    .from(tasksTable)
+    .where(eq(tasksTable.runnerId, runnerId));
+  const taskIds = runnerTaskIds.map(t => t.taskId);
+
   let lateArrivals = 0;
   let onTimeArrivals = 0;
-  for (const t of allRunnerTasks.filter(t => t.taskTimeline)) {
-    const timeline = t.taskTimeline || [];
-    const acceptedEntry = timeline.find(e => { try { return JSON.parse(e).status === "assigned"; } catch { return false; } });
-    const completedEntry = timeline.find(e => { try { return JSON.parse(e).status === "completed"; } catch { return false; } });
-    if (acceptedEntry && completedEntry) {
-      try {
-        const a = new Date(JSON.parse(acceptedEntry).timestamp);
-        const c = new Date(JSON.parse(completedEntry).timestamp);
-        const durationHours = (c.getTime() - a.getTime()) / 3600000;
+
+  if (taskIds.length > 0) {
+    // Batch query: get accepted + completed events for all tasks in one query
+    const events = await db
+      .select({
+        taskId: taskTimelineEventsTable.taskId,
+        status: taskTimelineEventsTable.status,
+        eventTimestamp: taskTimelineEventsTable.eventTimestamp,
+      })
+      .from(taskTimelineEventsTable)
+      .where(and(
+        inArray(taskTimelineEventsTable.taskId, taskIds),
+        inArray(taskTimelineEventsTable.status, ["assigned", "completed"]),
+      ))
+      .orderBy(asc(taskTimelineEventsTable.taskId), asc(taskTimelineEventsTable.eventTimestamp));
+
+    // Group by taskId and compute late/on-time
+    const byTask = new Map<number, { accepted?: Date; completed?: Date }>();
+    for (const e of events) {
+      if (!byTask.has(e.taskId)) byTask.set(e.taskId, {});
+      const entry = byTask.get(e.taskId)!;
+      if (e.status === "assigned" && !entry.accepted) entry.accepted = new Date(e.eventTimestamp);
+      if (e.status === "completed" && !entry.completed) entry.completed = new Date(e.eventTimestamp);
+    }
+    for (const [, { accepted, completed }] of byTask) {
+      if (accepted && completed) {
+        const durationHours = (completed.getTime() - accepted.getTime()) / 3600000;
         if (durationHours > 3) lateArrivals++;
         else onTimeArrivals++;
-      } catch { /* skip */ }
+      }
     }
   }
 
-  // Repeat clients (using allRunnerTasks already fetched above, avoiding a redundant DB query)
-  const clientCounts: Record<number, number> = {};
-  for (const t of allRunnerTasks) {
-    if (t.userId) clientCounts[t.userId] = (clientCounts[t.userId] || 0) + 1;
-  }
-  const repeatClients = Object.values(clientCounts).filter(c => c >= 2).length;
+  // Repeat clients: users who had >= 2 tasks with this runner
+  const [repeatRow] = await db
+    .select({ count: sql<number>`count(*)::int` })
+    .from(
+      db.select({ userId: tasksTable.userId })
+        .from(tasksTable)
+        .where(and(eq(tasksTable.runnerId, runnerId), sql`${tasksTable.userId} IS NOT NULL`))
+        .groupBy(tasksTable.userId)
+        .having(sql`count(*) >= 2`)
+        .as('repeat_users')
+    );
+  const repeatClients = repeatRow?.count ?? 0;
 
   // Average rating from reviews
-  const reviews = await db.select().from(reviewsTable).where(eq(reviewsTable.runnerId, runnerId));
-  const avgRating = reviews.length > 0
-    ? (reviews.reduce((s, r) => s + r.rating, 0) / reviews.length)
-    : null;
+  const [ratingRow] = await db
+    .select({ avg: sql<string | null>`avg(${reviewsTable.rating})::text` })
+    .from(reviewsTable)
+    .where(eq(reviewsTable.runnerId, runnerId));
+  const avgRating = ratingRow?.avg ? Number(ratingRow.avg) : null;
 
   // Update runner record
   await db.update(runnersTable).set({

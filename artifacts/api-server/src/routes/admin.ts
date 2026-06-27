@@ -212,7 +212,6 @@ router.get("/admin/stats", requireAdmin, async (_req, res): Promise<void> => {
   const waitingRevenue = Number(c.waitingRevenue);
   const priorityRevenue = Number(c.priorityRevenue);
   const subscriptionRevenue = Number(c.subscriptionRevenue);
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const revenueThisWeek = Number(result.weekRevenue[0]?.revenueThisWeek ?? 0);
   const revenueThisMonth = Number(result.monthRevenue[0]?.revenueThisMonth ?? 0);
 
@@ -252,7 +251,6 @@ router.get("/admin/stats", requireAdmin, async (_req, res): Promise<void> => {
   res.json({
     totalTasksToday, activeNow, completedToday, cancelledToday, gmvToday, platformRevenue, runnerPayouts,
     pendingPayouts: runnerPayouts, kycPending: Number(r.kycPending), stuckTasks, newReviews,
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     totalRunnersOnline, totalRunnersOnTask, totalRunnersOffline,
     hubStats,
     queueMetrics: {
@@ -562,8 +560,12 @@ router.patch("/admin/tasks/:id", requireAdmin, validateBody(adminTaskPatchSchema
 // GET /admin/runners
 router.get("/admin/runners", requireAdmin, async (req, res): Promise<void> => {
   const { kyc_status, limit = "50", offset = "0" } = req.query as Record<string, string>;
-  let runners = await db.select().from(runnersTable).orderBy(desc(runnersTable.createdAt)).limit(Number(limit)).offset(Number(offset));
-  if (kyc_status) runners = runners.filter(r => r.kycStatus === kyc_status);
+  // O5 FIX: Server-side SQL WHERE for kyc_status filter instead of loading all + JS filter
+  const runnerConditions: (import("drizzle-orm").SQL)[] = [];
+  if (kyc_status) runnerConditions.push(eq(runnersTable.kycStatus, kyc_status));
+  const runners = await db.select().from(runnersTable)
+    .where(runnerConditions.length > 0 ? and(...runnerConditions) : undefined)
+    .orderBy(desc(runnersTable.createdAt)).limit(Number(limit)).offset(Number(offset));
   res.json(runners.map(({ otp, otpExpiresAt, aadhaarNumber, ...r }) => ({
     ...r,
     rating: r.rating ? Number(r.rating) : null,
@@ -642,8 +644,12 @@ router.patch("/admin/runners/:id/kyc", requireAdmin, async (req, res): Promise<v
 // GET /admin/users
 router.get("/admin/users", requireAdmin, async (req, res): Promise<void> => {
   const { limit = "50", offset = "0", kyc_status } = req.query as Record<string, string>;
-  let users = await db.select().from(usersTable).orderBy(desc(usersTable.createdAt)).limit(Number(limit)).offset(Number(offset));
-  if (kyc_status) users = users.filter(u => u.kycStatus === kyc_status);
+  // O5 FIX: Server-side SQL WHERE for kyc_status filter instead of loading all + JS filter
+  const userConditions: (import("drizzle-orm").SQL)[] = [];
+  if (kyc_status) userConditions.push(eq(usersTable.kycStatus, kyc_status));
+  const users = await db.select().from(usersTable)
+    .where(userConditions.length > 0 ? and(...userConditions) : undefined)
+    .orderBy(desc(usersTable.createdAt)).limit(Number(limit)).offset(Number(offset));
   res.json(users.map(({ otp, otpExpiresAt, aadhaarNumber, aadhaarFront, aadhaarBack, ...u }) => u));
 });
 
@@ -954,8 +960,7 @@ router.get("/admin/reconciliation/export", requireAdmin, async (req, res): Promi
   `);
 
   // Generate CSV with proper escaping to prevent CSV injection
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const escapeCsv = (val: any): string => {
+  const escapeCsv = (val: unknown): string => {
     const str = String(val ?? "");
     // If value contains comma, quote, or newline, wrap in quotes and escape inner quotes
     if (str.includes(",") || str.includes('"') || str.includes("\n")) {

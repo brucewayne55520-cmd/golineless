@@ -25,7 +25,7 @@ export default function FamilyTrack({ token }: Props) {
     (async () => {
       try {
         const { io } = await import("socket.io-client");
-        const socket = io({ path: "/api/socket.io", transports: ["websocket", "polling"] });
+        const socket = io({ path: "/api/socket.io", transports: ["websocket", "polling"], auth: { token: token } });
         socketRef.current = socket;
 
         socket.on("connect", () => {
@@ -47,7 +47,7 @@ export default function FamilyTrack({ token }: Props) {
   }, [data?.task?.id]);
 
   if (isLoading) return (
-    <div className="min-h-screen flex items-center justify-center" style={{ background: "#F8F9FC" }}>
+    <div className="min-h-screen flex items-center justify-center" style={{ background: "#FFF9F2" }}>
       <div className="text-center">
         <div className="w-10 h-10 border-4 rounded-full animate-spin mx-auto mb-3" style={{ borderColor: GOLD, borderTopColor: "transparent" }} />
         <p className="text-gray-400">Loading task status...</p>
@@ -56,10 +56,10 @@ export default function FamilyTrack({ token }: Props) {
   );
 
   if (isError) return (
-    <div className="min-h-screen flex items-center justify-center p-6" style={{ background: "#F8F9FC" }}>
+    <div className="min-h-screen flex items-center justify-center p-6" style={{ background: "#FFF9F2" }}>
       <div className="bg-white rounded-2xl p-8 text-center shadow-sm border border-gray-100 max-w-sm">
         <Shield size={40} className="text-gray-300 mx-auto mb-3" />
-        <h2 className="font-black text-[#0A1628] mb-1">Tracking Not Found</h2>
+        <h2 className="font-black text-[#241100] mb-1">Tracking Not Found</h2>
         <p className="text-gray-400 text-sm">This tracking link is invalid or the task has been removed.</p>
       </div>
     </div>
@@ -74,7 +74,7 @@ export default function FamilyTrack({ token }: Props) {
   const photos: string[] = task.proofPhotos || [];
 
   return (
-    <div className="min-h-screen pb-8" style={{ background: "#F8F9FC" }}>
+    <div className="min-h-screen pb-8" style={{ background: "#FFF9F2" }}>
       {/* Header */}
       <div className="bg-white px-5 py-4 border-b border-gray-100 shadow-sm sticky top-0 z-10">
         <div className="flex items-center gap-3">
@@ -82,7 +82,7 @@ export default function FamilyTrack({ token }: Props) {
             <CategoryIcon category={taskCategory} size={22} />
           </div>
           <div>
-            <h1 className="font-black text-[#0A1628]">{data.clientName}'s Task</h1>
+            <h1 className="font-black text-[#241100]">{data.clientName}'s Task</h1>
             <div className="flex items-center gap-2 mt-0.5">
               <span className="text-[10px] font-semibold text-gray-400">Family Tracking · {CATEGORY_NAMES[taskCategory]}</span>
               <StatusBadge status={taskStatus} />
@@ -108,13 +108,13 @@ export default function FamilyTrack({ token }: Props) {
         {/* Phase 7: Trust Score & Comrade Details Card */}
         {runner && (
           <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
-            <h3 className="font-bold text-[#0A1628] mb-3 text-sm flex items-center gap-1"><Shield size={14} /> Comrade Details</h3>
+            <h3 className="font-bold text-[#241100] mb-3 text-sm flex items-center gap-1"><Shield size={14} /> Comrade Details</h3>
             <div className="flex items-center gap-3 mb-3">
-              <div className="w-14 h-14 rounded-full flex items-center justify-center text-white font-bold text-lg" style={{ background: `linear-gradient(135deg, ${NAVY}, #1D3D7C)` }}>
+              <div className="w-14 h-14 rounded-full flex items-center justify-center text-white font-bold text-lg" style={{ background: `linear-gradient(135deg, ${NAVY}, #663100)` }}>
                 {runner.name?.[0] ?? "C"}
               </div>
               <div className="flex-1">
-                <p className="font-bold text-[#0A1628] text-base">{runner.name ?? "Comrade"}</p>
+                <p className="font-bold text-[#241100] text-base">{runner.name ?? "Comrade"}</p>
                 <div className="flex items-center gap-2 mt-0.5">
                   {runner.rating && <span className="text-xs flex items-center gap-1"><span className="text-yellow-400">★</span> {Number(runner.rating).toFixed(1)}</span>}
                   <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium $                  {(runner.trustBadge === "elite" || (runner.trustScore ?? 0) >= 80) ? "bg-green-50 text-green-700" :
@@ -145,7 +145,7 @@ export default function FamilyTrack({ token }: Props) {
         )}
 
         <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
-            <h3 className="font-bold text-[#0A1628] mb-3 text-sm">Progress Timeline</h3>
+            <h3 className="font-bold text-[#241100] mb-3 text-sm">Progress Timeline</h3>
           <div className="space-y-0">
             {["pending", "assigned", "on_the_way", "in_progress", "completed"].map((s, i) => {
               const done = STATUS_ORDER.indexOf(s) <= statusIdx;
@@ -172,7 +172,7 @@ export default function FamilyTrack({ token }: Props) {
         {/* Location info */}
         {(task.locationName || task.fromArea) && (
           <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
-            <h3 className="font-bold text-[#0A1628] mb-2 text-sm flex items-center gap-1"><MapPin size={14} /> Location</h3>
+            <h3 className="font-bold text-[#241100] mb-2 text-sm flex items-center gap-1"><MapPin size={14} /> Location</h3>
             <p className="text-sm text-gray-600">{task.locationName}{task.locationArea ? `, ${task.locationArea}` : ""}</p>
             {task.fromArea && <p className="text-xs text-gray-400 mt-1">{task.fromArea} → {task.toArea || task.locationArea}</p>}
           </div>
@@ -181,7 +181,7 @@ export default function FamilyTrack({ token }: Props) {
         {/* Waiting timer info */}
         {(task.totalWaitingMinutes ?? 0) > 0 && (
           <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
-            <h3 className="font-bold text-[#0A1628] mb-1 text-sm flex items-center gap-1"><Clock size={14} /> Waiting Time</h3>
+            <h3 className="font-bold text-[#241100] mb-1 text-sm flex items-center gap-1"><Clock size={14} /> Waiting Time</h3>
             <p className="text-lg font-black" style={{ color: GOLD }}>{task.totalWaitingMinutes} min</p>
             <p className="text-xs text-gray-400">Total waiting at location</p>
           </div>
@@ -190,11 +190,11 @@ export default function FamilyTrack({ token }: Props) {
         {/* Phase 4: Queue Intelligence Card */}
         {task.tokenNumber && (
           <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
-            <h3 className="font-bold text-[#0A1628] mb-2 text-sm flex items-center gap-1"><Navigation size={14} /> Queue Status</h3>
+            <h3 className="font-bold text-[#241100] mb-2 text-sm flex items-center gap-1"><Navigation size={14} /> Queue Status</h3>
             <div className="grid grid-cols-3 gap-2 mb-2">
               <div className="bg-gray-50 rounded-xl p-3 text-center">
                 <p className="text-[10px] text-gray-400">Token</p>
-                <p className="text-lg font-black text-[#0A1628]">{task.tokenNumber}</p>
+                <p className="text-lg font-black text-[#241100]">{task.tokenNumber}</p>
               </div>
               <div className="bg-gray-50 rounded-xl p-3 text-center">
                 <p className="text-[10px] text-gray-400">Current</p>
@@ -202,7 +202,7 @@ export default function FamilyTrack({ token }: Props) {
               </div>
               <div className="bg-gray-50 rounded-xl p-3 text-center">
                 <p className="text-[10px] text-gray-400">Counter</p>
-                <p className="text-lg font-black text-[#0A1628]">{task.counterNumber || "—"}</p>
+                <p className="text-lg font-black text-[#241100]">{task.counterNumber || "—"}</p>
               </div>
             </div>
             {(() => {
@@ -228,7 +228,7 @@ export default function FamilyTrack({ token }: Props) {
                         <span className="text-xs font-bold" style={{ color: NAVY }}>{progress}%</span>
                       </div>
                       <div className="w-full h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                        <div className="h-full rounded-full transition-all" style={{ width: `${progress}%`, background: `linear-gradient(90deg, ${GOLD}, #D4B870)` }} />
+                        <div className="h-full rounded-full transition-all" style={{ width: `${progress}%`, background: `linear-gradient(90deg, ${GOLD}, #ffb066)` }} />
                       </div>
                     </div>
                   )}
@@ -241,7 +241,7 @@ export default function FamilyTrack({ token }: Props) {
         {/* Proof photos (read-only) */}
         {photos.length > 0 && (
           <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
-            <h3 className="font-bold text-[#0A1628] mb-3 text-sm flex items-center gap-1"><Camera size={14} /> Proof Photos</h3>
+            <h3 className="font-bold text-[#241100] mb-3 text-sm flex items-center gap-1"><Camera size={14} /> Proof Photos</h3>
             <div className="grid grid-cols-2 gap-2">
               {photos.map((photoStr: string, i: number) => {
                 let proof: Record<string, string>;

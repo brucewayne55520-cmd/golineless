@@ -16,9 +16,9 @@ export default function AdminAnalytics() {
       <main className="flex-1 overflow-y-auto p-6">
         <div className="flex items-center justify-between mb-5">
           <div>
-            <h1 className="text-2xl font-bold text-[#0A1628] dark:text-[#F5F0E8]">Analytics</h1>
+            <h1 className="text-2xl font-bold text-[#241100] dark:text-[#fff2e5]">Analytics</h1>
           </div>
-          <select value={days} onChange={e => setDays(e.target.value)} className="border border-[#E5E0D8] dark:border-[#374151] rounded-xl px-3 py-2 text-sm focus:outline-none bg-white dark:bg-[#1F2937] dark:text-[#F5F0E8] gl-transition">
+          <select value={days} onChange={e => setDays(e.target.value)} className="border border-[#E5E0D8] dark:border-[#374151] rounded-xl px-3 py-2 text-sm focus:outline-none bg-white dark:bg-[#1F2937] dark:text-[#fff2e5] gl-transition">
             {[7, 14, 30, 60, 90].map(d => <option key={d} value={d}>Last {d} days</option>)}
           </select>
         </div>
@@ -30,7 +30,7 @@ export default function AdminAnalytics() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="bg-white dark:bg-[#111827] rounded-2xl p-5 gl-shadow-md border border-[#E5E0D8] dark:border-[#1F2937] md:col-span-2">
-              <h3 className="font-bold text-[#0A1628] dark:text-[#F5F0E8] mb-4">Daily Tasks & GMV</h3>
+              <h3 className="font-bold text-[#241100] dark:text-[#fff2e5] mb-4">Daily Tasks & GMV</h3>
               <ResponsiveContainer width="100%" height={220}>
                 <LineChart data={d?.dailyStats ?? []}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
@@ -39,46 +39,46 @@ export default function AdminAnalytics() {
                   <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 10 }} />
                   <Tooltip contentStyle={{ borderRadius: 12, fontSize: 12 }} />
                   <Legend wrapperStyle={{ fontSize: 12 }} />
-                  <Line yAxisId="left" type="monotone" dataKey="tasks" stroke="#0A1628" strokeWidth={2} dot={false} name="Tasks" />
-                  <Line yAxisId="right" type="monotone" dataKey="gmv" stroke="#D4A843" strokeWidth={2} dot={false} name="GMV (Rs)" />
+                  <Line yAxisId="left" type="monotone" dataKey="tasks" stroke="#241100" strokeWidth={2} dot={false} name="Tasks" />
+                  <Line yAxisId="right" type="monotone" dataKey="gmv" stroke="#ff7b00" strokeWidth={2} dot={false} name="GMV (Rs)" />
                 </LineChart>
               </ResponsiveContainer>
             </div>
 
             <div className="bg-white dark:bg-[#111827] rounded-2xl p-5 gl-shadow-md border border-[#E5E0D8] dark:border-[#1F2937]">
-              <h3 className="font-bold text-[#0A1628] dark:text-[#F5F0E8] mb-4">Tasks by Category</h3>
+              <h3 className="font-bold text-[#241100] dark:text-[#fff2e5] mb-4">Tasks by Category</h3>
               <ResponsiveContainer width="100%" height={200}>
                 <BarChart data={(d?.categoryBreakdown ?? []).map((c: import("@workspace/api-client-react").CategoryStat) => ({ ...c, name: CATEGORY_NAMES[c.category] ?? c.category }))} layout="vertical">
                   <XAxis type="number" tick={{ fontSize: 10 }} />
                   <YAxis dataKey="name" type="category" tick={{ fontSize: 9 }} width={80} />
                   <Tooltip contentStyle={{ borderRadius: 12, fontSize: 12 }} />
-                  <Bar dataKey="tasks" fill="#0A1628" radius={[0, 4, 4, 0]} />
+                  <Bar dataKey="tasks" fill="#241100" radius={[0, 4, 4, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             </div>
 
             <div className="bg-white dark:bg-[#111827] rounded-2xl p-5 gl-shadow-md border border-[#E5E0D8] dark:border-[#1F2937]">
-              <h3 className="font-bold text-[#0A1628] dark:text-[#F5F0E8] mb-4">Hourly Distribution</h3>
+              <h3 className="font-bold text-[#241100] dark:text-[#fff2e5] mb-4">Hourly Distribution</h3>
               <ResponsiveContainer width="100%" height={200}>
                 <AreaChart data={d?.hourlyDistribution ?? []}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                   <XAxis dataKey="hour" tick={{ fontSize: 9 }} tickFormatter={v => `${v}h`} />
                   <YAxis tick={{ fontSize: 9 }} />
                   <Tooltip contentStyle={{ borderRadius: 12, fontSize: 12 }} />
-                  <Area type="monotone" dataKey="tasks" fill="#0A1628" fillOpacity={0.15} stroke="#0A1628" strokeWidth={2} />
+                  <Area type="monotone" dataKey="tasks" fill="#241100" fillOpacity={0.15} stroke="#241100" strokeWidth={2} />
                 </AreaChart>
               </ResponsiveContainer>
             </div>
 
             <div className="bg-white dark:bg-[#111827] rounded-2xl p-5 gl-shadow-md border border-[#E5E0D8] dark:border-[#1F2937]">
-              <h3 className="font-bold text-[#0A1628] dark:text-[#F5F0E8] mb-4">User Growth</h3>
+              <h3 className="font-bold text-[#241100] dark:text-[#fff2e5] mb-4">User Growth</h3>
               <ResponsiveContainer width="100%" height={200}>
                 <AreaChart data={d?.userGrowth ?? []}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                   <XAxis dataKey="date" tick={{ fontSize: 9 }} tickFormatter={v => v.slice(5)} />
                   <YAxis tick={{ fontSize: 9 }} />
                   <Tooltip contentStyle={{ borderRadius: 12, fontSize: 12 }} />
-                  <Area type="monotone" dataKey="total" fill="#D4A843" fillOpacity={0.2} stroke="#D4A843" strokeWidth={2} name="Users" />
+                  <Area type="monotone" dataKey="total" fill="#ff7b00" fillOpacity={0.2} stroke="#ff7b00" strokeWidth={2} name="Users" />
                 </AreaChart>
               </ResponsiveContainer>
             </div>
@@ -87,7 +87,7 @@ export default function AdminAnalytics() {
               <>
               {/* M5: Runner Earnings Chart */}
               <div className="bg-white dark:bg-[#111827] rounded-2xl p-5 gl-shadow-md border border-[#E5E0D8] dark:border-[#1F2937] md:col-span-2">
-                <h3 className="font-bold text-[#0A1628] dark:text-[#F5F0E8] mb-4">Runner Earnings Distribution</h3>
+                <h3 className="font-bold text-[#241100] dark:text-[#fff2e5] mb-4">Runner Earnings Distribution</h3>
                 <ResponsiveContainer width="100%" height={220}>
                   <BarChart data={d.runnerPerformance.map((r: import("@workspace/api-client-react").RunnerPerformance) => ({ name: r.name?.slice(0, 12) ?? `#${r.runnerId}`, earnings: Number(r.earnings) || 0, tasks: r.tasks || 0 }))}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#E5E0D8" />
@@ -96,13 +96,13 @@ export default function AdminAnalytics() {
                     <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 9 }} />
                     <Tooltip contentStyle={{ borderRadius: 12, fontSize: 12 }} formatter={(v: number, n: string) => n === "earnings" ? `Rs ${v.toLocaleString()}` : v} />
                     <Legend wrapperStyle={{ fontSize: 11 }} />
-                    <Bar yAxisId="left" dataKey="earnings" fill="#0A1628" radius={[4, 4, 0, 0]} name="Earnings (Rs)" />
-                    <Bar yAxisId="right" dataKey="tasks" fill="#D4A843" radius={[4, 4, 0, 0]} name="Tasks" />
+                    <Bar yAxisId="left" dataKey="earnings" fill="#241100" radius={[4, 4, 0, 0]} name="Earnings (Rs)" />
+                    <Bar yAxisId="right" dataKey="tasks" fill="#ff7b00" radius={[4, 4, 0, 0]} name="Tasks" />
                   </BarChart>
                 </ResponsiveContainer>
               </div>
               <div className="bg-white dark:bg-[#111827] rounded-2xl p-5 gl-shadow-md border border-[#E5E0D8] dark:border-[#1F2937]">
-                <h3 className="font-bold text-[#0A1628] dark:text-[#F5F0E8] mb-4">Runner Performance</h3>
+                <h3 className="font-bold text-[#241100] dark:text-[#fff2e5] mb-4">Runner Performance</h3>
                 <div className="overflow-x-auto">
                   <table className="w-full text-xs">
                     <thead><tr className="border-b border-[#E5E0D8] dark:border-[#1F2937]">{["Runner", "Tasks", "Earnings", "Rating"].map(h => <th key={h} className="text-left pb-2 text-[#6B7280]">{h}</th>)}</tr></thead>

@@ -8,6 +8,7 @@ import { sendOtp, verifyOtp } from "../lib/sms";
 import { sendEmail } from "../lib/email";
 import { isValidIndianPhone } from "../lib/gps-engine";
 import { validateBody } from "../lib/validate";
+import { logger } from "../lib/logger";
 
 const router: IRouter = Router();
 
@@ -248,7 +249,7 @@ router.post("/auth/forgot-password", validateBody(forgotPasswordSchema), async (
       textContent,
     });
   } catch (e) {
-    console.error("Failed to send password reset email:", e);
+    logger.error({ err: e }, "Failed to send password reset email");
   }
 
   res.json({ message: "If an account exists with this email, a password reset link has been sent." });
@@ -372,8 +373,9 @@ router.post("/admin/login", async (req, res): Promise<void> => {
     return;
   }
 
-  // Legacy shared-token login (bootstrap / backwards compatibility)
-  if (process.env.ADMIN_TOKEN && password === process.env.ADMIN_TOKEN) {
+  // S2: Legacy shared-token login — disabled in production, use per-admin accounts instead
+  if (process.env.ADMIN_TOKEN && process.env.NODE_ENV !== "production" && password === process.env.ADMIN_TOKEN) {
+    logger.warn("Admin used legacy shared-token login — migrate to per-admin accounts");
     res.json({ token: process.env.ADMIN_TOKEN, role: "admin" });
     return;
   }

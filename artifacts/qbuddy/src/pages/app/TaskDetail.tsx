@@ -26,7 +26,7 @@ const TIMELINE_STEPS = [
 
 const STATUS_ORDER = ["pending", "assigned", "on_the_way", "at_location", "waiting_started", "reached_pickup", "reached_task_location", "in_progress", "completed"];
 
-function LeafletMap({ task, runnerLoc }: { task: Required<import("@workspace/api-client-react").Task>; runnerLoc?: Required<import("@workspace/api-client-react").RunnerLocation> }) {
+function LeafletMap({ task, runnerLoc }: { task: import("@workspace/api-client-react").Task; runnerLoc?: Required<import("@workspace/api-client-react").RunnerLocation> }) {
   const mapRef = useRef<import("leaflet").Map | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const runnerMarkerRef = useRef<import("leaflet").Marker | null>(null);
@@ -54,7 +54,7 @@ function LeafletMap({ task, runnerLoc }: { task: Required<import("@workspace/api
 
       // Task location marker
       const blueIcon = L.divIcon({
-        html: `<div style="background:#0F2557;width:24px;height:24px;border-radius:50%;border:3px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.3);display:flex;align-items:center;justify-content:center;"><svg width="12" height="12" viewBox="0 0 24 24" fill="white"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/></svg></div>`,
+        html: `<div style="background:#331900;width:24px;height:24px;border-radius:50%;border:3px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.3);display:flex;align-items:center;justify-content:center;"><svg width="12" height="12" viewBox="0 0 24 24" fill="white"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/></svg></div>`,
         className: "",
         iconSize: [24, 24],
       });
@@ -63,7 +63,7 @@ function LeafletMap({ task, runnerLoc }: { task: Required<import("@workspace/api
       // Pickup marker if applicable
       if (task.pickupRequired && task.pickupLat && task.pickupLng) {
         const goldIcon = L.divIcon({
-          html: `<div style="background:#C9A84C;width:20px;height:20px;border-radius:50%;border:3px solid white;box-shadow:0 2px 6px rgba(0,0,0,0.3);font-size:10px;display:flex;align-items:center;justify-content:center;color:white;font-weight:bold;">P</div>`,
+          html: `<div style="background:#ff7b00;width:20px;height:20px;border-radius:50%;border:3px solid white;box-shadow:0 2px 6px rgba(0,0,0,0.3);font-size:10px;display:flex;align-items:center;justify-content:center;color:white;font-weight:bold;">P</div>`,
           className: "",
           iconSize: [20, 20],
         });
@@ -82,7 +82,7 @@ function LeafletMap({ task, runnerLoc }: { task: Required<import("@workspace/api
         runnerMarkerRef.current = L.marker([runnerLat, runnerLng], { icon: greenIcon }).addTo(map).bindPopup("<b>Your Comrade</b>");
       }
     };
-    load().catch(console.error);
+    load().catch(() => {});
     return () => { map?.remove(); mapRef.current = null; };
   }, [task, task.id]);
 
@@ -101,7 +101,7 @@ function ProofGallery({ photos }: { photos: string[] }) {
   if (!photos || photos.length === 0) return null;
   return (
     <div>
-      <h3 className="font-bold text-[#0A1628] text-sm flex items-center gap-1 mb-3"><Camera size={14} /> Proof Photos</h3>
+      <h3 className="font-bold text-[#241100] text-sm flex items-center gap-1 mb-3"><Camera size={14} /> Proof Photos</h3>
       <div className="grid grid-cols-2 gap-2">
         {photos.map((photoStr: string, i: number) => {
           let proof: { imageUrl?: string; proofType?: string; timestamp?: string; address?: string; lat?: number; lng?: number; id?: number; runnerId?: number; taskStatus?: string; uploadedBy?: string; gpsVerified?: boolean };
@@ -156,13 +156,13 @@ export default function TaskDetail({ id }: Props) {
   const countdownIntervalRef = useRef<ReturnType<typeof setInterval>>(undefined);
 
   // Realtime queue update listener
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const queueSocketRef = useRef<any>(null);
+  const queueSocketRef = useRef<{ disconnect: () => void; emit: (event: string, ...args: unknown[]) => void; on: (event: string, cb: (...args: unknown[]) => void) => void } | null>(null);
   useEffect(() => {
     if (!id) return;
     const init = async () => {
       const { io } = await import("socket.io-client");
-      const sock = io(window.location.origin, { path: "/api/socket.io" });
+      const token = localStorage.getItem("golineless_user_token") || localStorage.getItem("golineless_runner_token") || "";
+      const sock = io(window.location.origin, { path: "/api/socket.io", auth: { token } });
       sock.emit("join_task", { taskId: Number(id) });
       sock.on("queue_updated", (data: Record<string, unknown>) => {
         if (data.taskId === Number(id)) {
@@ -187,8 +187,7 @@ export default function TaskDetail({ id }: Props) {
     return () => { queueSocketRef.current?.disconnect(); };
   }, [id]);
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const taskData = task as any;
+  const taskData = task;
   const runnerLocQuery = useGetRunnerLocation(
     taskData?.runner?.id ?? 0,
     Number(id),
@@ -329,7 +328,7 @@ export default function TaskDetail({ id }: Props) {
   };
 
   if (isLoading) return (
-    <div className="min-h-screen flex items-center justify-center" style={{ background: "#F8F9FC" }}>
+    <div className="min-h-screen flex items-center justify-center" style={{ background: "#FFF9F2" }}>
       <div className="text-center">
         <div className="w-12 h-12 border-4 border-t-transparent rounded-full animate-spin mx-auto mb-3" style={{ borderColor: NAVY, borderTopColor: "transparent" }} />
         <p className="text-gray-500">Loading task...</p>
@@ -339,8 +338,7 @@ export default function TaskDetail({ id }: Props) {
 
   if (!task) return <div className="p-8 text-center text-gray-500">Task not found</div>;
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const t = task as any;
+  const t = task;
   const statusIdx = STATUS_ORDER.indexOf(t.status);
   const proofPhotos: string[] = t.proofPhotos || [];
   const hasActiveRunner = t.runner && ["assigned","on_the_way","at_location","in_progress","waiting_started"].includes(t.status);
@@ -356,14 +354,14 @@ export default function TaskDetail({ id }: Props) {
   }
 
   return (
-    <div className="min-h-screen pb-24" style={{ background: "#F8F9FC" }}>
+    <div className="min-h-screen pb-24" style={{ background: "#FFF9F2" }}>
       {/* Header */}
       <div className="bg-white px-4 py-3 flex items-center gap-3 border-b border-gray-100 shadow-sm sticky top-0 z-20">
         <button onClick={() => navigate("/app/tasks")} className="text-gray-500">
           <ArrowLeft size={20} />
         </button>
         <div className="flex-1">
-          <h1 className="font-bold text-[#0A1628]">Task #{t.id}</h1>
+          <h1 className="font-bold text-[#241100]">Task #{t.id}</h1>
           <div className="flex items-center gap-1.5 flex-wrap mt-0.5">
             <StatusBadge status={t.status} />
             <PaymentBadge paymentStatus={t.paymentStatus} taskStatus={t.status} paymentMethod={t.paymentMethod} />
@@ -399,7 +397,7 @@ export default function TaskDetail({ id }: Props) {
               {t.runner.name?.[0] ?? "C"}
             </div>
             <div className="flex-1">
-              <p className="font-semibold text-sm text-[#0A1628]">{t.runner.name ?? "Comrade"}</p>
+              <p className="font-semibold text-sm text-[#241100]">{t.runner.name ?? "Comrade"}</p>
               <p className="text-xs text-gray-500 flex items-center gap-1">
                 {t.runner.rating && <><Star size={10} className="text-yellow-400" /> {Number(t.runner.rating).toFixed(1)}</>}
                 {!t.runner.rating && "New Comrade"}
@@ -427,7 +425,7 @@ export default function TaskDetail({ id }: Props) {
               <CategoryIcon category={t.category} size={28} />
             </div>
             <div>
-              <h2 className="font-bold text-[#0A1628]">{CATEGORY_NAMES[t.category]}</h2>
+              <h2 className="font-bold text-[#241100]">{CATEGORY_NAMES[t.category]}</h2>
               {t.locationName && <p className="text-xs text-gray-500">{t.locationName}, {t.locationArea}</p>}
             </div>
           </div>
@@ -470,7 +468,7 @@ export default function TaskDetail({ id }: Props) {
             </div>
             {(t.waitingChargeAmount ?? 0) > 0 && (
               <div className="flex justify-between text-xs">
-                <span className="text-gray-400">Waiting Charges ({t.totalWaitingMinutes} min)</span>
+                <span className="text-gray-400">Waiting Charges ({t.totalWaitingMinutes ?? 0} min)</span>
                 <span className="text-amber-600">+{formatCurrency(t.waitingChargeAmount)}</span>
               </div>
             )}
@@ -537,7 +535,7 @@ export default function TaskDetail({ id }: Props) {
           {(t.totalWaitingMinutes ?? 0) > 0 && (
             <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
               <p className="text-[10px] font-semibold text-gray-400 uppercase mb-1">Total Waiting</p>
-              <p className="text-lg font-black" style={{ color: GOLD }}>{t.totalWaitingMinutes} min</p>
+              <p className="text-lg font-black" style={{ color: GOLD }}>{t.totalWaitingMinutes ?? 0} min</p>
               <p className="text-[10px] text-gray-400">At location</p>
             </div>
           )}
@@ -559,7 +557,7 @@ export default function TaskDetail({ id }: Props) {
 
         {/* Phase 4: Queue Intelligence Card — Premium Navy/Gold Design */}
         {t.tokenNumber && (
-          <div className="rounded-2xl p-5 shadow-md border overflow-hidden relative" style={{ background: "linear-gradient(135deg, #0F2557, #1D3D7C)", borderColor: NAVY }}>
+          <div className="rounded-2xl p-5 shadow-md border overflow-hidden relative" style={{ background: "linear-gradient(135deg, #331900, #663100)", borderColor: NAVY }}>
             <div className="absolute top-0 right-0 w-32 h-32 rounded-full opacity-10" style={{ background: `radial-gradient(circle, ${GOLD}, transparent)`, transform: "translate(30%,-30%)" }} />
             <h3 className="font-bold text-white/80 text-xs uppercase tracking-wider mb-4 flex items-center gap-1.5">
               <Crosshair size={12} /> Queue Intelligence
@@ -611,14 +609,14 @@ export default function TaskDetail({ id }: Props) {
                     <span className="text-white/70 text-xs font-bold">{progress}%</span>
                   </div>
                   <div className="w-full h-2 bg-white/10 rounded-full overflow-hidden">
-                    <div className="h-full rounded-full transition-all duration-500" style={{ width: `${progress}%`, background: `linear-gradient(90deg, ${GOLD}, #D4B870)` }} />
+                    <div className="h-full rounded-full transition-all duration-500" style={{ width: `${progress}%`, background: `linear-gradient(90deg, ${GOLD}, #ffb066)` }} />
                   </div>
                 </div>
               );
             })()}
 
             {/* Waiting Intelligence — combined waiting + queue estimate */}
-            {(t.totalWaitingMinutes > 0 || t.waitingStartedAt) && (() => {
+            {((t.totalWaitingMinutes ?? 0) > 0 || t.waitingStartedAt) && (() => {
               const gap = calculateQueueGap(t.tokenNumber, t.currentToken);
               const wait = estimateWaitTime(gap);
               const waited = t.totalWaitingMinutes || 0;
@@ -650,7 +648,7 @@ export default function TaskDetail({ id }: Props) {
 
         {/* Live Status Timeline */}
         <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
-          <h3 className="font-bold text-[#0A1628] mb-4">Live Status</h3>
+          <h3 className="font-bold text-[#241100] mb-4">Live Status</h3>
           <div className="space-y-0">
             {TIMELINE_STEPS.map((step, i) => {
               const done = STATUS_ORDER.indexOf(step.status) <= statusIdx;
@@ -686,7 +684,7 @@ export default function TaskDetail({ id }: Props) {
           if (queueEntries.length === 0) return null;
           return (
             <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
-              <h3 className="font-bold text-[#0A1628] text-sm mb-3 flex items-center gap-1">
+              <h3 className="font-bold text-[#241100] text-sm mb-3 flex items-center gap-1">
                 <Navigation size={14} /> Queue Timeline
               </h3>
               <div className="space-y-2">
@@ -715,7 +713,7 @@ export default function TaskDetail({ id }: Props) {
         {t.status !== "completed" && t.status !== "cancelled" && !familyToken && !t.familyTrackingToken && (
           <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
             <div className="flex items-center justify-between mb-2">
-              <h3 className="font-bold text-[#0A1628] text-sm flex items-center gap-1"><Share2 size={14} /> Family Tracking</h3>
+              <h3 className="font-bold text-[#241100] text-sm flex items-center gap-1"><Share2 size={14} /> Family Tracking</h3>
             </div>
             <p className="text-xs text-gray-500 mb-3">Let your family track this task live — share a read-only link with them.</p>
             <button
@@ -746,7 +744,7 @@ export default function TaskDetail({ id }: Props) {
         {/* Review section */}
         {t.status === "completed" && (
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
-            <h3 className="font-bold text-[#0A1628] mb-4">Rate your Comrade</h3>
+            <h3 className="font-bold text-[#241100] mb-4">Rate your Comrade</h3>
             <div className="flex gap-2 justify-center mb-4">
               {[1, 2, 3, 4, 5].map((star) => (
                 <button key={star} onClick={() => setRating(star)} className="transition-transform hover:scale-110">
@@ -785,7 +783,7 @@ export default function TaskDetail({ id }: Props) {
               <div className="w-10 h-1 bg-gray-200 rounded-full mx-auto mb-4" />
               <div className="flex items-center gap-2 mb-2">
                 <AlertTriangle size={18} className="text-red-500" />
-                <h3 className="font-black text-[#0A1628] text-lg">Dispute Payment</h3>
+                <h3 className="font-black text-[#241100] text-lg">Dispute Payment</h3>
               </div>
               <p className="text-gray-400 text-sm mb-4">Are you sure you want to dispute this payment? Admin will review the case.</p>
               <div className="space-y-3">
@@ -817,7 +815,7 @@ export default function TaskDetail({ id }: Props) {
             <motion.div initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }} transition={{ type: "spring", stiffness: 200, damping: 25 }}
               className="fixed bottom-0 left-0 right-0 bg-white rounded-t-3xl z-50 p-6 shadow-2xl">
               <div className="w-10 h-1 bg-gray-200 rounded-full mx-auto mb-4" />
-              <h3 className="font-black text-[#0A1628] text-lg mb-1">Family Tracking</h3>
+              <h3 className="font-black text-[#241100] text-lg mb-1">Family Tracking</h3>
               <p className="text-gray-400 text-sm mb-4">Add a family contact to generate a read-only tracking link.</p>
               {familyToken ? (
                 <div>

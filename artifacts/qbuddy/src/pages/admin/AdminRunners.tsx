@@ -73,10 +73,10 @@ export default function AdminRunners() {
       <main className="flex-1 overflow-y-auto p-6">
         <div className="flex items-center justify-between mb-5">
           <div>
-            <h1 className="text-2xl font-bold text-[#0A1628] dark:text-[#F5F0E8]">Comrades</h1>
+            <h1 className="text-2xl font-bold text-[#241100] dark:text-[#fff2e5]">Comrades</h1>
             <p className="text-[#6B7280] text-sm">Page {page + 1} · {filtered.length} runners shown ({TAB_LABELS[tab]}){selectedIds.size > 0 ? ` · ${selectedIds.size} selected` : ""}</p>
           </div>
-          <button onClick={exportCsv} disabled={filtered.length === 0} className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold bg-white dark:bg-[#1F2937] border border-[#E5E0D8] dark:border-[#374151] hover:bg-[#FAF7F2] dark:hover:bg-[#111827] disabled:opacity-40 gl-transition">
+          <button onClick={exportCsv} disabled={filtered.length === 0} className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold bg-white dark:bg-[#1F2937] border border-[#E5E0D8] dark:border-[#374151] hover:bg-[#FFF9F2] dark:hover:bg-[#111827] disabled:opacity-40 gl-transition">
             <Download size={14} /> Export CSV{selectedIds.size > 0 ? ` (${selectedIds.size})` : ""}
           </button>
         </div>
@@ -88,7 +88,7 @@ export default function AdminRunners() {
               value={search}
               onChange={e => { setSearch(e.target.value); setPage(0); }}
               placeholder="Search by name, phone, city, or area..."
-              className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-[#E5E0D8] dark:border-[#374151] text-sm focus:outline-none focus:ring-2 focus:ring-[#0A1628] bg-white dark:bg-[#1F2937] dark:text-[#F5F0E8] gl-transition"
+              className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-[#E5E0D8] dark:border-[#374151] text-sm focus:outline-none focus:ring-2 focus:ring-[#241100] bg-white dark:bg-[#1F2937] dark:text-[#fff2e5] gl-transition"
             />
           </div>
           <div className="flex gap-1 bg-white dark:bg-[#1F2937] p-1 rounded-xl border border-[#E5E0D8] dark:border-[#374151]">
@@ -96,7 +96,7 @@ export default function AdminRunners() {
               <button
                 key={t}
                 onClick={() => { setTab(t); setPage(0); setSelectedIds(new Set()); }}
-                className={`px-4 py-2 rounded-xl text-sm font-semibold gl-transition ${tab === t ? "bg-[#0A1628] dark:bg-[#D4A843] text-white dark:text-[#0A1628]" : "bg-white dark:bg-[#1F2937] text-[#6B7280] border border-[#E5E0D8] dark:border-[#374151]"}`}
+                className={`px-4 py-2 rounded-xl text-sm font-semibold gl-transition ${tab === t ? "bg-[#241100] dark:bg-[#ff7b00] text-white dark:text-[#241100]" : "bg-white dark:bg-[#1F2937] text-[#6B7280] border border-[#E5E0D8] dark:border-[#374151]"}`}
               >
                 {TAB_LABELS[t]}
               </button>
@@ -124,11 +124,11 @@ export default function AdminRunners() {
               <div key={runner.id} className={`bg-white dark:bg-[#111827] rounded-2xl p-5 gl-shadow-md border ${selectedIds.has(Number(runner.id)) ? "border-[#6366F1] ring-1 ring-[#C7D2FE]" : "border-[#E5E0D8] dark:border-[#1F2937]"} gl-transition`}>
                 <div className="flex items-center gap-3 mb-3">
                   <input type="checkbox" checked={selectedIds.has(Number(runner.id))} onChange={() => toggleSelect(Number(runner.id))} className="rounded" />
-                  <div className="w-12 h-12 gl-navy rounded-full flex items-center justify-center text-[#D4A843] font-bold text-lg">
+                  <div className="w-12 h-12 gl-navy rounded-full flex items-center justify-center text-[#ff7b00] font-bold text-lg">
                     {getInitials(runner.name)}
                   </div>
                   <div>
-                    <h3 className="font-bold text-[#0A1628] dark:text-[#F5F0E8]">{runner.name ?? runner.phone}</h3>
+                    <h3 className="font-bold text-[#241100] dark:text-[#fff2e5]">{runner.name ?? runner.phone}</h3>
                     <p className="text-xs text-[#6B7280]">{runner.phone}</p>
                   </div>
                 </div>
@@ -178,7 +178,7 @@ export default function AdminRunners() {
                 </div>
                 <button
                   onClick={() => { setSelected(runner); setRejReason(""); }}
-                  className="w-full py-2 rounded-xl text-[#0A1628] text-sm font-bold gl-transition hover:gl-shadow-lg active:scale-[0.98]"
+                  className="w-full py-2 rounded-xl text-[#241100] text-sm font-bold gl-transition hover:gl-shadow-lg active:scale-[0.98]"
                   style={{ background: GOLD_GRAD }}
                 >
                   Review KYC
@@ -194,7 +194,7 @@ export default function AdminRunners() {
             <button
               onClick={() => setPage(p => Math.max(0, p - 1))}
               disabled={page === 0}
-              className="px-4 py-2 rounded-xl text-sm font-semibold border border-[#E5E0D8] dark:border-[#374151] disabled:opacity-40 hover:bg-[#FAF7F2] dark:hover:bg-[#1F2937] gl-transition"
+              className="px-4 py-2 rounded-xl text-sm font-semibold border border-[#E5E0D8] dark:border-[#374151] disabled:opacity-40 hover:bg-[#FFF9F2] dark:hover:bg-[#1F2937] gl-transition"
             >
               ← Previous
             </button>
@@ -204,7 +204,7 @@ export default function AdminRunners() {
             <button
               onClick={() => setPage(p => p + 1)}
               disabled={list.length < LIMIT}
-              className="px-4 py-2 rounded-xl text-sm font-semibold border border-[#E5E0D8] dark:border-[#374151] disabled:opacity-40 hover:bg-[#FAF7F2] dark:hover:bg-[#1F2937] gl-transition"
+              className="px-4 py-2 rounded-xl text-sm font-semibold border border-[#E5E0D8] dark:border-[#374151] disabled:opacity-40 hover:bg-[#FFF9F2] dark:hover:bg-[#1F2937] gl-transition"
             >
               Next →
             </button>
@@ -221,7 +221,7 @@ export default function AdminRunners() {
                 className="fixed inset-4 md:inset-20 bg-white dark:bg-[#111827] rounded-3xl z-50 overflow-y-auto gl-shadow-xl"
               >
                 <div className="p-6 border-b border-[#E5E0D8] dark:border-[#1F2937] flex items-center justify-between">
-                  <h2 className="text-xl font-bold text-[#0A1628] dark:text-[#F5F0E8]">KYC Review — {selected.name ?? selected.phone}</h2>
+                  <h2 className="text-xl font-bold text-[#241100] dark:text-[#fff2e5]">KYC Review — {selected.name ?? selected.phone}</h2>
                   <button onClick={() => setSelected(null)} className="text-[#9CA3AF] hover:text-[#6B7280] gl-transition">
                     <X size={22} />
                   </button>
@@ -239,7 +239,7 @@ export default function AdminRunners() {
                       ].map(([k, v]) => (
                         <div key={k} className="flex gap-2">
                           <dt className="text-[#9CA3AF] w-24 flex-shrink-0">{k}:</dt>
-                          <dd className="font-medium text-[#0A1628] dark:text-[#F5F0E8]">{v}</dd>
+                          <dd className="font-medium text-[#241100] dark:text-[#fff2e5]">{v}</dd>
                         </div>
                       ))}
                     </dl>
@@ -252,7 +252,7 @@ export default function AdminRunners() {
                       ].map(([k, v]) => (
                         <div key={k} className="flex gap-2">
                           <dt className="text-[#9CA3AF] w-24 flex-shrink-0">{k}:</dt>
-                          <dd className="font-medium text-[#0A1628] dark:text-[#F5F0E8]">{v}</dd>
+                          <dd className="font-medium text-[#241100] dark:text-[#fff2e5]">{v}</dd>
                         </div>
                       ))}
                     </dl>
@@ -306,7 +306,7 @@ export default function AdminRunners() {
                         value={rejReason}
                         onChange={e => setRejReason(e.target.value)}
                         placeholder="Rejection reason (if rejecting)"
-                        className="w-full border border-[#E5E0D8] dark:border-[#374151] rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#0A1628] gl-transition"
+                        className="w-full border border-[#E5E0D8] dark:border-[#374151] rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#241100] gl-transition"
                       />
                       <div className="flex gap-3">
                         <button

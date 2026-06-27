@@ -51,7 +51,7 @@ export default function SeniorCare() {
   };
 
   return (
-    <div className="min-h-screen pb-24" style={{ background: "#F8F9FC" }}>
+    <div className="min-h-screen pb-24" style={{ background: "#FFF9F2" }}>
       {/* Hero */}
       <div className="relative overflow-hidden" style={{ background: NAVY_GRAD }}>
         <div className="absolute top-0 right-0 w-64 h-64 rounded-full opacity-10" style={{ background: `radial-gradient(circle, ${GOLD}, transparent)`, transform: "translate(30%, -30%)" }} />
@@ -144,14 +144,14 @@ export default function SeniorCare() {
               style={plan.isPopular ? { borderColor: GOLD } : {}}
             >
               {plan.isPopular && (
-                <div className="py-2 text-center text-[#0A1628] text-xs font-black tracking-wider" style={{ background: GOLD_GRAD }}>
+                <div className="py-2 text-center text-[#241100] text-xs font-black tracking-wider" style={{ background: GOLD_GRAD }}>
                   ★ MOST CHOSEN BY NRI FAMILIES
                 </div>
               )}
               <div className="p-5">
                 <div className="flex justify-between items-start mb-4">
                   <div>
-                    <h3 className="font-black text-[#0A1628] text-lg">{plan.name}</h3>
+                    <h3 className="font-black text-[#241100] text-lg">{plan.name}</h3>
                     {plan.badge && (
                       <span className="text-xs font-semibold px-2 py-0.5 rounded-full mt-1 inline-block" style={{ background: "#EEF2FA", color: NAVY }}>{plan.badge}</span>
                     )}
@@ -188,7 +188,7 @@ export default function SeniorCare() {
                   onClick={() => handleSubscribe(plan.id)}
                   className="w-full py-3.5 rounded-xl font-black text-sm shadow-sm hover:shadow-md transition-all"
                   style={plan.isPopular
-                    ? { background: GOLD_GRAD, color: "#0A1628" }
+                    ? { background: GOLD_GRAD, color: "#241100" }
                     : { background: NAVY_GRAD, color: "white" }}
                 >
                   {"Get Started →"}
@@ -201,7 +201,7 @@ export default function SeniorCare() {
 
       {/* Trust grid */}
       <div className="px-4 mt-8">
-        <h3 className="font-black text-[#0A1628] text-base mb-4">Built for your peace of mind</h3>
+        <h3 className="font-black text-[#241100] text-base mb-4">Built for your peace of mind</h3>
         <div className="grid grid-cols-2 gap-3">
           {trustBadges.map((b) => (
             <div key={b.title} className="bg-white rounded-xl p-3.5 flex items-start gap-2.5 shadow-sm border border-gray-100">
@@ -209,7 +209,7 @@ export default function SeniorCare() {
                 <b.Icon size={16} style={{ color: NAVY }} />
               </div>
               <div>
-                <p className="text-xs font-bold text-[#0A1628]">{b.title}</p>
+                <p className="text-xs font-bold text-[#241100]">{b.title}</p>
                 <p className="text-[10px] text-gray-400 mt-0.5">{b.desc}</p>
               </div>
             </div>
@@ -219,7 +219,7 @@ export default function SeniorCare() {
 
       {/* Testimonials */}
       <div className="px-4 mt-8">
-        <h3 className="font-black text-[#0A1628] text-base mb-4">What NRI families say</h3>
+        <h3 className="font-black text-[#241100] text-base mb-4">What NRI families say</h3>
         <div className="space-y-3">
           {testimonials.map((t) => (
             <div key={t.name} className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
@@ -232,7 +232,7 @@ export default function SeniorCare() {
                   {t.name[0]}
                 </div>
                 <div>
-                  <p className="text-xs font-bold text-[#0A1628]">{t.name}</p>
+                  <p className="text-xs font-bold text-[#241100]">{t.name}</p>
                   <p className="text-[10px] text-gray-400">{t.location}</p>
                 </div>
               </div>

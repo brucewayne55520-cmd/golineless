@@ -49,7 +49,7 @@ export default function UserHome() {
   ];
 
   return (
-    <div className="min-h-screen pb-20" style={{ background: "#F8F9FC" }}>
+    <div className="min-h-screen pb-20" style={{ background: "#FFF9F2" }}>
       {/* Header */}
       <div className="bg-white px-4 py-3 flex items-center justify-between border-b border-gray-100 sticky top-0 z-30 shadow-sm">
         <img src="/logo.jpg" alt="Go LineLess" className="h-8 w-auto" />
@@ -86,7 +86,7 @@ export default function UserHome() {
           <button
             onClick={() => navigate("/app/book")}
             className="px-5 py-2.5 rounded-xl font-bold text-sm shadow-md"
-            style={{ background: GOLD_GRAD, color: "#0A1628" }}
+            style={{ background: GOLD_GRAD, color: "#241100" }}
           >
             Request Assistance
           </button>
@@ -96,7 +96,7 @@ export default function UserHome() {
       {/* Notifications section */}
       <div className="px-4 mt-4">
         <div className="flex items-center justify-between mb-3">
-          <h3 className="font-black text-[#0A1628] text-base">Notifications</h3>
+          <h3 className="font-black text-[#241100] text-base">Notifications</h3>
           {(notifs?.length ?? 0) > 0 && (
             <span className="text-[10px] text-gray-400">{unreadCount} unread</span>
           )}
@@ -123,7 +123,7 @@ export default function UserHome() {
                   {n.type === "kyc_approved" ? "✓" : n.type === "task_completed" ? "📋" : n.type === "payment_received" ? "₹" : "ℹ"}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className={`text-xs ${!n.isRead ? "font-bold text-[#0A1628]" : "text-gray-600"}`}>{n.title}</p>
+                  <p className={`text-xs ${!n.isRead ? "font-bold text-[#241100]" : "text-gray-600"}`}>{n.title}</p>
                   <p className="text-[10px] text-gray-400 mt-0.5 line-clamp-1">{n.message}</p>
                   <p className="text-[9px] text-gray-300 mt-0.5">
                     {new Date(n.createdAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
@@ -159,7 +159,7 @@ export default function UserHome() {
       {/* Service Hubs */}
       <div className="px-4 mt-5">
         <div className="flex items-center justify-between mb-3">
-          <h3 className="font-black text-[#0A1628] text-base">How can we help?</h3>
+          <h3 className="font-black text-[#241100] text-base">How can we help?</h3>
           <span className="text-[10px] font-semibold text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">Ahmedabad Pilot</span>
         </div>
         <div className="grid grid-cols-2 gap-3">
@@ -179,7 +179,7 @@ export default function UserHome() {
                     {hub.icon}
                   </div>
                   <div className="flex-1">
-                    <h4 className="font-black text-sm text-[#0A1628]">{hub.name}</h4>
+                    <h4 className="font-black text-sm text-[#241100]">{hub.name}</h4>
                     <p className="text-[10px] text-gray-400 mt-0.5">{hub.desc}</p>
                   </div>
                 </div>
@@ -198,7 +198,7 @@ export default function UserHome() {
 
       {/* How it works */}
       <div className="px-4 mt-6">
-        <h3 className="font-black text-[#0A1628] text-base mb-3">How it works</h3>
+        <h3 className="font-black text-[#241100] text-base mb-3">How it works</h3>
         <div className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm">
           <div className="flex items-start gap-0">
             {howItWorks.map((s, i) => (
@@ -209,7 +209,7 @@ export default function UserHome() {
                 <div className="w-9 h-9 rounded-xl flex items-center justify-center mb-2 z-10" style={{ background: "linear-gradient(135deg, #EEF2FA, #D9E3F5)", color: NAVY }}>
                   <s.Icon size={17} />
                 </div>
-                <div className="text-[10px] font-bold text-[#0A1628]">{s.label}</div>
+                <div className="text-[10px] font-bold text-[#241100]">{s.label}</div>
                 <div className="text-[9px] text-gray-400 mt-0.5">{s.sub}</div>
               </div>
             ))}
@@ -225,7 +225,7 @@ export default function UserHome() {
       ) : tasks && tasks.length > 0 ? (
         <div className="px-4 mt-6">
           <div className="flex justify-between items-center mb-3">
-            <h3 className="font-black text-[#0A1628] text-base">Recent Requests</h3>
+            <h3 className="font-black text-[#241100] text-base">Recent Requests</h3>
             <button onClick={() => navigate("/app/tasks")} className="text-xs font-bold px-2 py-1 rounded-lg" style={{ color: NAVY, background: "#EEF2FA" }}>See all</button>
           </div>
           <div className="flex gap-3 overflow-x-auto pb-1">
@@ -242,7 +242,7 @@ export default function UserHome() {
                     <CategoryIcon category={task.category} size={18} />
                   </div>
                   <div>
-                    <div className="text-sm font-bold text-[#0A1628] leading-tight">            {CATEGORY_NAMES[task.category]}</div>
+                    <div className="text-sm font-bold text-[#241100] leading-tight">            {CATEGORY_NAMES[task.category]}</div>
                     <div className="flex items-center gap-1.5 flex-wrap mt-1">
                       <StatusBadge status={task.status ?? ""} />
                       <PaymentBadge paymentStatus={task.paymentStatus} taskStatus={task.status} paymentMethod={task.paymentMethod} />
@@ -275,13 +275,13 @@ export default function UserHome() {
           <div className="flex justify-between items-start">
             <div>
               <div className="flex items-center gap-1.5 mb-1">
-                <Star size={12} fill="#0A1628" className="text-[#0A1628]" />
-                <span className="text-[10px] font-bold text-[#0A1628]/70 uppercase tracking-wider">For NRI Families</span>
+                <Star size={12} fill="#241100" className="text-[#241100]" />
+                <span className="text-[10px] font-bold text-[#241100]/70 uppercase tracking-wider">For NRI Families</span>
               </div>
-              <h3 className="font-black text-lg text-[#0A1628] leading-tight">Senior Care Plans</h3>
-              <p className="text-[#0A1628]/70 text-xs mt-1">Peace of mind for your parents<br/>back home.</p>
+              <h3 className="font-black text-lg text-[#241100] leading-tight">Senior Care Plans</h3>
+              <p className="text-[#241100]/70 text-xs mt-1">Peace of mind for your parents<br/>back home.</p>
             </div>
-            <HeartHandshake size={40} className="text-[#0A1628]/40 flex-shrink-0" />
+            <HeartHandshake size={40} className="text-[#241100]/40 flex-shrink-0" />
           </div>
           <button
             onClick={() => navigate("/app/senior")}
@@ -297,7 +297,7 @@ export default function UserHome() {
       {tasks && tasks.length > 0 && (
         <div className="px-4 mt-6">
           <div className="flex items-center justify-between mb-3">
-            <h3 className="font-black text-[#0A1628] text-base">Payment History</h3>
+            <h3 className="font-black text-[#241100] text-base">Payment History</h3>
             <button onClick={() => navigate("/app/tasks")} className="text-xs font-bold px-2 py-1 rounded-lg" style={{ color: NAVY, background: "#EEF2FA" }}>See all</button>
           </div>
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
@@ -316,7 +316,7 @@ export default function UserHome() {
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between">
-                    <p className="text-sm font-bold text-[#0A1628] truncate">{CATEGORY_NAMES[task.category]}</p>
+                    <p className="text-sm font-bold text-[#241100] truncate">{CATEGORY_NAMES[task.category]}</p>
                     <p className="text-sm font-black ml-2" style={{ color: task.paymentStatus === "paid" ? "#16A34A" : GOLD }}>
                       {formatCurrency(task.price)}
                     </p>

@@ -12,7 +12,7 @@ export default function AdminOperationsCenter() {
     <div className="flex min-h-screen gl-surface dark:bg-[#0A0E1A]">
       <AdminSidebar />
       <main className="flex-1 overflow-y-auto p-6">
-        <h1 className="text-xl font-bold text-[#0A1628] dark:text-[#F5F0E8] mb-5">Comrade Operations Center</h1>
+        <h1 className="text-xl font-bold text-[#241100] dark:text-[#fff2e5] mb-5">Comrade Operations Center</h1>
 
         {isLoading ? (
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-5">
@@ -52,7 +52,7 @@ export default function AdminOperationsCenter() {
             {/* Area-wise distribution */}
             <div className="bg-white dark:bg-[#111827] rounded-2xl gl-shadow-md border border-[#E5E0D8] dark:border-[#1F2937] overflow-hidden">
               <div className="px-5 py-4 border-b border-[#E5E0D8] dark:border-[#1F2937] flex items-center justify-between">
-                <h3 className="font-bold text-[#0A1628] dark:text-[#F5F0E8] text-sm flex items-center gap-2">
+                <h3 className="font-bold text-[#241100] dark:text-[#fff2e5] text-sm flex items-center gap-2">
                   <MapPin size={14} /> Area-wise Distribution
                 </h3>
                 <span className="text-xs text-[#9CA3AF]">{data?.areaDist?.length ?? 0} areas</span>
@@ -64,13 +64,13 @@ export default function AdminOperationsCenter() {
                     initial={{ opacity: 0, x: -8 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: i * 0.02 }}
-                    className="flex items-center gap-4 px-5 py-3.5 hover:bg-[#FAF7F2] dark:hover:bg-[#1F2937] gl-transition"
+                    className="flex items-center gap-4 px-5 py-3.5 hover:bg-[#FFF9F2] dark:hover:bg-[#1F2937] gl-transition"
                   >
                     <div className="w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold" style={{ background: "#E8EDF5", color: NAVY }}>
                       {area.area?.[0] ?? "?"}
                     </div>
                     <div className="flex-1">
-                      <p className="font-semibold text-[#0A1628] dark:text-[#F5F0E8] text-sm">{area.area}</p>
+                      <p className="font-semibold text-[#241100] dark:text-[#fff2e5] text-sm">{area.area}</p>
                       <div className="flex items-center gap-3 text-[10px] text-[#9CA3AF] mt-0.5">
                         <span>{area.total} total</span>
                         <span className="text-green-600">{area.online} online</span>

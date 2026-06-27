@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { db, usersTable, tasksTable } from "@workspace/db";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { requireUser } from "../lib/auth";
 import { logger } from "../lib/logger";
 import crypto from "crypto";
@@ -24,7 +24,8 @@ const SENSITIVE_FIELDS = ["otp", "otpExpiresAt", "passwordHash", "passwordResetT
 
 // GET /users/me
 router.get("/users/me", requireUser, async (req, res): Promise<void> => {
-  const user = req.user!;
+  const user = req.user;
+  if (!user) { res.status(401).json({ error: "Unauthorized" }); return; }
   const safe = Object.fromEntries(
     Object.entries(user).filter(([k]) => !SENSITIVE_FIELDS.includes(k as typeof SENSITIVE_FIELDS[number]))
   );
@@ -33,7 +34,8 @@ router.get("/users/me", requireUser, async (req, res): Promise<void> => {
 
 // PATCH /users/me — update profile fields
 router.patch("/users/me", requireUser, async (req, res): Promise<void> => {
-  const user = req.user!;
+  const user = req.user;
+  if (!user) { res.status(401).json({ error: "Unauthorized" }); return; }
   const { name, email, city, area, language, phone } = req.body;
 
   const updates: Record<string, unknown> = {};
@@ -95,7 +97,8 @@ router.patch("/users/me", requireUser, async (req, res): Promise<void> => {
 
 // POST /users/me/kyc — submit user KYC (Aadhaar verification)
 router.post("/users/me/kyc", requireUser, async (req, res): Promise<void> => {
-  const user = req.user!;
+  const user = req.user;
+  if (!user) { res.status(401).json({ error: "Unauthorized" }); return; }
   const { aadhaarNumber, aadhaarFront, aadhaarBack, emergencyContact } = req.body;
 
   if (!aadhaarNumber || !aadhaarFront || !aadhaarBack) {
@@ -134,7 +137,8 @@ router.post("/users/me/kyc", requireUser, async (req, res): Promise<void> => {
 
 // PATCH /users/me/avatar — upload profile photo
 router.patch("/users/me/avatar", requireUser, async (req, res): Promise<void> => {
-  const user = req.user!;
+  const user = req.user;
+  if (!user) { res.status(401).json({ error: "Unauthorized" }); return; }
   const { avatar } = req.body; // base64 data URL or URL string
   if (!avatar) {
     res.status(400).json({ error: "No avatar provided" }); return;
@@ -153,12 +157,15 @@ router.patch("/users/me/avatar", requireUser, async (req, res): Promise<void> =>
 
 // GET /users/me/stats
 router.get("/users/me/stats", requireUser, async (req, res): Promise<void> => {
-  const user = req.user!;
-  const tasks = await db.select().from(tasksTable).where(eq(tasksTable.userId, user.id));
-  const completedTasks = tasks.filter(t => t.status === "completed");
-  const totalTasks = completedTasks.length;
+  const user = req.user;
+  if (!user) { res.status(401).json({ error: "Unauthorized" }); return; }
+  const [stats] = await db.select({
+    totalTasks: sql<number>`COUNT(CASE WHEN ${tasksTable.status} = 'completed' THEN 1 END)`,
+    valueSaved: sql<number>`COALESCE(SUM(CASE WHEN ${tasksTable.status} = 'completed' THEN ${tasksTable.price}::numeric ELSE 0 END), 0)`,
+  }).from(tasksTable).where(eq(tasksTable.userId, user.id));
+  const totalTasks = Number(stats?.totalTasks ?? 0);
   const hoursSaved = totalTasks * 2.5; // avg 2.5 hrs saved per task
-  const valueSaved = completedTasks.reduce((sum, t) => sum + Number(t.price || 0), 0);
+  const valueSaved = Number(stats?.valueSaved ?? 0);
   res.json({ totalTasks, hoursSaved, valueSaved });
 });
 

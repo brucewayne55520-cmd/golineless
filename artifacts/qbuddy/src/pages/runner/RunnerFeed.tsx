@@ -32,13 +32,13 @@ function ReadinessBanner({ runner }: { runner: Runner }) {
 
   if (isLoading || !score) return (
     <div className="bg-white/8 border border-white/10 rounded-xl p-3 flex items-center gap-3">
-      <Loader2 size={16} className="animate-spin text-[#C9A84C]" />
+      <Loader2 size={16} className="animate-spin text-[#ff7b00]" />
       <span className="text-white/50 text-xs">Checking readiness...</span>
     </div>
   );
 
   const scoreVal = score.score ?? 0;
-  const scoreColor = scoreVal >= 80 ? "#22C55E" : scoreVal >= 50 ? "#C9A84C" : "#EF4444";
+  const scoreColor = scoreVal >= 80 ? "#22C55E" : scoreVal >= 50 ? "#ff7b00" : "#EF4444";
   const scoreLabel = score.status === "ready" ? "Ready for Dispatch" : score.status === "partial" ? "Almost Ready" : "Setup Required";
 
   const items: { key: string; label: string; icon: import("lucide-react").LucideIcon; ok: boolean }[] = [
@@ -55,7 +55,7 @@ function ReadinessBanner({ runner }: { runner: Runner }) {
     <div className="bg-white/8 border border-white/10 rounded-xl p-3">
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center gap-2">
-          <Wifi size={14} className="text-[#C9A84C]" />
+          <Wifi size={14} className="text-[#ff7b00]" />
           <span className="text-white text-xs font-bold">Dispatch Readiness</span>
         </div>
         <div className="flex items-center gap-1.5">
@@ -82,8 +82,8 @@ function ReadinessBanner({ runner }: { runner: Runner }) {
       {score.missingItems && score.missingItems.length > 0 && scoreVal < 100 && runner.kycStatus === "pending" && (
         <button
           onClick={() => navigate("/runner/onboarding")}
-          className="mt-2 w-full py-2 rounded-xl text-[#0A1628] text-xs font-black flex items-center justify-center gap-1"
-          style={{ background: "linear-gradient(135deg, #C9A84C, #D4B870)" }}
+          className="mt-2 w-full py-2 rounded-xl text-[#241100] text-xs font-black flex items-center justify-center gap-1"
+          style={{ background: "linear-gradient(135deg, #ff7b00, #ffb066)" }}
         >
           Complete Setup ({score.missingItems?.length} steps left)
         </button>
@@ -93,7 +93,7 @@ function ReadinessBanner({ runner }: { runner: Runner }) {
 }
 
 function getTrustLevel(tasks: number, rating: number): { label: string; color: string; icon: string } {
-  if (tasks >= 100 && rating >= 4.7) return { label: "Elite Comrade", color: "#C9A84C", icon: "⭐" };
+  if (tasks >= 100 && rating >= 4.7) return { label: "Elite Comrade", color: "#ff7b00", icon: "⭐" };
   if (tasks >= 50 && rating >= 4.5) return { label: "Pro Comrade", color: "#10B981", icon: "🏆" };
   if (tasks >= 20 && rating >= 4.0) return { label: "Trusted Comrade", color: "#3B82F6", icon: "✓" };
   if (tasks >= 5) return { label: "Active Comrade", color: "#9CA3AF", icon: "◎" };
@@ -136,6 +136,11 @@ function TaskCard({ task, onAccept, acceptingId, expanded, detail, loadingDetail
             <MapPin size={10} /> {task.locationArea}, {task.locationCity ?? "Ahmedabad"}
           </p>
         )}
+        {!task.locationArea && !task.locationLat && (
+          <p className="text-white/40 text-xs flex items-center gap-1 mb-1.5">
+            <MapPin size={10} /> Location details not available
+          </p>
+        )}
 
         {/* From/To area */}
         {(task.fromArea || task.toArea) && (
@@ -156,7 +161,7 @@ function TaskCard({ task, onAccept, acceptingId, expanded, detail, loadingDetail
           )}
           {/* M14: Show actual computed distance */}
           {distance != null && (
-            <span className="bg-white/8 border border-white/10 text-[#C9A84C] text-[10px] font-bold px-2 py-1 rounded-lg flex items-center gap-1">
+            <span className="bg-white/8 border border-white/10 text-[#ff7b00] text-[10px] font-bold px-2 py-1 rounded-lg flex items-center gap-1">
               📍 {distance} km away
             </span>
           )}
@@ -224,7 +229,7 @@ function TaskCard({ task, onAccept, acceptingId, expanded, detail, loadingDetail
           <button
             onClick={() => onAccept(task.id)}
             disabled={acceptingId === task.id}
-            className="flex-1 py-2.5 rounded-xl text-[#0A1628] text-sm font-black flex items-center justify-center gap-1.5 transition-all hover:shadow-lg disabled:opacity-60"
+            className="flex-1 py-2.5 rounded-xl text-[#241100] text-sm font-black flex items-center justify-center gap-1.5 transition-all hover:shadow-lg disabled:opacity-60"
             style={{ background: GOLD_GRAD }}
           >
             <CheckCircle size={14} />
@@ -250,12 +255,10 @@ export default function RunnerFeed() {
   });
   const [accepting, setAccepting] = useState<number | null>(null);
   // E5+L1: Socket ref for real-time dispatch notifications
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const socketRef = useRef<any>(null);
+  const socketRef = useRef<ReturnType<typeof import("socket.io-client").io> | null>(null);
 
   // Debounced refetch to avoid excessive API calls when many tasks dispatched rapidly
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const debounceRef = useRef<any>(null);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     try {
@@ -309,8 +312,7 @@ export default function RunnerFeed() {
 
   // M6: Expanded task detail state
   const [expandedTaskId, setExpandedTaskId] = useState<number | null>(null);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [expandedTaskDetail, setExpandedTaskDetail] = useState<any>(null);
+  const [expandedTaskDetail, setExpandedTaskDetail] = useState<Task | null>(null);
   const [loadingDetail, setLoadingDetail] = useState(false);
 
   const fetchTaskDetail = useCallback(async (taskId: number) => {
@@ -507,7 +509,7 @@ export default function RunnerFeed() {
         {/* M4: Pull-to-refresh indicator + refresh button */}
         {isFetching && !isLoading && (
           <div className="flex items-center justify-center gap-2 py-2 mb-2">
-            <RotateCw size={12} className="animate-spin text-[#C9A84C]" />
+            <RotateCw size={12} className="animate-spin text-[#ff7b00]" />
             <span className="text-white/40 text-[10px]">Refreshing...</span>
           </div>
         )}

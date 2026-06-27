@@ -4,8 +4,8 @@ import MetricCards from "../MetricCards";
 import { ClipboardList, Zap } from "lucide-react";
 
 const mockCards = [
-  { label: "Tasks Today", val: 150, Icon: ClipboardList, color: "#0F2557", bg: "#EEF2FA", trend: "All time" },
-  { label: "Active Now", val: 12, Icon: Zap, color: "#C9A84C", bg: "#FEF9EC", trend: "Live" },
+  { label: "Tasks Today", val: 150, Icon: ClipboardList, color: "#331900", bg: "#EEF2FA", trend: "All time" },
+  { label: "Active Now", val: 12, Icon: Zap, color: "#ff7b00", bg: "#FEF9EC", trend: "Live" },
 ];
 
 describe("MetricCards", () => {

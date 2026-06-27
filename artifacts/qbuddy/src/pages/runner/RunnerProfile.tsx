@@ -31,7 +31,7 @@ const SPECIALIZATIONS = [
 ];
 
 function getTrustBadgeInfo(score: number): { label: string; color: string; progress: number; next?: string } {
-  if (score >= 95) return { label: "Elite Comrade", next: "Maximum trust level", progress: 100, color: "#C9A84C" };
+  if (score >= 95) return { label: "Elite Comrade", next: "Maximum trust level", progress: 100, color: "#ff7b00" };
   if (score >= 90) return { label: "Trusted Comrade", next: "5 more points for Elite (95+)", progress: score, color: "#10B981" };
   if (score >= 80) return { label: "Verified Comrade", next: "10 more points for Trusted (90+)", progress: score, color: "#3B82F6" };
   if (score >= 70) return { label: "Active Comrade", next: "10 more points for Verified (80+)", progress: score, color: "#9CA3AF" };
@@ -73,7 +73,7 @@ export default function RunnerProfile() {
   const handleSubmitKyc = () => {
     if (!form.agreed) { toast.error("Please accept the runner agreement"); return; }
     // M11: Validate IFSC format
-    if (form.bankIfsc && !/^[A-Z]{4}0[A-Z0-9]{6}$/.test(form.bankIfsc as string)) {
+    if (typeof form.bankIfsc === 'string' && form.bankIfsc && !/^[A-Z]{4}0[A-Z0-9]{6}$/.test(form.bankIfsc)) {
       toast.error("Invalid IFSC code format (e.g. SBIN0001234)"); return;
     }
     submitKyc.mutate({
@@ -194,7 +194,7 @@ export default function RunnerProfile() {
               };
               reader.readAsDataURL(file);
             }} />
-            <div className="w-16 h-16 rounded-2xl flex items-center justify-center text-xl font-black text-[#0A1628] shadow-lg overflow-hidden group-hover:opacity-80 transition-opacity"
+            <div className="w-16 h-16 rounded-2xl flex items-center justify-center text-xl font-black text-[#241100] shadow-lg overflow-hidden group-hover:opacity-80 transition-opacity"
               style={{ background: (runner as unknown as { avatar?: string })?.avatar ? undefined : GOLD_GRAD }}>
               {(runner as unknown as { avatar?: string })?.avatar
                 ? <img src={(runner as unknown as { avatar?: string }).avatar} alt="" className="w-full h-full object-cover" />
@@ -300,7 +300,7 @@ export default function RunnerProfile() {
             {runner?.kycStatus !== "verified" && (
               <button
                 onClick={openKycModal}
-                className="px-3 py-1.5 rounded-xl text-[#0A1628] text-xs font-black flex-shrink-0 ml-3"
+                className="px-3 py-1.5 rounded-xl text-[#241100] text-xs font-black flex-shrink-0 ml-3"
                 style={{ background: GOLD_GRAD }}
               >
                 {runner?.kycStatus === "rejected" ? "Resubmit" : runner?.fullName ? "Update" : "Submit KYC"}
@@ -419,7 +419,7 @@ export default function RunnerProfile() {
               exit={{ y: "100%" }}
               transition={{ type: "spring", stiffness: 200, damping: 25 }}
               className="w-full max-h-[92vh] rounded-t-3xl overflow-y-auto p-5"
-              style={{ background: "#0F2557" }}
+              style={{ background: "#331900" }}
             >
               <div className="flex items-center justify-between mb-5">
                 <div>
@@ -545,7 +545,7 @@ export default function RunnerProfile() {
                           inputMode={f.inputMode}
                           maxLength={f.maxLength}
                         />
-                        {f.key === "bankIfsc" && form.bankIfsc && !/^[A-Z]{4}0[A-Z0-9]{6}$/.test(form.bankIfsc as string) && (
+                        {f.key === "bankIfsc" && form.bankIfsc && typeof form.bankIfsc === "string" && !/^[A-Z]{4}0[A-Z0-9]{6}$/.test(form.bankIfsc) && (
                           <p className="text-red-400 text-[10px] mt-1">Invalid IFSC format</p>
                         )}
                       </div>
@@ -568,6 +568,9 @@ export default function RunnerProfile() {
                           placeholder={f.placeholder}
                           className={inputClass}
                         />
+                        {"validate" in f && f.validate && typeof form[f.key] === "string" && (form[f.key] as string).length > 0 && (f as { validate: (v: string) => string }).validate(form[f.key] as string) && (
+                          <p className="text-red-400 text-[10px] mt-1">{(f as { validate: (v: string) => string }).validate(form[f.key] as string)}</p>
+                        )}
                       </div>
                     ))}
                   </div>
@@ -593,7 +596,7 @@ export default function RunnerProfile() {
                 {kycStep < KYC_STEPS.length - 1 ? (
                   <button
                     onClick={() => setKycStep(s => s + 1)}
-                    className="w-full py-4 rounded-2xl text-[#0A1628] font-black mt-2 text-base"
+                    className="w-full py-4 rounded-2xl text-[#241100] font-black mt-2 text-base"
                     style={{ background: GOLD_GRAD }}
                   >
                     Continue →
@@ -602,7 +605,7 @@ export default function RunnerProfile() {
                   <button
                     onClick={handleSubmitKyc}
                     disabled={submitKyc.isPending}
-                    className="w-full py-4 rounded-2xl text-[#0A1628] font-black mt-2 text-base"
+                    className="w-full py-4 rounded-2xl text-[#241100] font-black mt-2 text-base"
                     style={{ background: GOLD_GRAD }}
                   >
                     {submitKyc.isPending ? "Submitting..." : "Submit for Verification"}

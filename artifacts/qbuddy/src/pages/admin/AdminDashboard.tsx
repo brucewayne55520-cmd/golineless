@@ -37,7 +37,8 @@ function useAdminSocket(refetchStats: () => void) {
     const init = async () => {
       try {
         const { io } = await import("socket.io-client");
-        const sock = io(window.location.origin, { path: "/api/socket.io", reconnection: true, reconnectionDelay: 2000, reconnectionAttempts: 5 });
+        const authToken = localStorage.getItem("golineless_admin_token") || localStorage.getItem("golineless_runner_token") || localStorage.getItem("golineless_user_token") || "";
+        const sock = io(window.location.origin, { path: "/api/socket.io", auth: { token: authToken }, reconnection: true, reconnectionDelay: 2000, reconnectionAttempts: 5 });
         sock.on("connect_error", () => { /* swallow */ });
         sock.emit("join_admin_map");
         sock.on("task_status_changed", (data: { taskId?: number; status?: string }) => {
@@ -126,25 +127,21 @@ export default function AdminDashboard() {
 
   const { data: fraud, refetch: refetchFraud } = useGetFraudFlags({ query: { queryKey: ["fraudFlags"], refetchInterval: 15000 } });
   // H2 FIX: Use customFetch instead of raw fetch for reconciliation and payouts
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data: reconciliation, isLoading: reconciliationLoading, isError: reconciliationError } = useQuery({
     queryKey: ["cashReconciliation"],
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    queryFn: () => customFetch("/api/admin/reconciliation?days=7") as any,
+    queryFn: () => customFetch("/api/admin/reconciliation?days=7") as Promise<{ summary: { totalCashCollected: number; totalCashPending: number; totalOnlineCollected: number; totalOnlinePending: number; cashRunnerPayouts: number; onlineRunnerPayouts: number; pendingRunnerPayouts: number; cashPlatformFees: number; onlinePlatformFees: number; totalCashTasks: number; totalOnlineTasks: number; cashConfirmedCount: number; cashPendingCount: number }; dailyBreakdown: Array<{ date: string; cashCollected: number; cashPending: number; onlineCollected: number; runnerPayouts: number; platformFees: number; cashTasks: number; onlineTasks: number; totalTasks: number }>; runnerReconciliation: Array<{ runnerId: number; name: string; cashTasksCollected: number; cashCollected: number; runnerPayout: number; totalTasks: number; totalEarnings: number }> } | undefined>,
     refetchInterval: 30000,
   });
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data: payouts, isLoading: payoutsLoading, isError: payoutsError, refetch: refetchPayouts } = useQuery({
     queryKey: ["payoutSettlements"],
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    queryFn: () => customFetch("/api/admin/payouts") as any,
+    queryFn: () => customFetch("/api/admin/payouts") as Promise<{ runners: Array<{ runnerId: number; name: string; phone: string | null; bankAccount: string | null; bankIfsc: string | null; outstandingAmount: number; unsettledTaskCount: number; unsettledTaskIds: number[]; settledAmount: number; totalPaidOut: number; lifetimeEarnings: number; totalTasks: number }>; settlements: Array<{ id: number; runnerId: number; runnerName: string; amount: number; taskCount: number; taskIds: string; status: string; settledBy: string | null; settledAt: string | null; reference: string | null; notes: string | null; createdAt: string }> } | undefined>,
     refetchInterval: 30000,
   });
   const flags: FraudFlagListFlagsItem[] = fraud?.flags ?? [];
 
   const metricCards: MetricCardConfig[] = s ? [
-    { label: "Tasks Today", val: s.totalTasksToday, Icon: ClipboardList, color: "#0A1628", bg: "#E8EDF5", trend: "All time" },
-    { label: "Active Now", val: s.activeNow, Icon: Zap, color: "#D4A843", bg: "#FEF7E0", trend: "Live" },
+    { label: "Tasks Today", val: s.totalTasksToday, Icon: ClipboardList, color: "#241100", bg: "#E8EDF5", trend: "All time" },
+    { label: "Active Now", val: s.activeNow, Icon: Zap, color: "#ff7b00", bg: "#FEF7E0", trend: "Live" },
     { label: "Completed", val: s.completedToday, Icon: CheckCircle2, color: "#16A34A", bg: "#ECFDF5", trend: "Today" },
     { label: "Cancelled", val: s.cancelledToday, Icon: XCircle, color: "#DC2626", bg: "#FEF2F2", trend: "Today" },
   ] : [];
@@ -164,7 +161,7 @@ export default function AdminDashboard() {
       <main className="flex-1 overflow-y-auto">
         {/* Top bar */}          <div className="bg-white dark:bg-[#111827] border-b border-[#E5E0D8] dark:border-[#1F2937] px-4 sm:px-6 py-4 flex items-center justify-between sticky top-0 z-10 gl-shadow-sm">
           <div>
-            <h1 className="text-lg sm:text-xl font-bold text-[#0A1628] dark:text-[#F5F0E8]">Command Center</h1>
+            <h1 className="text-lg sm:text-xl font-bold text-[#241100] dark:text-[#fff2e5]">Command Center</h1>
             <p className="text-[#6B7280] text-xs mt-0.5">
               Go LineLess Operations · {now.toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "long" })}
             </p>
@@ -262,7 +259,7 @@ export default function AdminDashboard() {
           {kycMetrics && kycMetrics.total > 0 && (
             <div className="mt-5 bg-white dark:bg-[#111827] rounded-2xl p-5 border border-[#E5E0D8] dark:border-[#1F2937] gl-shadow-md">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="font-bold text-[#0A1628] dark:text-[#F5F0E8] flex items-center gap-2">
+                <h3 className="font-bold text-[#241100] dark:text-[#fff2e5] flex items-center gap-2">
                   <Shield size={18} /> KYC Overview
                 </h3>
                 <button
@@ -320,7 +317,7 @@ export default function AdminDashboard() {
 
           {/* L1: Changelog widget */}
           <div className="mt-5 bg-gradient-to-r from-[#EEF2FF] to-[#F5F3FF] dark:from-[#1E1B4B] dark:to-[#2E1065] rounded-2xl p-5 border border-[#C7D2FE] dark:border-[#4338CA]">
-            <h3 className="font-bold text-[#0A1628] dark:text-[#F5F0E8] text-sm mb-3">📋 What's New</h3>
+            <h3 className="font-bold text-[#241100] dark:text-[#fff2e5] text-sm mb-3">📋 What's New</h3>
             <div className="space-y-2 text-xs">
               {[
                 { date: "Jun 2026", text: "Phase 5: Runner earnings chart, task timeline, quick actions, keyboard shortcuts" },

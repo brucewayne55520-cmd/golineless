@@ -10,6 +10,7 @@ export default function ResetPassword() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [reset, setReset] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [tokenExpired, setTokenExpired] = useState(false);
   const [, navigate] = useLocation();
 
   // Extract token from URL query string
@@ -19,15 +20,15 @@ export default function ResetPassword() {
 
   if (!token) {
     return (
-      <div className="min-h-screen flex items-center justify-center px-4" style={{ background: "linear-gradient(135deg, #F8F9FC, #EEF2FA)" }}>
+      <div className="min-h-screen flex items-center justify-center px-4" style={{ background: "linear-gradient(135deg, #FFF9F2, #EEF2FA)" }}>
         <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-sm">
           <div className="bg-white rounded-3xl p-8 shadow-xl border border-gray-100 text-center">
             <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-red-100 mb-4">
               <svg className="w-8 h-8 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
             </div>
-            <h1 className="text-xl font-bold text-[#0A1628] mb-2">Invalid link</h1>
-            <p className="text-gray-500 text-sm mb-4">This password reset link is invalid or missing a token.</p>
-            <button onClick={() => navigate("/forgot-password")} className="w-full py-3 rounded-xl text-white font-bold text-sm" style={{ background: "linear-gradient(135deg, #0F2557, #1A3A7A)" }}>
+            <h1 className="text-xl font-bold text-[#241100] mb-2">{tokenExpired ? 'Link expired' : 'Invalid link'}</h1>
+            <p className="text-gray-500 text-sm mb-4">{tokenExpired ? 'This password reset link has expired. Reset links are valid for 1 hour.' : 'This password reset link is invalid or missing a token.'}</p>
+            <button onClick={() => navigate("/forgot-password")} className="w-full py-3 rounded-xl text-white font-bold text-sm" style={{ background: "linear-gradient(135deg, #331900, #1A3A7A)" }}>
               Request a new link
             </button>
           </div>
@@ -48,21 +49,26 @@ export default function ResetPassword() {
         body: JSON.stringify({ token, password, role }),
       });
       const data = await res.json();
-      if (!res.ok) { toast.error(data.error || "Reset failed"); setLoading(false); return; }
+      if (!res.ok) { 
+        if (data.error?.includes('expired')) { setTokenExpired(true); }
+        toast.error(data.error || "Reset failed"); 
+        setLoading(false); 
+        return; 
+      }
       setReset(true);
     } catch { toast.error("Network error"); }
     setLoading(false);
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4" style={{ background: "linear-gradient(135deg, #F8F9FC, #EEF2FA)" }}>
+    <div className="min-h-screen flex items-center justify-center px-4" style={{ background: "linear-gradient(135deg, #FFF9F2, #EEF2FA)" }}>
       <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }} className="w-full max-w-sm">
         <div className="bg-white rounded-3xl p-8 shadow-xl border border-gray-100">
           <div className="text-center mb-8">
             <div className="inline-block bg-white border border-gray-100 rounded-2xl p-3 shadow-sm mb-4">
               <img src="/logo.jpg" alt="Go LineLess" className="h-14 w-auto" />
             </div>
-            <h1 className="text-2xl font-black text-[#0A1628]">
+            <h1 className="text-2xl font-black text-[#241100]">
               {reset ? "Password reset!" : "Set new password"}
             </h1>
             <p className="text-gray-500 text-sm mt-1">
@@ -78,7 +84,7 @@ export default function ResetPassword() {
               <button
                 onClick={() => navigate("/login")}
                 className="mt-4 w-full py-3 rounded-xl text-white font-bold text-sm"
-                style={{ background: "linear-gradient(135deg, #0F2557, #1A3A7A)" }}
+                style={{ background: "linear-gradient(135deg, #331900, #1A3A7A)" }}
               >
                 Go to login
               </button>
@@ -92,7 +98,7 @@ export default function ResetPassword() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
-                  className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#0F2557]/30 focus:border-[#0F2557] transition"
+                  className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#331900]/30 focus:border-[#331900] transition"
                   required
                   minLength={6}
                 />
@@ -104,7 +110,7 @@ export default function ResetPassword() {
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   placeholder="••••••••"
-                  className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#0F2557]/30 focus:border-[#0F2557] transition"
+                  className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#331900]/30 focus:border-[#331900] transition"
                   required
                   minLength={6}
                 />
@@ -113,7 +119,7 @@ export default function ResetPassword() {
                 type="submit"
                 disabled={loading}
                 className="w-full py-3 rounded-xl text-white font-bold text-sm transition-opacity disabled:opacity-60"
-                style={{ background: "linear-gradient(135deg, #0F2557, #1A3A7A)" }}
+                style={{ background: "linear-gradient(135deg, #331900, #1A3A7A)" }}
               >
                 {loading ? "Resetting..." : "Reset password"}
               </button>
@@ -122,7 +128,7 @@ export default function ResetPassword() {
         </div>
 
         <p className="text-center text-sm text-gray-500 mt-4">
-          <button type="button" onClick={() => navigate("/login")} className="font-semibold" style={{ color: "#0F2557" }}>
+          <button type="button" onClick={() => navigate("/login")} className="font-semibold" style={{ color: "#331900" }}>
             Back to login
           </button>
         </p>

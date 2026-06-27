@@ -82,19 +82,19 @@ export default function RunnerReviewsPage() {
           <div className="absolute top-0 right-0 w-32 h-32 rounded-full opacity-20" style={{ background: "radial-gradient(circle, white, transparent)", transform: "translate(20%, -20%)" }} />
           <div className="flex items-center gap-4">
             <div className="text-center">
-              <div className="text-4xl font-black text-[#0A1628]">{avgRating}</div>
+              <div className="text-4xl font-black text-[#241100]">{avgRating}</div>
               <StarRating rating={Math.round(Number(avgRating))} size={14} />
-              <p className="text-[#0A1628]/60 text-[10px] mt-0.5">{reviews.length} review{reviews.length !== 1 ? "s" : ""}</p>
+              <p className="text-[#241100]/60 text-[10px] mt-0.5">{reviews.length} review{reviews.length !== 1 ? "s" : ""}</p>
             </div>
             <div className="flex-1 space-y-1">
               {ratingDistribution.map((d) => (
                 <div key={d.rating} className="flex items-center gap-2">
-                  <span className="text-[#0A1628]/60 text-[10px] w-3 text-right">{d.rating}</span>
+                  <span className="text-[#241100]/60 text-[10px] w-3 text-right">{d.rating}</span>
                   <Star size={10} fill={GOLD} style={{ color: GOLD }} />
-                  <div className="flex-1 h-1.5 bg-[#0A1628]/10 rounded-full overflow-hidden">
-                    <div className="h-full rounded-full bg-[#0A1628]/40 transition-all" style={{ width: `${d.pct}%` }} />
+                  <div className="flex-1 h-1.5 bg-[#241100]/10 rounded-full overflow-hidden">
+                    <div className="h-full rounded-full bg-[#241100]/40 transition-all" style={{ width: `${d.pct}%` }} />
                   </div>
-                  <span className="text-[#0A1628]/50 text-[9px] w-6 text-right">{d.count}</span>
+                  <span className="text-[#241100]/50 text-[9px] w-6 text-right">{d.count}</span>
                 </div>
               ))}
             </div>
@@ -109,7 +109,7 @@ export default function RunnerReviewsPage() {
             onClick={() => setFilterRating(null)}
             className={`px-3 py-1.5 rounded-xl text-[11px] font-semibold border transition-all whitespace-nowrap ${
               filterRating === null
-                ? "text-[#0A1628] border-transparent"
+                ? "text-[#241100] border-transparent"
                 : "text-white/60 border-white/10 bg-white/5"
             }`}
             style={filterRating === null ? { background: GOLD_GRAD } : {}}
@@ -125,7 +125,7 @@ export default function RunnerReviewsPage() {
                 onClick={() => setFilterRating(filterRating === r ? null : r)}
                 className={`px-3 py-1.5 rounded-xl text-[11px] font-semibold border transition-all whitespace-nowrap flex items-center gap-1 ${
                   filterRating === r
-                    ? "text-[#0A1628] border-transparent"
+                    ? "text-[#241100] border-transparent"
                     : "text-white/60 border-white/10 bg-white/5"
                 }`}
                 style={filterRating === r ? { background: GOLD_GRAD } : {}}
@@ -174,7 +174,7 @@ export default function RunnerReviewsPage() {
               className="bg-white/8 border border-white/10 rounded-2xl p-4"
             >
               <div className="flex items-center gap-3 mb-2.5">
-                <div className="w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold" style={{ background: GOLD_GRAD, color: "#0A1628" }}>
+                <div className="w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold" style={{ background: GOLD_GRAD, color: "#241100" }}>
                   {review.userName?.[0] ?? "C"}
                 </div>
                 <div className="flex-1 min-w-0">

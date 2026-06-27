@@ -1,9 +1,9 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useLocation } from "wouter";
 import { toast } from "sonner";
 import { BookOpen, ChevronDown, ArrowLeft, CheckCircle2, Camera, MapPin, Clock, XCircle, ShieldAlert, Search, Share2, type LucideIcon } from "lucide-react";
-import type { PlaybookResponseSectionsItem } from "@workspace/api-client-react";
+import type { PlaybookResponse, PlaybookResponseSectionsItem } from "@workspace/api-client-react";
 import { useGetRunnerPlaybook } from "@workspace/api-client-react";
 import { NAVY, NAVY_GRAD, GOLD } from "@/lib/theme";
 
@@ -32,11 +32,19 @@ export default function RunnerPlaybook() {
   const [, navigate] = useLocation();
   const [expandedSection, setExpandedSection] = useState<string>("");
   const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedQuery, setDebouncedQuery] = useState("");
+  const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const handleSearch = useCallback((value: string) => {
+    setSearchQuery(value);
+    if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
+    debounceTimerRef.current = setTimeout(() => setDebouncedQuery(value), 200);
+  }, []);
+  // Cleanup debounce timer on unmount
+  useEffect(() => () => { if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current); }, []);
   const { data: fetchedPlaybook, isLoading } = useGetRunnerPlaybook({ query: { queryKey: ["runnerPlaybook"] } });
 
   // L2: Offline playbook caching — save to localStorage, use cache when offline
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [cachedPlaybook, setCachedPlaybook] = useState<any>(null);
+  const [cachedPlaybook, setCachedPlaybook] = useState<PlaybookResponse | null>(null);
   useEffect(() => {
     if (fetchedPlaybook) {
       try { localStorage.setItem("golineless_playbook", JSON.stringify(fetchedPlaybook)); } catch { /* ignore */ }
@@ -48,8 +56,7 @@ export default function RunnerPlaybook() {
       if (cached) setCachedPlaybook(JSON.parse(cached));
     } catch { /* ignore */ }
   }, []);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const playbook: any = fetchedPlaybook || cachedPlaybook;
+  const playbook: PlaybookResponse | null = fetchedPlaybook || cachedPlaybook || null;
 
   return (
     <div className="min-h-screen" style={{ background: "#080E1E" }}>
@@ -80,7 +87,7 @@ export default function RunnerPlaybook() {
           <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/30" />
           <input
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            onChange={(e) => handleSearch(e.target.value)}
             placeholder="Search rules..."
             className="w-full bg-white/8 border border-white/10 rounded-xl pl-9 pr-3 py-2.5 text-white text-xs placeholder-white/30 focus:outline-none focus:border-white/20"
           />
@@ -92,7 +99,7 @@ export default function RunnerPlaybook() {
           const Icon = getSectionIcon(title);
           const isExpanded = expandedSection === title;
           // H12: Filter sections by search query
-          const matchesSearch = !searchQuery || title.toLowerCase().includes(searchQuery.toLowerCase()) || section.rules?.some((r: string) => r.toLowerCase().includes(searchQuery.toLowerCase()));
+          const matchesSearch = !debouncedQuery || title.toLowerCase().includes(debouncedQuery.toLowerCase()) || section.rules?.some((r: string) => r.toLowerCase().includes(debouncedQuery.toLowerCase()));
           if (!matchesSearch) return null;
           return (
             <motion.div
@@ -103,7 +110,7 @@ export default function RunnerPlaybook() {
                 onClick={() => setExpandedSection(isExpanded ? "" : title)}
                 className="w-full flex items-center gap-3 p-4 text-left"
               >
-                <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: "rgba(201,168,76,0.15)", color: "#C9A84C" }}>
+                <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: "rgba(201,168,76,0.15)", color: "#ff7b00" }}>
                   <Icon size={18} />
                 </div>                  <span className="flex-1 font-bold text-white text-sm">{title}</span>
                 <ChevronDown size={16} className={`text-white/40 transition-transform ${isExpanded ? "rotate-180" : ""}`} />
@@ -119,7 +126,7 @@ export default function RunnerPlaybook() {
                     <div className="px-4 pb-4 space-y-2 border-t border-white/10 pt-3">
                       {section.rules?.map((rule: string, i: number) => (
                         <div key={i} className="flex items-start gap-2.5 text-sm text-white/60">
-                          <span className="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5" style={{ background: "rgba(201,168,76,0.15)", color: "#C9A84C" }}>
+                          <span className="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5" style={{ background: "rgba(201,168,76,0.15)", color: "#ff7b00" }}>
                             <span className="text-[10px] font-bold">{i + 1}</span>
                           </span>
                           <span className="leading-relaxed">{rule}</span>

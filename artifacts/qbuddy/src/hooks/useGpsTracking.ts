@@ -12,8 +12,7 @@ export function useGpsTracking(opts: {
   enabled: boolean;
   taskId?: number | null;
   runnerId?: number;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  socketRef: React.MutableRefObject<any>;
+  socketRef: React.MutableRefObject<ReturnType<typeof import("socket.io-client").io> | null>;
 }) {
   const { enabled, taskId, runnerId, socketRef } = opts;
   const lastEmitRef = useRef(0);

@@ -4,7 +4,7 @@ import { motion } from "framer-motion";
 import { toast } from "sonner";
 import { GoogleLogin, type CredentialResponse } from "@react-oauth/google";
 import { useAuth } from "@/contexts/AuthContext";
-import { NAVY, NAVY_GRAD } from "@/lib/theme";
+import { DARK_GRAD, ORANGE } from "@/lib/theme";
 
 const API_BASE = import.meta.env.VITE_API_URL || "";
 
@@ -68,16 +68,20 @@ export default function Signup() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4" style={{ background: "linear-gradient(135deg, #F8F9FC, #EEF2FA)" }}>
-      <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }} className="w-full max-w-sm">
-        <div className="bg-white rounded-3xl p-8 shadow-xl border border-gray-100">
+    <div className="min-h-screen flex items-center justify-center px-4 relative overflow-hidden" style={{ background: "linear-gradient(160deg, #241100 0%, #331900 30%, #663100 60%, #994a00 85%, #cc6300 100%)" }}>
+      {/* Decorative circles */}
+      <div className="absolute top-[-80px] left-[-60px] w-[300px] h-[300px] rounded-full opacity-[0.1]" style={{ background: "radial-gradient(circle, #ff7b00, transparent 70%)" }} />
+      <div className="absolute bottom-[-100px] right-[-60px] w-[250px] h-[250px] rounded-full opacity-[0.07]" style={{ background: "radial-gradient(circle, #ff9633, transparent 70%)" }} />
+
+      <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }} className="w-full max-w-sm relative z-10">
+        <div className="bg-white/10 backdrop-blur-md rounded-3xl p-8 border border-white/20">
           {/* Logo & Header */}
           <div className="text-center mb-8">
-            <div className="inline-block bg-white border border-gray-100 rounded-2xl p-3 shadow-sm mb-4">
+            <div className="inline-block bg-white rounded-2xl p-3 shadow-lg mb-4">
               <img src="/logo.jpg" alt="Go LineLess" className="h-14 w-auto" />
             </div>
-            <h1 className="text-2xl font-black text-[#0A1628]">Create Account</h1>
-            <p className="text-gray-500 text-sm mt-1">Get started with Go LineLess</p>
+            <h1 className="text-2xl font-black text-white">Create Account</h1>
+            <p className="text-white/60 text-sm mt-1">Get started with Go LineLess</p>
           </div>
 
           {/* Google Sign-Up */}
@@ -85,7 +89,7 @@ export default function Signup() {
             <GoogleLogin
               onSuccess={handleGoogleSuccess}
               onError={handleGoogleError}
-              theme="outline"
+              theme="filled_black"
               size="large"
               shape="rectangular"
               width="300"
@@ -96,76 +100,76 @@ export default function Signup() {
 
           {/* Divider */}
           <div className="flex items-center gap-3 mb-5">
-            <div className="flex-1 h-px bg-gray-200" />
-            <span className="text-xs text-gray-400 font-medium">OR</span>
-            <div className="flex-1 h-px bg-gray-200" />
+            <div className="flex-1 h-px bg-white/20" />
+            <span className="text-xs text-white/40 font-medium">OR</span>
+            <div className="flex-1 h-px bg-white/20" />
           </div>
 
           {/* Email + Password Signup Form */}
           <form onSubmit={handleSignup} className="space-y-3">
             <div>
-              <label className="text-sm font-medium text-gray-700 mb-1 block">Full name</label>
+              <label className="text-sm font-medium text-white/80 mb-1 block">Full name</label>
               <input
                 type="text"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="Your name"
-                className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#0F2557]/30 focus:border-[#0F2557] transition"
+                className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white text-sm placeholder:text-white/30 focus:outline-none focus:ring-2 focus:ring-white/30 transition"
                 required
               />
             </div>
             <div>
-              <label className="text-sm font-medium text-gray-700 mb-1 block">Email address</label>
+              <label className="text-sm font-medium text-white/80 mb-1 block">Email address</label>
               <input
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="you@example.com"
-                className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#0F2557]/30 focus:border-[#0F2557] transition"
+                className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white text-sm placeholder:text-white/30 focus:outline-none focus:ring-2 focus:ring-white/30 transition"
                 required
               />
             </div>
             <div>
-              <label className="text-sm font-medium text-gray-700 mb-1 block">Password</label>
+              <label className="text-sm font-medium text-white/80 mb-1 block">Password</label>
               <input
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
-                className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#0F2557]/30 focus:border-[#0F2557] transition"
+                className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white text-sm placeholder:text-white/30 focus:outline-none focus:ring-2 focus:ring-white/30 transition"
                 required
                 minLength={6}
               />
-              <p className="text-xs text-gray-400 mt-1">At least 6 characters</p>
+              <p className="text-xs text-white/40 mt-1">At least 6 characters</p>
             </div>
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-3.5 rounded-xl text-white font-bold text-sm transition-opacity disabled:opacity-60"
-              style={{ background: NAVY_GRAD }}
+              className="w-full py-3.5 rounded-xl text-white font-bold text-sm transition-all disabled:opacity-60"
+              style={{ background: "linear-gradient(135deg, #ff7b00, #ff9633)", boxShadow: "0 6px 20px -4px rgba(255, 123, 0, 0.35)" }}
             >
               {loading ? "Creating account..." : "Create Account"}
             </button>
           </form>
 
           {/* Login Link */}
-          <p className="text-center text-sm text-gray-500 mt-5">
+          <p className="text-center text-sm text-white/60 mt-5">
             Already have an account?{" "}
-            <button type="button" onClick={() => navigate("/login")} className="font-semibold" style={{ color: NAVY }}>
+            <button type="button" onClick={() => navigate("/login")} className="font-semibold" style={{ color: ORANGE }}>
               Sign in
             </button>
           </p>
 
           {/* Runner Link */}
-          <p className="text-center text-sm text-gray-500 mt-3">
+          <p className="text-center text-sm text-white/60 mt-3">
             Are you a runner?{" "}
-            <button type="button" onClick={() => navigate("/runner/login")} className="font-semibold" style={{ color: NAVY }}>
+            <button type="button" onClick={() => navigate("/runner/login")} className="font-semibold" style={{ color: ORANGE }}>
               Login here
             </button>
           </p>
         </div>
 
-        <p className="text-center text-xs text-gray-400 mt-4">By creating an account, you agree to our Terms &amp; Privacy Policy</p>
+        <p className="text-center text-xs text-white/30 mt-4">By creating an account, you agree to our Terms &amp; Privacy Policy</p>
       </motion.div>
     </div>
   );

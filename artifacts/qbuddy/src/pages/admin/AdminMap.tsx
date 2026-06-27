@@ -28,7 +28,7 @@ export default function AdminMap() {
       mapRef.current = map;
       L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map);
     };
-    load().catch(console.error);
+    load().catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -51,7 +51,7 @@ export default function AdminMap() {
         markersRef.current.push(marker);
       }
     };
-    load().catch(console.error);
+    load().catch(() => {});
   }, [runners]);
 
   useEffect(() => {

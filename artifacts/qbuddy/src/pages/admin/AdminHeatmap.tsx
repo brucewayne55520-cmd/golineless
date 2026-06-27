@@ -84,17 +84,17 @@ export default function AdminHeatmap() {
       <AdminSidebar />
       <main className="flex-1 overflow-y-auto p-6">
         <div className="flex items-center justify-between mb-5">
-          <h1 className="text-xl font-bold text-[#0A1628] dark:text-[#F5F0E8]">City Heatmap</h1>
+          <h1 className="text-xl font-bold text-[#241100] dark:text-[#fff2e5]">City Heatmap</h1>
           <div className="flex items-center gap-2">
             <input
               value={newArea}
               onChange={e => setNewArea(e.target.value)}
               onKeyDown={e => e.key === "Enter" && addCustomArea()}
               placeholder="Add new area..."
-              className="w-48 border border-[#E5E0D8] dark:border-[#374151] rounded-xl px-3 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-[#0A1628] bg-white dark:bg-[#1F2937] dark:text-[#F5F0E8] gl-transition"
+              className="w-48 border border-[#E5E0D8] dark:border-[#374151] rounded-xl px-3 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-[#241100] bg-white dark:bg-[#1F2937] dark:text-[#fff2e5] gl-transition"
             />
-            <button onClick={addCustomArea} className="p-1.5 rounded-xl bg-white dark:bg-[#1F2937] border border-[#E5E0D8] dark:border-[#374151] hover:bg-[#FAF7F2] dark:hover:bg-[#111827] gl-transition" title="Add area">
-              <Plus size={14} className="text-[#0A1628] dark:text-[#D4A843]" />
+            <button onClick={addCustomArea} className="p-1.5 rounded-xl bg-white dark:bg-[#1F2937] border border-[#E5E0D8] dark:border-[#374151] hover:bg-[#FFF9F2] dark:hover:bg-[#111827] gl-transition" title="Add area">
+              <Plus size={14} className="text-[#241100] dark:text-[#ff7b00]" />
             </button>
           </div>
         </div>
@@ -103,8 +103,8 @@ export default function AdminHeatmap() {
         {data && (
           <div className="grid grid-cols-3 gap-4 mb-5">
             <div className="bg-white dark:bg-[#111827] rounded-2xl p-4 gl-shadow-md border border-[#E5E0D8] dark:border-[#1F2937] text-center gl-transition">
-              <MapPin size={18} className="mx-auto mb-1 text-[#0A1628] dark:text-[#D4A843]" />
-              <p className="text-2xl font-bold text-[#0A1628] dark:text-[#F5F0E8]">{data.totalDemand}</p>
+              <MapPin size={18} className="mx-auto mb-1 text-[#241100] dark:text-[#ff7b00]" />
+              <p className="text-2xl font-bold text-[#241100] dark:text-[#fff2e5]">{data.totalDemand}</p>
               <p className="text-[10px] text-[#9CA3AF]">Total Demand</p>
             </div>
             <div className="bg-white dark:bg-[#111827] rounded-2xl p-4 gl-shadow-md border border-[#ECFDF5] dark:border-[#065F46] text-center gl-transition">
@@ -138,7 +138,7 @@ export default function AdminHeatmap() {
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-2">
                     <MapPin size={14} style={{ color: shortage ? "#EF4444" : NAVY }} />
-                    <h3 className="font-bold text-[#0A1628] dark:text-[#F5F0E8]">{area.area}</h3>
+                    <h3 className="font-bold text-[#241100] dark:text-[#fff2e5]">{area.area}</h3>
                     {isCustom && (
                       <button onClick={() => removeArea(area.area)} className="p-0.5 rounded hover:bg-red-50 transition-colors" title="Remove custom area">
                         <X size={12} className="text-gray-400 hover:text-red-400" />
@@ -163,7 +163,7 @@ export default function AdminHeatmap() {
                     <div className="w-full bg-[#F3F4F6] rounded-full h-3 overflow-hidden">
                       <motion.div
                         initial={{ width: 0 }} animate={{ width: `${demandPercent}%` }}
-                        className="h-full rounded-full" style={{ background: "#0A1628", width: `${demandPercent}%` }}
+                        className="h-full rounded-full" style={{ background: "#241100", width: `${demandPercent}%` }}
                       />
                     </div>
                     <p className="text-[10px] text-[#9CA3AF] mt-0.5">{area.activeTasks} active</p>

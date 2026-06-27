@@ -28,7 +28,7 @@ export default function AdminSupport() {
     <div className="flex min-h-screen gl-surface dark:bg-[#0A0E1A]">
       <AdminSidebar />
       <main className="flex-1 overflow-y-auto p-6">
-        <h1 className="text-xl font-bold text-[#0A1628] dark:text-[#F5F0E8] mb-5">Customer Support Center</h1>
+        <h1 className="text-xl font-bold text-[#241100] dark:text-[#fff2e5] mb-5">Customer Support Center</h1>
 
         {stats && (
           <div className="grid grid-cols-4 gap-4 mb-5">
@@ -57,8 +57,8 @@ export default function AdminSupport() {
 
         <div className="bg-white dark:bg-[#111827] rounded-2xl gl-shadow-md border border-[#E5E0D8] dark:border-[#1F2937] overflow-hidden">
           <div className="px-5 py-4 border-b border-[#E5E0D8] dark:border-[#1F2937] flex items-center justify-between">
-            <h3 className="font-bold text-[#0A1628] dark:text-[#F5F0E8]">Support Tickets</h3>
-            <select value={filter} onChange={e => setFilter(e.target.value)} className="text-xs border border-[#E5E0D8] dark:border-[#374151] rounded-lg px-2 py-1.5 bg-white dark:bg-[#1F2937] dark:text-[#F5F0E8] gl-transition">
+            <h3 className="font-bold text-[#241100] dark:text-[#fff2e5]">Support Tickets</h3>
+            <select value={filter} onChange={e => setFilter(e.target.value)} className="text-xs border border-[#E5E0D8] dark:border-[#374151] rounded-lg px-2 py-1.5 bg-white dark:bg-[#1F2937] dark:text-[#fff2e5] gl-transition">
               <option value="">All</option><option value="open">Open</option><option value="in_progress">In Progress</option><option value="resolved">Resolved</option><option value="closed">Closed</option>
             </select>
           </div>
@@ -67,12 +67,12 @@ export default function AdminSupport() {
           ) : (
             <div className="divide-y divide-[#F3F4F6] dark:divide-[#1F2937]">
               {(Array.isArray(tickets) ? tickets : []).filter(t => !filter || t.status === filter).map((t: Required<import("@workspace/api-client-react").SupportTicket>) => (
-                <motion.div key={t.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="px-5 py-4 hover:bg-[#FAF7F2] dark:hover:bg-[#1F2937] gl-transition">
+                <motion.div key={t.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="px-5 py-4 hover:bg-[#FFF9F2] dark:hover:bg-[#1F2937] gl-transition">
                   <div className="flex items-start justify-between">
                     <div>
                       <div className="flex items-center gap-2">
                         <span className="text-xs font-mono font-bold text-[#9CA3AF]">{t.ticketId}</span>
-                        <span className="text-sm font-semibold text-[#0A1628] dark:text-[#F5F0E8]">{t.subject}</span>
+                        <span className="text-sm font-semibold text-[#241100] dark:text-[#fff2e5]">{t.subject}</span>
                       </div>
                       <p className="text-xs text-[#9CA3AF] mt-1 line-clamp-2">{t.description}</p>
                     </div>
@@ -140,7 +140,7 @@ function ResolutionForm({ ticketId, onResolve, onInProgress }: {
         value={resolution}
         onChange={e => setResolution(e.target.value)}
         placeholder="Describe the resolution..."
-        className="w-full border border-[#E5E0D8] dark:border-[#374151] rounded-lg px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-[#059669] resize-none bg-white dark:bg-[#1F2937] dark:text-[#F5F0E8] gl-transition"
+        className="w-full border border-[#E5E0D8] dark:border-[#374151] rounded-lg px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-[#059669] resize-none bg-white dark:bg-[#1F2937] dark:text-[#fff2e5] gl-transition"
         rows={3}
       />
       <div className="flex gap-2">

@@ -19,7 +19,7 @@ export default function AdminLeaderboard() {
       <main className="flex-1 overflow-y-auto p-6">
         <div className="flex items-center justify-between mb-5">
           <div>
-            <h1 className="text-xl font-black text-[#0A1628]">Comrade Leaderboard</h1>
+            <h1 className="text-xl font-black text-[#241100]">Comrade Leaderboard</h1>
             <p className="text-gray-400 text-xs mt-0.5">{data?.total ?? 0} verified comrades</p>
           </div>
           <div className="flex items-center gap-2 bg-white rounded-xl border border-gray-200 p-1">
@@ -60,13 +60,13 @@ export default function AdminLeaderboard() {
 
                     {/* Avatar */}
                     <div className="w-10 h-10 rounded-full flex items-center justify-center text-white text-sm font-bold flex-shrink-0"
-                      style={{ background: i < 3 ? `linear-gradient(135deg, ${GOLD}, #D4B870)` : `linear-gradient(135deg, ${NAVY}, #1D3D7C)` }}>
+                      style={{ background: i < 3 ? `linear-gradient(135deg, ${GOLD}, #ffb066)` : `linear-gradient(135deg, ${NAVY}, #663100)` }}>
                       {c.name?.[0] ?? "C"}
                     </div>
 
                     {/* Info */}
                     <div className="flex-1 min-w-0">
-                      <p className="font-bold text-[#0A1628] text-sm truncate">{c.name}</p>
+                      <p className="font-bold text-[#241100] text-sm truncate">{c.name}</p>
                       <div className="flex items-center gap-2 text-[10px] text-gray-400 mt-0.5">
                         <span className={`flex items-center gap-0.5 ${BADGE_COLORS[c.trustBadge] || "text-gray-400"}`}>
                           <Medal size={10} /> {c.trustBadge?.replace("_", " ")}

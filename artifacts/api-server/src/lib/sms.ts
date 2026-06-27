@@ -18,7 +18,7 @@ function getTwilioClient() {
   twilioVerifySid = process.env.TWILIO_VERIFY_SID || "";
   if (!accountSid || !authToken) return null;
   try {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    // eslint-disable-next-line @typescript-eslint/no-require-imports, @typescript-eslint/no-var-requires
     const twilio = require("twilio");
     twilioClient = twilio(accountSid, authToken);
     logger.info("Twilio client initialized");
@@ -75,8 +75,7 @@ export async function sendOtp(phone: string): Promise<boolean> {
       logger.warn({ err, phone }, "Twilio SMS send failed — OTP available in dev logs only");
     }
   }
-  // eslint-disable-next-line no-console
-  console.log(`[DEV OTP] Phone: ${phone}, OTP: ${otp}`);
+  logger.info({ phone, otp }, "[DEV OTP]");
   return true;
 }
 

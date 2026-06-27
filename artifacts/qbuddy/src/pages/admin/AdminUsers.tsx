@@ -19,16 +19,15 @@ export default function AdminUsers() {
   const [kycFilter, setKycFilter] = useState<string>("all");
   const [page, setPage] = useState(0);
   const LIMIT = 50;
-  // M3 FIX: Use server-side pagination with limit/offset (API doesn't support kyc_status, so filter client-side)
-  const { data: users, isLoading } = useListAdminUsers({ limit: LIMIT, offset: page * LIMIT });
+  // O6 FIX: Pass kyc_status param to server — backend now supports SQL WHERE filter
+  const { data: users, isLoading } = useListAdminUsers({ limit: LIMIT, offset: page * LIMIT, ...(kycFilter !== "all" ? { kyc_status: kycFilter } : {}) } as import("@workspace/api-client-react").ListAdminUsersParams);
   const list = (users ?? []) as UserWithKyc[];
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
 
-  // Client-side kyc + search filter
+  // Server-side kyc filter, client-side search filter
   const filtered = list.filter(u => {
-    const matchesKyc = kycFilter === "all" || u.kycStatus === kycFilter;
     const matchesSearch = !search || u.name?.toLowerCase().includes(search.toLowerCase()) || u.phone?.includes(search) || u.email?.toLowerCase().includes(search.toLowerCase());
-    return matchesKyc && matchesSearch;
+    return matchesSearch;
   });
 
   const allSelected = filtered.length > 0 && filtered.every(u => selectedIds.has(u.id));
@@ -61,10 +60,10 @@ export default function AdminUsers() {
       <main className="flex-1 overflow-y-auto p-6">
         <div className="flex items-center justify-between mb-5">
           <div>
-            <h1 className="text-2xl font-bold text-[#0A1628] dark:text-[#F5F0E8] flex items-center gap-2">Users</h1>
+            <h1 className="text-2xl font-bold text-[#241100] dark:text-[#fff2e5] flex items-center gap-2">Users</h1>
             <p className="text-[#6B7280] text-sm">Page {page + 1} · {filtered.length} users shown{kycFilter !== "all" ? ` (${kycFilter})` : ""}{selectedIds.size > 0 ? ` · ${selectedIds.size} selected` : ""}</p>
           </div>
-          <button onClick={exportCsv} disabled={filtered.length === 0} className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold bg-white dark:bg-[#1F2937] border border-[#E5E0D8] dark:border-[#374151] hover:bg-[#FAF7F2] dark:hover:bg-[#111827] disabled:opacity-40 gl-transition">
+          <button onClick={exportCsv} disabled={filtered.length === 0} className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold bg-white dark:bg-[#1F2937] border border-[#E5E0D8] dark:border-[#374151] hover:bg-[#FFF9F2] dark:hover:bg-[#111827] disabled:opacity-40 gl-transition">
             <Download size={14} /> Export CSV{selectedIds.size > 0 ? ` (${selectedIds.size})` : ""}
           </button>
         </div>
@@ -77,12 +76,12 @@ export default function AdminUsers() {
               value={search}
               onChange={e => { setSearch(e.target.value); setPage(0); }}
               placeholder="Search by name, phone, email, or ID..."
-              className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-[#E5E0D8] dark:border-[#374151] text-sm focus:outline-none focus:ring-2 focus:ring-[#0A1628] bg-white dark:bg-[#1F2937] dark:text-[#F5F0E8] gl-transition"
+              className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-[#E5E0D8] dark:border-[#374151] text-sm focus:outline-none focus:ring-2 focus:ring-[#241100] bg-white dark:bg-[#1F2937] dark:text-[#fff2e5] gl-transition"
             />
           </div>
           <div className="flex gap-1 bg-white dark:bg-[#1F2937] p-1 rounded-xl border border-[#E5E0D8] dark:border-[#374151]">
             {["all", "pending", "verified", "rejected"].map(f => (
-              <button key={f} onClick={() => { setKycFilter(f); setPage(0); }} className={`px-3 py-1.5 rounded-lg text-xs font-semibold gl-transition ${kycFilter === f ? "bg-[#0A1628] dark:bg-[#D4A843] text-white dark:text-[#0A1628]" : "text-[#6B7280] hover:bg-[#F3F4F6] dark:hover:bg-[#374151]"}`}>
+              <button key={f} onClick={() => { setKycFilter(f); setPage(0); }} className={`px-3 py-1.5 rounded-lg text-xs font-semibold gl-transition ${kycFilter === f ? "bg-[#241100] dark:bg-[#ff7b00] text-white dark:text-[#241100]" : "text-[#6B7280] hover:bg-[#F3F4F6] dark:hover:bg-[#374151]"}`}>
                 {f === "all" ? "All" : f.charAt(0).toUpperCase() + f.slice(1)}
 
               </button>
@@ -109,15 +108,15 @@ export default function AdminUsers() {
                 <tr><td colSpan={6} className="text-center py-12 text-gray-400">No users found</td></tr>
               ) : (
                 filtered.map(user => (
-                  <tr key={user.id} className="border-b border-[#F3F4F6] dark:border-[#1F2937] hover:bg-[#FAF7F2] dark:hover:bg-[#1F2937] gl-transition">
+                  <tr key={user.id} className="border-b border-[#F3F4F6] dark:border-[#1F2937] hover:bg-[#FFF9F2] dark:hover:bg-[#1F2937] gl-transition">
                     <td className="px-4 py-3"><input type="checkbox" checked={selectedIds.has(user.id)} onChange={() => toggleSelect(user.id)} className="rounded" onClick={e => e.stopPropagation()} /></td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 gl-navy rounded-full flex items-center justify-center text-[#D4A843] text-xs font-bold">
+                        <div className="w-8 h-8 gl-navy rounded-full flex items-center justify-center text-[#ff7b00] text-xs font-bold">
                           {getInitials(user.name ?? user.phone)}
                         </div>
                         <div>
-                          <span className="font-medium text-[#0A1628] dark:text-[#F5F0E8] block">{user.name ?? "—"}</span>
+                          <span className="font-medium text-[#241100] dark:text-[#fff2e5] block">{user.name ?? "—"}</span>
                           {user.email && <span className="text-[10px] text-[#9CA3AF]">{user.email}</span>}
                         </div>
                       </div>

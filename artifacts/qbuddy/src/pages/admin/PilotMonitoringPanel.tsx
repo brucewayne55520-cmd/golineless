@@ -30,7 +30,7 @@ export default function PilotMonitoringPanel({ monitoring }: Props) {
       className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 mb-5"
       style={{ borderLeft: `4px solid ${GOLD}` }}
     >
-      <h3 className="font-black text-[#0A1628] text-sm mb-3 flex items-center gap-2">
+      <h3 className="font-black text-[#241100] text-sm mb-3 flex items-center gap-2">
         <Activity size={14} className="text-blue-500" /> Pilot Monitoring
       </h3>
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-4">

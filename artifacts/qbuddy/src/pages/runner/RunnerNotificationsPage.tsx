@@ -101,14 +101,14 @@ export default function RunnerNotificationsPage() {
           <div>
             <h1 className="font-black text-white text-lg">Notifications</h1>
             {unreadCount > 0 && (
-              <p className="text-xs text-[#C9A84C] font-semibold">{unreadCount} unread</p>
+              <p className="text-xs text-[#ff7b00] font-semibold">{unreadCount} unread</p>
             )}
           </div>
         </div>
         {unreadCount > 0 && (
           <button
             onClick={markAllRead}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#C9A84C]/15 text-[#C9A84C] text-xs font-bold hover:bg-[#C9A84C]/25 transition-colors"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#ff7b00]/15 text-[#ff7b00] text-xs font-bold hover:bg-[#ff7b00]/25 transition-colors"
           >
             <CheckCheck size={12} /> Mark all read
           </button>
@@ -146,7 +146,7 @@ export default function RunnerNotificationsPage() {
                   className={`w-full text-left p-4 rounded-2xl border transition-all ${
                     notif.isRead
                       ? "bg-white/5 border-white/10"
-                      : "bg-[#C9A84C]/5 border-[#C9A84C]/20 shadow-sm"
+                      : "bg-[#ff7b00]/5 border-[#ff7b00]/20 shadow-sm"
                   }`}
                 >
                   <div className="flex gap-3">
@@ -159,7 +159,7 @@ export default function RunnerNotificationsPage() {
                           {notif.title}
                         </h3>
                         {!notif.isRead && (
-                          <div className="w-2 h-2 rounded-full bg-[#C9A84C] flex-shrink-0" />
+                          <div className="w-2 h-2 rounded-full bg-[#ff7b00] flex-shrink-0" />
                         )}
                       </div>
                       <p className="text-xs text-white/40 line-clamp-2 leading-relaxed">{notif.message}</p>

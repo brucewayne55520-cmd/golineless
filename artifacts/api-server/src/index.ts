@@ -6,10 +6,10 @@ import { validateEnv, getFeatureStatus } from "./lib/env-check";
 import { initSentry, getSentryErrorHandler } from "./lib/sentry";
 import { setIo } from "./lib/socket";
 import { getUserFromToken, getRunnerFromToken, getAdminFromToken } from "./lib/auth";
-import { db, runnerLocationsTable, runnersTable, usersTable, userSessionsTable, runnerSessionsTable, adminSessionsTable, notificationsTable } from "@workspace/db";
+import { db, tasksTable, runnerLocationsTable, runnersTable, usersTable, userSessionsTable, runnerSessionsTable, adminSessionsTable, notificationsTable } from "@workspace/db";
 import { eq, lt, and } from "drizzle-orm";
 
-type SocketIdentity = { type: "user" | "runner" | "admin"; id: number };
+type SocketIdentity = { type: "user" | "runner" | "admin" | "family"; id: number; taskId?: number };
 
 async function resolveSocketIdentity(token: string | null): Promise<SocketIdentity | null> {
   if (!token) return null;
@@ -20,6 +20,9 @@ async function resolveSocketIdentity(token: string | null): Promise<SocketIdenti
   if (runner) return { type: "runner", id: runner.id };
   const admin = await getAdminFromToken(token);
   if (admin) return { type: "admin", id: admin.id };
+  // Family tracking token: resolve to the specific task
+  const [task] = await db.select({ id: tasksTable.id }).from(tasksTable).where(eq(tasksTable.familyTrackingToken, token)).limit(1);
+  if (task) return { type: "family", id: 0, taskId: task.id };
   return null;
 }
 
@@ -245,7 +248,13 @@ io.on("connection", (socket) => {
   });
 
   // Join task room (requires an authenticated identity in production)
+  // Family tracking tokens are authorized only for the specific task they were issued for
   socket.on("join_task", (data: { taskId: number }) => {
+    if (identity?.type === "family" && identity.taskId === data.taskId) {
+      socket.join(`task_${data.taskId}`);
+      logger.info({ socketId: socket.id, taskId: data.taskId }, "Joined task room via family tracking");
+      return;
+    }
     if (!allow(identity != null)) {
       logger.warn({ socketId: socket.id, taskId: data.taskId }, "Unauthorized join_task");
       return;

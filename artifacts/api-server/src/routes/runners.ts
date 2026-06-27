@@ -12,14 +12,16 @@ const router: IRouter = Router();
 
 // GET /runners/me
 router.get("/runners/me", requireRunner, async (req, res): Promise<void> => {
-  const runner = req.runner!;
+  const runner = req.runner;
+  if (!runner) { res.status(401).json({ error: "Unauthorized" }); return; }
   const { otp, otpExpiresAt, aadhaarNumber, ...safe } = runner;
   // Auto-generate unique_id if missing (GLR-XXXX-XXXX)
-  if (!(safe as any).uniqueId) {
+  const runnerRecord = safe as Record<string, unknown>;
+  if (!runnerRecord.uniqueId) {
     const suffix = crypto.randomBytes(2).toString("hex").toUpperCase();
     const newUniqueId = `GLR-${String(runner.id).padStart(4, "0")}-${suffix}`;
-    await db.update(runnersTable).set({ uniqueId: newUniqueId } as any).where(eq(runnersTable.id, runner.id));
-    (safe as any).uniqueId = newUniqueId;
+    await db.update(runnersTable).set({ uniqueId: newUniqueId } as Record<string, unknown>).where(eq(runnersTable.id, runner.id));
+    runnerRecord.uniqueId = newUniqueId;
   }
   res.json({
     ...safe,
@@ -36,7 +38,8 @@ router.get("/runners/me", requireRunner, async (req, res): Promise<void> => {
 
 // PATCH /runners/me
 router.patch("/runners/me", requireRunner, async (req, res): Promise<void> => {
-  const runner = req.runner!;
+  const runner = req.runner;
+  if (!runner) { res.status(401).json({ error: "Unauthorized" }); return; }
   const { name, email, city, area, gender, fullName, bankAccount, bankIfsc, bankAccountHolder,
     emergencyContactName, emergencyContactPhone, emergencyContactRelation } = req.body;
   // B1 FIX: Allow updating more profile fields from the profile page
@@ -64,7 +67,8 @@ router.patch("/runners/me", requireRunner, async (req, res): Promise<void> => {
 
 // GET /runners/me/earnings
 router.get("/runners/me/earnings", requireRunner, async (req, res): Promise<void> => {
-  const runner = req.runner!;
+  const runner = req.runner;
+  if (!runner) { res.status(401).json({ error: "Unauthorized" }); return; }
   const now = new Date();
   const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   const weekStart = new Date(todayStart); weekStart.setDate(todayStart.getDate() - 7);
@@ -101,7 +105,8 @@ router.get("/runners/me/earnings", requireRunner, async (req, res): Promise<void
 
 // GET /runners/me/earnings/daily
 router.get("/runners/me/earnings/daily", requireRunner, async (req, res): Promise<void> => {
-  const runner = req.runner!;
+  const runner = req.runner;
+  if (!runner) { res.status(401).json({ error: "Unauthorized" }); return; }
   const weekAgo = new Date(); weekAgo.setDate(weekAgo.getDate() - 7); weekAgo.setHours(0, 0, 0, 0);
 
   // Fix #22: SQL GROUP BY date instead of loading all completed tasks
@@ -127,7 +132,8 @@ router.get("/runners/me/earnings/daily", requireRunner, async (req, res): Promis
 
 // POST /runners/kyc
 router.post("/runners/kyc", requireRunner, async (req, res): Promise<void> => {
-  const runner = req.runner!;
+  const runner = req.runner;
+  if (!runner) { res.status(401).json({ error: "Unauthorized" }); return; }
   const { fullName, aadhaarNumber, aadhaarFront, aadhaarBack, selfie, bankAccount, bankIfsc,
     bankAccountHolder, emergencyContactName, emergencyContactPhone, emergencyContactRelation } = req.body;
 
@@ -163,7 +169,8 @@ router.post("/runners/kyc", requireRunner, async (req, res): Promise<void> => {
 
 // PATCH /runners/me/avatar — upload profile photo
 router.patch("/runners/me/avatar", requireRunner, async (req, res): Promise<void> => {
-  const runner = req.runner!;
+  const runner = req.runner;
+  if (!runner) { res.status(401).json({ error: "Unauthorized" }); return; }
   const { avatar } = req.body; // base64 data URL or URL string
   if (!avatar) {
     res.status(400).json({ error: "No avatar provided" }); return;
@@ -183,7 +190,8 @@ router.patch("/runners/me/avatar", requireRunner, async (req, res): Promise<void
 
 // POST /runners/toggle-online
 router.post("/runners/toggle-online", requireRunner, async (req, res): Promise<void> => {
-  const runner = req.runner!;
+  const runner = req.runner;
+  if (!runner) { res.status(401).json({ error: "Unauthorized" }); return; }
   const { isOnline } = req.body;
   const [updated] = await db.update(runnersTable)
     .set({ isOnline })
@@ -195,7 +203,8 @@ router.post("/runners/toggle-online", requireRunner, async (req, res): Promise<v
 
 // POST /runners/me/onboarding — save onboarding step data
 router.post("/runners/me/onboarding", requireRunner, async (req, res): Promise<void> => {
-  const runner = req.runner!;
+  const runner = req.runner;
+  if (!runner) { res.status(401).json({ error: "Unauthorized" }); return; }
   const { step, name, fullName, bankAccount, bankIfsc, bankAccountHolder, selfie } = req.body;
 
   const updates: Record<string, unknown> = {};
@@ -219,7 +228,8 @@ router.post("/runners/me/onboarding", requireRunner, async (req, res): Promise<v
 
 // POST /runners/me/gps-check — verify GPS health
 router.post("/runners/me/gps-check", requireRunner, async (req, res): Promise<void> => {
-  const runner = req.runner!;
+  const runner = req.runner;
+  if (!runner) { res.status(401).json({ error: "Unauthorized" }); return; }
   const { lat, lng, status } = req.body; // status: "granted" | "denied" | "unavailable"
 
   // Fix #3: Validate GPS coordinates
@@ -242,7 +252,8 @@ router.post("/runners/me/gps-check", requireRunner, async (req, res): Promise<vo
 
 // GET /runners/me/active-tasks
 router.get("/runners/me/active-tasks", requireRunner, async (req, res): Promise<void> => {
-  const runner = req.runner!;
+  const runner = req.runner;
+  if (!runner) { res.status(401).json({ error: "Unauthorized" }); return; }
   const tasks = await db
     .select()
     .from(tasksTable)
@@ -261,7 +272,8 @@ router.get("/runners/me/active-tasks", requireRunner, async (req, res): Promise<
 
 // GET /runners/me/readiness — compute dispatch readiness score (0-100%)
 router.get("/runners/me/readiness", requireRunner, async (req, res): Promise<void> => {
-  const runner = req.runner!;
+  const runner = req.runner;
+  if (!runner) { res.status(401).json({ error: "Unauthorized" }); return; }
 
   const kycReady = runner.kycStatus === "verified" || runner.dispatchAllowed === true;
   const gpsReady = runner.gpsStatus === "granted";
@@ -453,7 +465,8 @@ router.get("/runners/:id/location/:taskId", async (req, res): Promise<void> => {
 
 // GET /runners/me/payouts — payout settlement history for the logged-in runner
 router.get("/runners/me/payouts", requireRunner, async (req, res): Promise<void> => {
-  const runner = req.runner!;
+  const runner = req.runner;
+  if (!runner) { res.status(401).json({ error: "Unauthorized" }); return; }
   const payouts = await db.select().from(runnerPayoutsTable)
     .where(eq(runnerPayoutsTable.runnerId, runner.id))
     .orderBy(desc(runnerPayoutsTable.createdAt));
@@ -482,7 +495,8 @@ router.get("/runners/me/payouts", requireRunner, async (req, res): Promise<void>
 
 // POST /runners/me/payout-request — Runner requests payout of pending earnings
 router.post("/runners/me/payout-request", requireRunner, async (req, res): Promise<void> => {
-  const runner = req.runner!;
+  const runner = req.runner;
+  if (!runner) { res.status(401).json({ error: "Unauthorized" }); return; }
   const { amount, notes } = req.body;
 
   // Prevent duplicate pending payout requests
@@ -544,7 +558,8 @@ router.post("/runners/me/payout-request", requireRunner, async (req, res): Promi
 
 // GET /runners/me/reviews — list reviews for the logged-in runner
 router.get("/runners/me/reviews", requireRunner, async (req, res): Promise<void> => {
-  const runner = req.runner!;
+  const runner = req.runner;
+  if (!runner) { res.status(401).json({ error: "Unauthorized" }); return; }
   const { limit = "20", offset = "0" } = req.query as Record<string, string>;
 
   const reviews = await db
@@ -573,7 +588,8 @@ router.get("/runners/me/reviews", requireRunner, async (req, res): Promise<void>
 
 // GET /runners/me/stats — aggregated stats endpoint (E4)
 router.get("/runners/me/stats", requireRunner, async (req, res): Promise<void> => {
-  const runner = req.runner!;
+  const runner = req.runner;
+  if (!runner) { res.status(401).json({ error: "Unauthorized" }); return; }
   const now = new Date();
   const weekStart = new Date(now); weekStart.setDate(now.getDate() - 7); weekStart.setHours(0, 0, 0, 0);
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -617,7 +633,8 @@ router.get("/runners/me/stats", requireRunner, async (req, res): Promise<void> =
 
 // PATCH /runners/me/specializations — toggle specialization badges
 router.patch("/runners/me/specializations", requireRunner, async (req, res): Promise<void> => {
-  const runner = req.runner!;
+  const runner = req.runner;
+  if (!runner) { res.status(401).json({ error: "Unauthorized" }); return; }
   const { specializations } = req.body; // string[]
   if (!Array.isArray(specializations)) {
     res.status(400).json({ error: "specializations must be an array of strings" }); return;
@@ -627,12 +644,14 @@ router.patch("/runners/me/specializations", requireRunner, async (req, res): Pro
   await db.update(runnersTable).set({
     specializations: filteredSpecs,
   } as Record<string, unknown>).where(eq(runnersTable.id, runner.id));
+  // Note: `as Record<string, unknown>` is used because specializations is a pg text[] column
   res.json({ specializations: filteredSpecs });
 });
 
 // POST /runners/me/gps-background — B2: GPS background update endpoint
 router.post("/runners/me/gps-background", requireRunner, async (req, res): Promise<void> => {
-  const runner = req.runner!;
+  const runner = req.runner;
+  if (!runner) { res.status(401).json({ error: "Unauthorized" }); return; }
   const { lat, lng } = req.body;
   if (lat != null && !isValidCoordinate(lat, "lat")) { res.status(400).json({ error: "Invalid latitude" }); return; }
   if (lng != null && !isValidCoordinate(lng, "lng")) { res.status(400).json({ error: "Invalid longitude" }); return; }
@@ -645,7 +664,8 @@ router.post("/runners/me/gps-background", requireRunner, async (req, res): Promi
 
 // POST /runners/delete-account — Runner requests account deletion (requires password confirmation)
 router.post("/runners/delete-account", requireRunner, async (req, res): Promise<void> => {
-  const runner = req.runner!;
+  const runner = req.runner;
+  if (!runner) { res.status(401).json({ error: "Unauthorized" }); return; }
   const { password } = req.body;
   // L7 FIX: Require password confirmation for account deletion
   if (!password) {

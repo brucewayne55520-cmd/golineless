@@ -11,8 +11,7 @@ import { useQueryClient } from "@tanstack/react-query";
  */
 export function useNotificationSocket(runnerId?: number | null, enabled = true) {
   const queryClient = useQueryClient();
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const socketRef = useRef<any>(null);
+  const socketRef = useRef<ReturnType<typeof import("socket.io-client").io> | null>(null);
 
   useEffect(() => {
     if (!enabled || !runnerId) return;
@@ -20,14 +19,17 @@ export function useNotificationSocket(runnerId?: number | null, enabled = true) 
     let mounted = true;
     const init = async () => {
       try {
-        const { io } = await import("socket.io-client");
-        if (!mounted) return;
-        const sock = io(window.location.origin, {
-          path: "/api/socket.io",
-          reconnection: true,
-          reconnectionDelay: 2000,
-          reconnectionAttempts: 5,
-        });
+      const { io } = await import("socket.io-client");
+      if (!mounted) return;
+      // O1: Include auth token for server-side verification
+      const authToken = localStorage.getItem("golineless_runner_token") || localStorage.getItem("golineless_user_token") || "";
+      const sock = io(window.location.origin, {
+        path: "/api/socket.io",
+        auth: { token: authToken },
+        reconnection: true,
+        reconnectionDelay: 2000,
+        reconnectionAttempts: 5,
+      });
 
         // Join the runner's personal notification room once connected
         sock.on("connect", () => {

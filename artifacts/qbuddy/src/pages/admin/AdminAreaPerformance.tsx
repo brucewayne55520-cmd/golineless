@@ -17,7 +17,7 @@ export default function AdminAreaPerformance() {
       <main className="flex-1 overflow-y-auto p-6">
         <div className="flex items-center justify-between mb-5">
           <div>
-            <h1 className="text-xl font-black text-[#0A1628]">Area Performance Analytics</h1>
+            <h1 className="text-xl font-black text-[#241100]">Area Performance Analytics</h1>
             <p className="text-gray-400 text-xs mt-0.5">Ahmedabad · {data?.areas?.length ?? 0} zones</p>
           </div>
         </div>
@@ -61,7 +61,7 @@ export default function AdminAreaPerformance() {
                       <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: area.shortage > 0 ? "#FEF2F2" : "#F0FDF4" }}>
                         <MapPin size={14} style={{ color: area.shortage > 0 ? "#EF4444" : "#16A34A" }} />
                       </div>
-                      <h3 className="font-bold text-[#0A1628]">{area.area}</h3>
+                      <h3 className="font-bold text-[#241100]">{area.area}</h3>
                     </div>
                     {area.shortage > 0 && (
                       <span className="text-[9px] font-bold text-red-500 bg-red-50 border border-red-100 px-2 py-0.5 rounded-full">

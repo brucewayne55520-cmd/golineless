@@ -4,7 +4,7 @@ import { motion } from "framer-motion";
 import { toast } from "sonner";
 import { useSendOtp, useVerifyOtp } from "@workspace/api-client-react";
 import { useAuth } from "@/contexts/AuthContext";
-import { NAVY_GRAD, GOLD_GRAD } from "@/lib/theme";
+import { DARK_GRAD } from "@/lib/theme";
 import { requestMagicLink } from "@/lib/neon-auth";
 
 const API_BASE = import.meta.env.VITE_API_URL || "";
@@ -60,8 +60,12 @@ export default function RunnerLogin() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4" style={{ background: NAVY_GRAD }}>
-      <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-sm">
+    <div className="min-h-screen flex items-center justify-center px-4 relative overflow-hidden" style={{ background: "linear-gradient(160deg, #241100 0%, #331900 30%, #663100 60%, #994a00 85%, #cc6300 100%)" }}>
+      {/* Decorative circles */}
+      <div className="absolute top-[-80px] right-[-60px] w-[300px] h-[300px] rounded-full opacity-[0.1]" style={{ background: "radial-gradient(circle, #ff7b00, transparent 70%)" }} />
+      <div className="absolute bottom-[-100px] left-[-60px] w-[250px] h-[250px] rounded-full opacity-[0.07]" style={{ background: "radial-gradient(circle, #ff9633, transparent 70%)" }} />
+
+      <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-sm relative z-10">
         <div className="bg-white/10 backdrop-blur-md rounded-3xl p-8 border border-white/20">
           <div className="text-center mb-8">
             <div className="bg-white rounded-2xl p-3 inline-block mb-4 shadow-lg">
@@ -85,7 +89,7 @@ export default function RunnerLogin() {
                 type="button"
                 onClick={() => { setMagicLinkSent(false); setEmail(""); setStep("phone"); }}
                 className="mt-4 text-sm font-medium underline"
-                style={{ color: "#C9A84C" }}
+                style={{ color: "#ff9633" }}
               >
                 Use a different method
               </button>
@@ -123,12 +127,12 @@ export default function RunnerLogin() {
                 type="submit"
                 disabled={sendingLink}
                 className="w-full py-4 rounded-2xl text-white font-bold text-lg disabled:opacity-60"
-                style={{ background: GOLD_GRAD }}
+                style={{ background: "linear-gradient(135deg, #ff7b00, #ff9633)", boxShadow: "0 6px 20px -4px rgba(255, 123, 0, 0.35)" }}
               >
                 {sendingLink ? "Sending..." : "Send magic link"}
               </button>
               <p className="text-center text-sm text-white/60">
-                <button type="button" onClick={() => setStep("phone")} className="font-semibold" style={{ color: "#C9A84C" }}>
+                <button type="button" onClick={() => setStep("phone")} className="font-semibold" style={{ color: "#ff9633" }}>
                   Use phone instead
                 </button>
               </p>
@@ -153,7 +157,7 @@ export default function RunnerLogin() {
                 type="submit"
                 disabled={sendOtp.isPending}
                 className="w-full py-4 rounded-2xl text-white font-bold text-lg"
-                style={{ background: GOLD_GRAD }}
+                style={{ background: "linear-gradient(135deg, #ff7b00, #ff9633)", boxShadow: "0 6px 20px -4px rgba(255, 123, 0, 0.35)" }}
               >
                 {sendOtp.isPending ? "Sending..." : "Get OTP"}
               </button>
@@ -178,7 +182,7 @@ export default function RunnerLogin() {
               </button>
               <p className="text-center text-sm text-white/60">
                 Looking to hire?{" "}
-                <button type="button" onClick={() => navigate("/login")} className="font-semibold" style={{ color: "#C9A84C" }}>
+                <button type="button" onClick={() => navigate("/login")} className="font-semibold" style={{ color: "#ff9633" }}>
                   Book a runner
                 </button>
               </p>
@@ -223,7 +227,7 @@ export default function RunnerLogin() {
                 <label className="text-sm font-medium text-white/80 mb-1 block">Password</label>
                 <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" className="w-full px-4 py-3 rounded-xl bg-white/10 border border-white/20 text-white text-sm placeholder:text-white/30 focus:outline-none focus:ring-2 focus:ring-white/30" required minLength={6} />
               </div>
-              <button type="submit" disabled={loading} className="w-full py-4 rounded-2xl text-white font-bold text-lg disabled:opacity-60" style={{ background: GOLD_GRAD }}>
+              <button type="submit" disabled={loading} className="w-full py-4 rounded-2xl text-white font-bold text-lg disabled:opacity-60" style={{ background: "linear-gradient(135deg, #ff7b00, #ff9633)", boxShadow: "0 6px 20px -4px rgba(255, 123, 0, 0.35)" }}>
                 {loading ? "Please wait..." : isSigningUp ? "Create Account" : "Sign In"}
               </button>
               {!isSigningUp && (
@@ -235,12 +239,12 @@ export default function RunnerLogin() {
               )}
               <p className="text-center text-sm text-white/60">
                 {isSigningUp ? "Already have an account?" : "Don't have an account?"}{" "}
-                <button type="button" onClick={() => setIsSigningUp(!isSigningUp)} className="font-semibold" style={{ color: "#C9A84C" }}>
+                <button type="button" onClick={() => setIsSigningUp(!isSigningUp)} className="font-semibold" style={{ color: "#ff9633" }}>
                   {isSigningUp ? "Sign in" : "Create one"}
                 </button>
               </p>
               <p className="text-center text-sm text-white/60">
-                <button type="button" onClick={() => setStep("phone")} className="font-semibold" style={{ color: "#C9A84C" }}>
+                <button type="button" onClick={() => setStep("phone")} className="font-semibold" style={{ color: "#ff9633" }}>
                   Use phone instead
                 </button>
               </p>
@@ -263,7 +267,7 @@ export default function RunnerLogin() {
                     onChange={(e) => handleOtpChange(e.target.value, idx)}
                     onKeyDown={(e) => { if (e.key === "Backspace" && !digit && idx > 0) document.getElementById(`otp-r-${idx - 1}`)?.focus(); }}
                     className="w-11 h-14 bg-white/10 border-2 border-white/20 rounded-xl text-center text-2xl font-bold focus:outline-none transition-colors"
-                    style={{ color: "#C9A84C", borderColor: digit ? "#C9A84C" : "" }}
+                    style={{ color: "#ff9633", borderColor: digit ? "#ff7b00" : "" }}
                   />
                 ))}
               </div>
@@ -271,7 +275,7 @@ export default function RunnerLogin() {
                 type="submit"
                 disabled={verifyOtp.isPending}
                 className="w-full py-4 rounded-2xl text-white font-bold text-lg"
-                style={{ background: GOLD_GRAD }}
+                style={{ background: "linear-gradient(135deg, #ff7b00, #ff9633)", boxShadow: "0 6px 20px -4px rgba(255, 123, 0, 0.35)" }}
               >
                 {verifyOtp.isPending ? "Verifying..." : "Start Earning!"}
               </button>

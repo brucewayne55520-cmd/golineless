@@ -59,17 +59,17 @@ export default function MagicLinkCallback() {
 
   if (status === "error") {
     return (
-      <div className="min-h-screen flex items-center justify-center px-4" style={{ background: "linear-gradient(135deg, #F8F9FC, #EEF2FA)" }}>
+      <div className="min-h-screen flex items-center justify-center px-4" style={{ background: "linear-gradient(135deg, #FFF9F2, #EEF2FA)" }}>
         <div className="bg-white rounded-3xl p-8 shadow-xl text-center max-w-sm">
           <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-red-100 mb-4">
             <svg className="w-8 h-8 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
           </div>
-          <h1 className="text-xl font-bold text-[#0A1628] mb-2">Link expired or invalid</h1>
+          <h1 className="text-xl font-bold text-[#241100] mb-2">Link expired or invalid</h1>
           <p className="text-gray-500 text-sm mb-4">Please request a new magic link.</p>
           <button
             onClick={() => navigate("/login")}
             className="px-6 py-3 rounded-xl text-white font-bold text-sm"
-            style={{ background: "linear-gradient(135deg, #0F2557, #1A3A7A)" }}
+            style={{ background: "linear-gradient(135deg, #331900, #1A3A7A)" }}
           >
             Back to login
           </button>
@@ -79,10 +79,10 @@ export default function MagicLinkCallback() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4" style={{ background: "linear-gradient(135deg, #F8F9FC, #EEF2FA)" }}>
+    <div className="min-h-screen flex items-center justify-center px-4" style={{ background: "linear-gradient(135deg, #FFF9F2, #EEF2FA)" }}>
       <div className="bg-white rounded-3xl p-8 shadow-xl text-center max-w-sm">
-        <div className="inline-block animate-spin w-8 h-8 rounded-full mb-4" style={{ border: "3px solid #0F2557", borderTopColor: "transparent" }} />
-        <h1 className="text-lg font-bold text-[#0A1628]">Signing you in...</h1>
+        <div className="inline-block animate-spin w-8 h-8 rounded-full mb-4" style={{ border: "3px solid #331900", borderTopColor: "transparent" }} />
+        <h1 className="text-lg font-bold text-[#241100]">Signing you in...</h1>
         <p className="text-gray-500 text-sm mt-1">Please wait a moment.</p>
       </div>
     </div>

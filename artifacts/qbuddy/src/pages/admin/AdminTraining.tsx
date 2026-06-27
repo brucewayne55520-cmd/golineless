@@ -4,7 +4,7 @@ import { toast } from "sonner";
 import AdminSidebar from "@/components/AdminSidebar";
 import { useListTrainingModules, useGetRunnerTrainingProgress, useSeedDefaultTrainingModules, useCompleteTrainingModule } from "@workspace/api-client-react";
 import { BookOpen, CheckCircle2, RefreshCw, GraduationCap, Plus, Trash2, Edit2, Save, X, Search } from "lucide-react";
-import { NAVY } from "@/lib/theme";
+import { NAVY, GOLD_GRAD } from "@/lib/theme";
 import { customFetch } from "@workspace/api-client-react";
 
 export default function AdminTraining() {
@@ -93,12 +93,12 @@ export default function AdminTraining() {
       <AdminSidebar />
       <main className="flex-1 overflow-y-auto p-6">
         <div className="flex items-center justify-between mb-5">
-          <h1 className="text-xl font-bold text-[#0A1628] dark:text-[#F5F0E8]">Training Center</h1>
+          <h1 className="text-xl font-bold text-[#241100] dark:text-[#fff2e5]">Training Center</h1>
           <div className="flex gap-2">
-            <button onClick={seedModules} className="flex items-center gap-2 px-3 py-2 rounded-xl border border-[#E5E0D8] dark:border-[#374151] text-xs font-semibold bg-white dark:bg-[#1F2937] hover:bg-[#FAF7F2] dark:hover:bg-[#111827] gl-transition">
+            <button onClick={seedModules} className="flex items-center gap-2 px-3 py-2 rounded-xl border border-[#E5E0D8] dark:border-[#374151] text-xs font-semibold bg-white dark:bg-[#1F2937] hover:bg-[#FFF9F2] dark:hover:bg-[#111827] gl-transition">
               <RefreshCw size={14} /> Seed Modules
             </button>
-            <button onClick={() => setShowCreateForm(true)} className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold text-[#0A1628] gl-transition" style={{ background: "linear-gradient(135deg, #D4A843, #E8C96A)" }}>
+            <button onClick={() => setShowCreateForm(true)} className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold text-[#241100] gl-transition" style={{ background: GOLD_GRAD }}>
               <Plus size={14} /> Create Module
             </button>
           </div>
@@ -108,35 +108,35 @@ export default function AdminTraining() {
         {showCreateForm && (
           <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="bg-white dark:bg-[#111827] rounded-2xl p-5 gl-shadow-md border border-[#EEF2FF] dark:border-[#4338CA] mb-5">
             <div className="flex items-center justify-between mb-3">
-              <h3 className="font-bold text-[#0A1628] dark:text-[#F5F0E8] text-sm">New Training Module</h3>
+              <h3 className="font-bold text-[#241100] dark:text-[#fff2e5] text-sm">New Training Module</h3>
               <button onClick={() => setShowCreateForm(false)} className="text-[#9CA3AF] hover:text-[#6B7280] gl-transition"><X size={16} /></button>
             </div>
             <div className="grid grid-cols-2 gap-3 mb-3">
               <div>
                 <label className="text-xs text-[#6B7280] mb-1 block">Topic *</label>
-                <input value={newModule.topic} onChange={e => setNewModule(p => ({ ...p, topic: e.target.value }))} className="w-full border border-[#E5E0D8] dark:border-[#374151] rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#0A1628] bg-white dark:bg-[#1F2937] dark:text-[#F5F0E8] gl-transition" placeholder="e.g. Hospital Protocol" />
+                <input value={newModule.topic} onChange={e => setNewModule(p => ({ ...p, topic: e.target.value }))} className="w-full border border-[#E5E0D8] dark:border-[#374151] rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#241100] bg-white dark:bg-[#1F2937] dark:text-[#fff2e5] gl-transition" placeholder="e.g. Hospital Protocol" />
               </div>
               <div>
                 <label className="text-xs text-[#6B7280] mb-1 block">Order</label>
-                <input type="number" value={newModule.order} onChange={e => setNewModule(p => ({ ...p, order: Number(e.target.value) }))} className="w-full border border-[#E5E0D8] dark:border-[#374151] rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#0A1628] bg-white dark:bg-[#1F2937] dark:text-[#F5F0E8] gl-transition" />
+                <input type="number" value={newModule.order} onChange={e => setNewModule(p => ({ ...p, order: Number(e.target.value) }))} className="w-full border border-[#E5E0D8] dark:border-[#374151] rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#241100] bg-white dark:bg-[#1F2937] dark:text-[#fff2e5] gl-transition" />
               </div>
             </div>
             <div className="mb-3">
               <label className="text-xs text-[#6B7280] mb-1 block">Description</label>
-              <input value={newModule.description} onChange={e => setNewModule(p => ({ ...p, description: e.target.value }))} className="w-full border border-[#E5E0D8] dark:border-[#374151] rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#0A1628] bg-white dark:bg-[#1F2937] dark:text-[#F5F0E8] gl-transition" placeholder="Brief description of the module" />
+              <input value={newModule.description} onChange={e => setNewModule(p => ({ ...p, description: e.target.value }))} className="w-full border border-[#E5E0D8] dark:border-[#374151] rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#241100] bg-white dark:bg-[#1F2937] dark:text-[#fff2e5] gl-transition" placeholder="Brief description of the module" />
             </div>
             <div className="flex items-center gap-2 mb-3">
               <input type="checkbox" checked={newModule.isRequired} onChange={e => setNewModule(p => ({ ...p, isRequired: e.target.checked }))} className="rounded" />
               <label className="text-xs text-[#4B5563]">Required module</label>
             </div>
-            <button onClick={createModule} className="px-4 py-2 rounded-xl text-[#0A1628] text-sm font-semibold gl-transition" style={{ background: "linear-gradient(135deg, #D4A843, #E8C96A)" }}>Create Module</button>
+            <button onClick={createModule} className="px-4 py-2 rounded-xl text-[#241100] text-sm font-semibold gl-transition" style={{ background: GOLD_GRAD }}>Create Module</button>
           </motion.div>
         )}
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
           {/* Training Modules */}
           <div className="bg-white dark:bg-[#111827] rounded-2xl p-5 gl-shadow-md border border-[#E5E0D8] dark:border-[#1F2937]">
-            <h3 className="font-bold text-[#0A1628] dark:text-[#F5F0E8] text-sm mb-3 flex items-center gap-2">
+            <h3 className="font-bold text-[#241100] dark:text-[#fff2e5] text-sm mb-3 flex items-center gap-2">
               <BookOpen size={14} className="text-blue-500" /> Training Modules ({moduleList.length})
             </h3>
             {loading ? (
@@ -152,11 +152,11 @@ export default function AdminTraining() {
             ) : (
               <div className="space-y-2 max-h-[400px] overflow-y-auto">
                 {moduleList.map((m, i) => (
-                  <div key={m.id} className="flex items-center gap-3 p-3 rounded-xl bg-[#FAF7F2] dark:bg-[#1F2937] group">
+                  <div key={m.id} className="flex items-center gap-3 p-3 rounded-xl bg-[#FFF9F2] dark:bg-[#1F2937] group">
                     {editingModule === m.id ? (
                       <div className="flex-1 space-y-2">
-                        <input defaultValue={m.topic ?? ""} id={`topic-${m.id}`} className="w-full border border-[#E5E0D8] dark:border-[#374151] rounded-lg px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-[#0A1628] bg-white dark:bg-[#1F2937] dark:text-[#F5F0E8] gl-transition" />
-                        <input defaultValue={m.description ?? ""} id={`desc-${m.id}`} className="w-full border border-[#E5E0D8] dark:border-[#374151] rounded-lg px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-[#0A1628] bg-white dark:bg-[#1F2937] dark:text-[#F5F0E8] gl-transition" placeholder="Description" />
+                        <input defaultValue={m.topic ?? ""} id={`topic-${m.id}`} className="w-full border border-[#E5E0D8] dark:border-[#374151] rounded-lg px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-[#241100] bg-white dark:bg-[#1F2937] dark:text-[#fff2e5] gl-transition" />
+                        <input defaultValue={m.description ?? ""} id={`desc-${m.id}`} className="w-full border border-[#E5E0D8] dark:border-[#374151] rounded-lg px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-[#241100] bg-white dark:bg-[#1F2937] dark:text-[#fff2e5] gl-transition" placeholder="Description" />
                         <div className="flex gap-1">
                           <button onClick={() => m.id != null && updateModule(m.id)} className="px-2 py-1 rounded-lg bg-green-500 text-white text-xs font-semibold flex items-center gap-1"><Save size={10} /> Save</button>
                           <button onClick={() => setEditingModule(null)} className="px-2 py-1 rounded-lg bg-[#E5E0D8] text-[#4B5563] text-xs font-semibold">Cancel</button>
@@ -166,7 +166,7 @@ export default function AdminTraining() {
                       <>
                         <div className="w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold text-white" style={{ background: NAVY }}>{m.order || i + 1}</div>
                         <div className="flex-1">
-                          <p className="text-sm font-semibold text-[#0A1628] dark:text-[#F5F0E8]">{m.topic}</p>
+                          <p className="text-sm font-semibold text-[#241100] dark:text-[#fff2e5]">{m.topic}</p>
                           {m.description &&                          <p className="text-[10px] text-[#9CA3AF] mt-0.5">{m.description ?? ""}</p>}
                         </div>
                         {m.isRequired && <span className="text-[9px] px-1.5 py-0.5 rounded bg-blue-100 text-blue-600 font-bold">Required</span>}
@@ -194,7 +194,7 @@ export default function AdminTraining() {
 
           {/* Runner Progress */}
           <div className="bg-white dark:bg-[#111827] rounded-2xl p-5 gl-shadow-md border border-[#E5E0D8] dark:border-[#1F2937]">
-            <h3 className="font-bold text-[#0A1628] dark:text-[#F5F0E8] text-sm mb-3 flex items-center gap-2">
+            <h3 className="font-bold text-[#241100] dark:text-[#fff2e5] text-sm mb-3 flex items-center gap-2">
               <GraduationCap size={14} className="text-emerald-500" /> Runner Readiness
             </h3>
             <div className="mb-3">
@@ -210,7 +210,7 @@ export default function AdminTraining() {
                     const num = Number(v);
                     if (!isNaN(num) && num > 0) setSelectedRunner(num);
                   }}
-                  className="w-full pl-8 pr-4 py-2 rounded-xl border border-[#E5E0D8] dark:border-[#374151] text-sm focus:outline-none focus:ring-2 focus:ring-[#0A1628] bg-white dark:bg-[#1F2937] dark:text-[#F5F0E8] gl-transition"
+                  className="w-full pl-8 pr-4 py-2 rounded-xl border border-[#E5E0D8] dark:border-[#374151] text-sm focus:outline-none focus:ring-2 focus:ring-[#241100] bg-white dark:bg-[#1F2937] dark:text-[#fff2e5] gl-transition"
                 />
               </div>
             </div>

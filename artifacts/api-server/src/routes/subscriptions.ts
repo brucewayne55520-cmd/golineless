@@ -23,7 +23,8 @@ router.get("/subscriptions/plans", async (_req, res): Promise<void> => {
 
 // POST /subscriptions/create-order
 router.post("/subscriptions/create-order", requireUser, validateBody(createSubscriptionSchema), async (req, res): Promise<void> => {
-  const user = req.user!;
+  const user = req.user;
+  if (!user) { res.status(401).json({ error: "Unauthorized" }); return; }
   const { planId, billingCycle = "monthly" } = req.body;
 
   const [plan] = await db.select().from(subscriptionPlansTable).where(eq(subscriptionPlansTable.id, planId));
@@ -54,7 +55,8 @@ router.post("/subscriptions/create-order", requireUser, validateBody(createSubsc
 
 // GET /subscriptions/me
 router.get("/subscriptions/me", requireUser, async (req, res): Promise<void> => {
-  const user = req.user!;
+  const user = req.user;
+  if (!user) { res.status(401).json({ error: "Unauthorized" }); return; }
   const [sub] = await db.select().from(subscriptionsTable)
     .where(and(eq(subscriptionsTable.userId, user.id), eq(subscriptionsTable.status, "active")))
     .limit(1);
@@ -64,7 +66,8 @@ router.get("/subscriptions/me", requireUser, async (req, res): Promise<void> => 
 
 // POST /subscriptions
 router.post("/subscriptions", requireUser, validateBody(createSubscriptionSchema), async (req, res): Promise<void> => {
-  const user = req.user!;
+  const user = req.user;
+  if (!user) { res.status(401).json({ error: "Unauthorized" }); return; }
   const { planId, billingCycle = "monthly" } = req.body;
 
   const [plan] = await db.select().from(subscriptionPlansTable).where(eq(subscriptionPlansTable.id, planId));

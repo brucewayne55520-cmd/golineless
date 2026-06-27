@@ -61,11 +61,11 @@ export function RunnerBottomNav() {
   const [hasActiveTask, setHasActiveTask] = useState(false);
   useEffect(() => {
     const token = localStorage.getItem("golineless_runner_token") || "";
-    if (!token) return;
+    if (!token || token === "undefined" || token === "null") return;
     fetch("/api/runners/me/active-tasks", { headers: { Authorization: `Bearer ${token}` } })
-      .then(r => r.json())
+      .then(r => { if (!r.ok) throw new Error(); return r.json(); })
       .then(data => setHasActiveTask(!!data))
-      .catch(() => {});
+      .catch(() => setHasActiveTask(false));
   }, [location]);
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-40 backdrop-blur-xl border-t border-white/10" style={{ background: "rgba(8,14,30,0.97)" }}>

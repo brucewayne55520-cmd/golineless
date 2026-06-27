@@ -14,7 +14,7 @@ export default function AdminQuality() {
     <div className="flex min-h-screen gl-surface dark:bg-[#0A0E1A]">
       <AdminSidebar />
       <main className="flex-1 overflow-y-auto p-6">
-        <h1 className="text-xl font-bold text-[#0A1628] dark:text-[#F5F0E8] mb-5">Task Quality System</h1>
+        <h1 className="text-xl font-bold text-[#241100] dark:text-[#fff2e5] mb-5">Task Quality System</h1>
 
         {stats && (
           <div className="grid grid-cols-4 gap-4 mb-5">
@@ -48,7 +48,7 @@ export default function AdminQuality() {
 
         <div className="bg-white dark:bg-[#111827] rounded-2xl gl-shadow-md border border-[#E5E0D8] dark:border-[#1F2937] overflow-hidden">
           <div className="px-5 py-4 border-b border-[#E5E0D8] dark:border-[#1F2937]">
-            <h3 className="font-bold text-[#0A1628] dark:text-[#F5F0E8]">Quality Reviews</h3>
+            <h3 className="font-bold text-[#241100] dark:text-[#fff2e5]">Quality Reviews</h3>
           </div>
           {loading ? (
             <div className="p-8 text-center text-[#9CA3AF]">Loading...</div>

@@ -9,7 +9,8 @@ const router: IRouter = Router();
 
 // Runner KYC resubmission: allow rejected runners to update fields and resubmit
 router.post("/runners/kyc/resubmit", requireRunner, async (req, res): Promise<void> => {
-  const runner = req.runner!;
+  const runner = req.runner;
+  if (!runner) { res.status(401).json({ error: "Unauthorized" }); return; };
   if (runner.kycStatus !== "rejected") {
     res.status(400).json({ error: "Only rejected runners can resubmit KYC" });
     return;

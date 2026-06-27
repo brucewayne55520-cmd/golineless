@@ -36,7 +36,7 @@ function StepBadge({ label, done, current, icon: Icon, index }: StepBadgeProps) 
   return (
     <div className={`flex items-center gap-3 p-3 rounded-xl transition-all ${current ? "bg-white/10 border border-white/20" : done ? "bg-green-500/10" : "bg-white/5"}`}>
       <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 ${done ? "bg-green-500 text-white" : current ? "" : "bg-white/10 text-white/40"}`}
-        style={current && !done ? { background: GOLD_GRAD, color: "#0A1628" } : {}}>
+        style={current && !done ? { background: GOLD_GRAD, color: "#241100" } : {}}>
         {done ? <CheckCircle size={16} /> : index + 1}
       </div>
       <span className={`text-sm font-semibold ${done ? "text-green-400" : current ? "text-white" : "text-white/40"}`}>
@@ -74,8 +74,7 @@ export default function ActiveTask() {
   const [queueToken, setQueueToken] = useState("");
   const [queueCounter, setQueueCounter] = useState("");
   const [queueNotes, setQueueNotes] = useState("");
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const socketRef = useRef<any>(null);
+  const socketRef = useRef<ReturnType<typeof import("socket.io-client").io> | null>(null);
   // M8: Socket connection status for disconnect UI banner
   const [socketConnected, setSocketConnected] = useState(true);
   // L14: GPS accuracy state
@@ -316,7 +315,7 @@ export default function ActiveTask() {
         haptic([100, 50, 100]);
         setCompleted(true);
         setTimerActive(false);
-        confetti({ particleCount: 150, spread: 100, origin: { y: 0.5 }, colors: [NAVY, GOLD, "#1D3D7C", "#22C55E"] });
+        confetti({ particleCount: 150, spread: 100, origin: { y: 0.5 }, colors: [NAVY, GOLD, "#663100", "#22C55E"] });
         toast.success(`Task Complete! You earned ${formatCurrency(data.runnerEarning ?? task.runnerEarning)}`);
       },
       onError: () => toast.error("Invalid OTP"),
@@ -351,7 +350,7 @@ export default function ActiveTask() {
       <Moon size={48} className="text-white/20 mb-4" />
       <h3 className="text-white font-bold text-lg">No active task</h3>
       <p className="text-white/50 text-sm mt-1 mb-5">Go to Tasks tab to find new dispatch tasks</p>
-      <button onClick={() => navigate("/runner/feed")} className="px-6 py-3 rounded-xl text-[#0A1628] font-semibold" style={{ background: GOLD_GRAD }}>
+      <button onClick={() => navigate("/runner/feed")} className="px-6 py-3 rounded-xl text-[#241100] font-semibold" style={{ background: GOLD_GRAD }}>
         Find Tasks
       </button>
       <RunnerBottomNav />
@@ -384,7 +383,7 @@ export default function ActiveTask() {
           </div>
           {timerActive && (
             <div className="px-3 py-1.5 rounded-xl" style={{ background: GOLD_GRAD }}>
-              <span className="text-[#0A1628] font-black text-lg font-mono">{formatTime(elapsed)}</span>
+              <span className="text-[#241100] font-black text-lg font-mono">{formatTime(elapsed)}</span>
             </div>
           )}
         </div>
@@ -553,7 +552,7 @@ export default function ActiveTask() {
                 <button
                   onClick={() => handleStatusUpdate("in_progress")}
                   disabled={updateStatus.isPending}
-                  className="flex-1 py-3 rounded-xl text-[#0A1628] font-bold text-sm"
+                  className="flex-1 py-3 rounded-xl text-[#241100] font-bold text-sm"
                   style={{ background: GOLD_GRAD }}
                 >
                   Start Task →
@@ -734,7 +733,7 @@ export default function ActiveTask() {
                 });
               }}
               disabled={(!queueToken && !queueCounter) || updateQueueProgress.isPending}
-              className="w-full py-3 rounded-xl text-[#0A1628] font-bold text-sm"
+              className="w-full py-3 rounded-xl text-[#241100] font-bold text-sm"
               style={{ background: !queueToken && !queueCounter ? "#374151" : GOLD_GRAD }}
             >
               Update Queue Status
@@ -810,7 +809,7 @@ export default function ActiveTask() {
         )}
 
         {/* Step 5.5: Cash Payment Confirmation (offline mode) */}
-        {task.status === "in_progress" && task.paymentMethod === "cash" && (
+        {(task.status === "in_progress" || task.status === "at_location" || task.status === "waiting_started") && task.paymentMethod === "cash" && (
           <div className="bg-white/8 border border-white/10 rounded-2xl p-4">
             <div className="flex items-center gap-2 mb-3">
               <Banknote size={16} className="text-green-400" />
@@ -956,7 +955,7 @@ export default function ActiveTask() {
               <h3 className="text-white font-black text-xl mb-1">Task Complete!</h3>
               <p className="font-bold text-2xl" style={{ color: GOLD }}>{formatCurrency(task.runnerEarning ?? 0)}</p>
               <p className="text-white/50 text-xs mt-1">Added to your earnings</p>
-              <button onClick={() => navigate("/runner/feed")} className="mt-4 px-6 py-3 rounded-xl text-[#0A1628] font-semibold" style={{ background: GOLD_GRAD }}>
+              <button onClick={() => navigate("/runner/feed")} className="mt-4 px-6 py-3 rounded-xl text-[#241100] font-semibold" style={{ background: GOLD_GRAD }}>
                 Find Next Task
               </button>
             </motion.div>

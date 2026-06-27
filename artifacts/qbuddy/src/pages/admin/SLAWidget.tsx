@@ -21,7 +21,7 @@ export default function SLAWidget() {
       className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 mb-5"
       style={{ borderLeft: "4px solid #3B82F6" }}
     >
-      <h3 className="font-black text-[#0A1628] text-sm mb-3 flex items-center gap-2">
+      <h3 className="font-black text-[#241100] text-sm mb-3 flex items-center gap-2">
         <Timer size={14} className="text-blue-500" /> SLA Monitoring
       </h3>
 

@@ -38,7 +38,7 @@ export default function FraudAlertsWidget({ fraud, flags, onRefresh }: Props) {
       style={{ borderLeft: "4px solid #EF4444" }}
     >
       <div className="flex items-center justify-between mb-3">
-        <h3 className="font-black text-[#0A1628] text-sm flex items-center gap-2">
+        <h3 className="font-black text-[#241100] text-sm flex items-center gap-2">
           <ShieldAlert size={14} className="text-red-500" /> Fraud Center
           {onRefresh && (
             <button onClick={() => { onRefresh(); setAutoRefreshing(true); setTimeout(() => setAutoRefreshing(false), 1000); }} className="ml-1" title="Refresh">

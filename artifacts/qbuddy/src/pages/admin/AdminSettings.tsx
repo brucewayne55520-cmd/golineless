@@ -3,6 +3,7 @@ import { toast } from "sonner";
 import { useGetAdminSettings, useUpdateAdminSettings } from "@workspace/api-client-react";
 import type { AdminSettings } from "@workspace/api-client-react";
 import AdminSidebar from "@/components/AdminSidebar";
+import { GOLD_GRAD } from "@/lib/theme";
 
 export default function AdminSettings() {
   const { data: settings, isLoading, refetch } = useGetAdminSettings();
@@ -55,7 +56,7 @@ export default function AdminSettings() {
       <AdminSidebar />
       <main className="flex-1 overflow-y-auto p-6">
         <div className="mb-5">
-          <h1 className="text-2xl font-bold text-[#0A1628] dark:text-[#F5F0E8]">Settings</h1>
+          <h1 className="text-2xl font-bold text-[#241100] dark:text-[#fff2e5]">Settings</h1>
         </div>
 
         {isLoading || !form ? (
@@ -65,7 +66,7 @@ export default function AdminSettings() {
         ) : (
           <div className="max-w-2xl space-y-5">
             <div className="bg-white dark:bg-[#111827] rounded-2xl p-5 gl-shadow-md border border-[#E5E0D8] dark:border-[#1F2937]">
-              <h2 className="font-bold text-[#0A1628] dark:text-[#F5F0E8] mb-4">App Info</h2>
+              <h2 className="font-bold text-[#241100] dark:text-[#fff2e5] mb-4">App Info</h2>
               <div className="space-y-3">
                 {[
                   { key: "appName" as const, label: "App Name" },
@@ -79,7 +80,7 @@ export default function AdminSettings() {
                     <input
                       value={form[f.key] ?? ""}
                       onChange={e => set(f.key, e.target.value)}
-                      className="w-full border border-[#E5E0D8] dark:border-[#374151] rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#0A1628] bg-white dark:bg-[#1F2937] dark:text-[#F5F0E8] gl-transition"
+                      className="w-full border border-[#E5E0D8] dark:border-[#374151] rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#241100] bg-white dark:bg-[#1F2937] dark:text-[#fff2e5] gl-transition"
                     />
                   </div>
                 ))}
@@ -87,7 +88,7 @@ export default function AdminSettings() {
             </div>
 
             <div className="bg-white dark:bg-[#111827] rounded-2xl p-5 gl-shadow-md border border-[#E5E0D8] dark:border-[#1F2937]">
-              <h2 className="font-bold text-[#0A1628] dark:text-[#F5F0E8] mb-4">Platform Settings</h2>
+              <h2 className="font-bold text-[#241100] dark:text-[#fff2e5] mb-4">Platform Settings</h2>
               <div className="space-y-3">
                 {[
                   { key: "runnerPayoutPercent" as const, label: "Runner Payout %", type: "number" },
@@ -101,7 +102,7 @@ export default function AdminSettings() {
                       type={f.type}
                       value={form[f.key] ?? ""}
                       onChange={e => set(f.key, Number(e.target.value))}
-                      className="w-full border border-[#E5E0D8] dark:border-[#374151] rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#0A1628] bg-white dark:bg-[#1F2937] dark:text-[#F5F0E8] gl-transition"
+                      className="w-full border border-[#E5E0D8] dark:border-[#374151] rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#241100] bg-white dark:bg-[#1F2937] dark:text-[#fff2e5] gl-transition"
                     />
                   </div>
                 ))}
@@ -109,7 +110,7 @@ export default function AdminSettings() {
             </div>
 
             <div className="bg-white dark:bg-[#111827] rounded-2xl p-5 gl-shadow-md border border-[#E5E0D8] dark:border-[#1F2937]">
-              <h2 className="font-bold text-[#0A1628] dark:text-[#F5F0E8] mb-4">Phase 6: Revenue Settings</h2>
+              <h2 className="font-bold text-[#241100] dark:text-[#fff2e5] mb-4">Phase 6: Revenue Settings</h2>
               <div className="space-y-3">
                 {[
                   { key: "freeWaitingMinutes" as const, label: "Free Waiting Minutes", type: "number" },
@@ -127,7 +128,7 @@ export default function AdminSettings() {
                       step={f.step}
                       value={form[f.key] ?? ""}
                       onChange={e => set(f.key, Number(e.target.value))}
-                      className="w-full border border-[#E5E0D8] dark:border-[#374151] rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#0A1628] bg-white dark:bg-[#1F2937] dark:text-[#F5F0E8] gl-transition"
+                      className="w-full border border-[#E5E0D8] dark:border-[#374151] rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#241100] bg-white dark:bg-[#1F2937] dark:text-[#fff2e5] gl-transition"
                     />
                   </div>
                 ))}
@@ -136,9 +137,8 @@ export default function AdminSettings() {
 
             <div className="bg-white dark:bg-[#111827] rounded-2xl p-5 gl-shadow-md border border-[#FEF2F2] dark:border-[#7F1D1D]">
               <h2 className="font-bold text-[#DC2626] mb-4">Danger Zone</h2>
-              <label className="flex items-center gap-3 cursor-pointer">
+              <label className="flex items-center gap-3 cursor-pointer" onClick={() => set("maintenanceMode", !form.maintenanceMode)}>
                 <div
-                  onClick={() => set("maintenanceMode", !form.maintenanceMode)}
                   className={`w-12 h-6 rounded-full transition-colors relative ${form.maintenanceMode ? "bg-red-500" : "bg-gray-200"}`}
                 >
                   <div className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${form.maintenanceMode ? "translate-x-6" : "translate-x-0.5"}`} />
@@ -160,7 +160,7 @@ export default function AdminSettings() {
                     value={form.upiId ?? "golineless@upi"}
                     onChange={e => set("upiId", e.target.value)}
                     placeholder="e.g. golineless@upi"
-                    className={`w-full border rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 ${formErrors.upiId ? "border-[#FECACA] focus:ring-[#DC2626]" : "border-[#E5E0D8] dark:border-[#374151] focus:ring-[#4F46E5]"} bg-white dark:bg-[#1F2937] dark:text-[#F5F0E8] gl-transition`}
+                    className={`w-full border rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 ${formErrors.upiId ? "border-[#FECACA] focus:ring-[#DC2626]" : "border-[#E5E0D8] dark:border-[#374151] focus:ring-[#4F46E5]"} bg-white dark:bg-[#1F2937] dark:text-[#fff2e5] gl-transition`}
                   />
                   {formErrors.upiId ? <p className="text-[10px] text-[#DC2626] mt-1">{formErrors.upiId}</p> : <p className="text-[10px] text-[#9CA3AF] mt-1">This is your Google Pay / PhonePe / Paytm UPI ID</p>}
                 </div>
@@ -180,8 +180,8 @@ export default function AdminSettings() {
             <button
               onClick={handleSave}
               disabled={updateSettings.isPending}
-              className="w-full py-4 rounded-2xl text-[#0A1628] font-bold text-lg gl-transition hover:gl-shadow-xl active:scale-[0.98]"
-              style={{ background: "linear-gradient(135deg, #D4A843, #E8C96A)" }}
+              className="w-full py-4 rounded-2xl text-[#241100] font-bold text-lg gl-transition hover:gl-shadow-xl active:scale-[0.98]"
+              style={{ background: GOLD_GRAD }}
             >
               {updateSettings.isPending ? "Saving..." : "Save Settings"}
             </button>

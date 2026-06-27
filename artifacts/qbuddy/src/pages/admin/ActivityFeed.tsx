@@ -13,7 +13,7 @@ export default function ActivityFeed({ activities }: Props) {
       <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
         <div className="flex items-center gap-2.5">
           <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-          <h3 className="font-black text-[#0A1628]">Live Activity Feed</h3>
+          <h3 className="font-black text-[#241100]">Live Activity Feed</h3>
         </div>
         <span className="text-xs text-gray-400 bg-gray-50 border border-gray-100 px-2 py-1 rounded-lg">
           Auto-refresh · 5s

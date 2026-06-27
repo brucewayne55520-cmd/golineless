@@ -9,7 +9,7 @@ export default function AdminFounder() {
   const { data, isLoading } = useGetFounderDashboard({ query: { queryKey: ["founderDashboard"], refetchInterval: 15000 } });
 
   if (isLoading) return (
-    <div className="flex min-h-screen" style={{ background: "#0A1628" }}>
+    <div className="flex min-h-screen" style={{ background: "#241100" }}>
       <AdminSidebar />
       <main className="flex-1 p-6">
         <div className="grid grid-cols-3 gap-4 mb-5">{[1,2,3].map(i => <div key={i} className="h-28 bg-white/5 rounded-2xl animate-pulse" />)}</div>
@@ -82,7 +82,7 @@ export default function AdminFounder() {
   ];
 
   return (
-    <div className="flex min-h-screen" style={{ background: "#0A1628" }}>
+    <div className="flex min-h-screen" style={{ background: "#241100" }}>
       <AdminSidebar />
       <main className="flex-1 overflow-y-auto">
         {/* Header */}

@@ -151,7 +151,7 @@ export default function BookTask() {
   //     });
   //     if (result.status === "success") {
   //       setPaymentResult("success");
-  //       confetti({ particleCount: 120, spread: 80, origin: { y: 0.6 }, colors: [NAVY, GOLD, "#1D3D7C"] });
+  //       confetti({ particleCount: 120, spread: 80, origin: { y: 0.6 }, colors: [NAVY, GOLD, "#663100"] });
   //     } else if (result.status === "failed") {
   //       setPaymentResult("failed");
   //       toast.error(`Payment failed: ${result.error.description}`);
@@ -188,7 +188,7 @@ export default function BookTask() {
         // if (po?.orderId && po?.keyId) {
         //   processPayment(po);
         // } else {
-        confetti({ particleCount: 120, spread: 80, origin: { y: 0.6 }, colors: [NAVY, GOLD, "#1D3D7C"] });
+        confetti({ particleCount: 120, spread: 80, origin: { y: 0.6 }, colors: [NAVY, GOLD, "#663100"] });
         // }
       },
       onError: (err: unknown) => {
@@ -209,7 +209,7 @@ export default function BookTask() {
   const sit = LIFE_SITUATIONS[category] ?? { label: CATEGORY_NAMES[category], desc: "" };
 
   return (
-    <div className="min-h-screen" style={{ background: "#F8F9FC" }}>
+    <div className="min-h-screen" style={{ background: "#FFF9F2" }}>
       {/* Header */}
       <div className="bg-white px-4 py-3 border-b border-gray-100 shadow-sm sticky top-0 z-20">
         <div className="flex items-center gap-3 mb-2">
@@ -217,7 +217,7 @@ export default function BookTask() {
             <ArrowLeft size={16} />
           </button>
           <div className="flex-1">
-            <h1 className="font-black text-[#0A1628] text-base">Request Assistance</h1>
+            <h1 className="font-black text-[#241100] text-base">Request Assistance</h1>
             <p className="text-xs text-gray-400">{STEP_LABELS[step - 1]}</p>
           </div>
           <span className="text-xs font-bold px-2 py-1 rounded-lg text-gray-500 bg-gray-50 border border-gray-100">{step}/3</span>
@@ -248,7 +248,7 @@ export default function BookTask() {
                   </div>
                   <div className="flex-1">
                     <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-0.5">Selected service</p>
-                    <h2 className="font-black text-[#0A1628] text-base">{sit.label}</h2>
+                    <h2 className="font-black text-[#241100] text-base">{sit.label}</h2>
                     <p className="text-xs text-gray-400 mt-0.5">{sit.desc}</p>
                   </div>
                   <ChevronDown size={16} className={`text-gray-400 transition-transform ${showCategoryPicker ? "rotate-180" : ""}`} />
@@ -352,7 +352,7 @@ export default function BookTask() {
               <button
                 onClick={() => { if (!description.trim()) { toast.error("Please describe what you need help with"); return; } setStep(2); }}
                 className="w-full py-4 rounded-2xl font-black text-base shadow-md hover:shadow-lg transition-all"
-                style={{ background: GOLD_GRAD, color: "#0A1628" }}
+                style={{ background: GOLD_GRAD, color: "#241100" }}
               >
                 Next: When &amp; Where →
               </button>
@@ -363,7 +363,7 @@ export default function BookTask() {
           {step === 2 && (
             <motion.div key="step2" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-4">
               <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
-                <h3 className="font-black text-[#0A1628] mb-4">When do you need the runner?</h3>
+                <h3 className="font-black text-[#241100] mb-4">When do you need the runner?</h3>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className="text-xs font-semibold text-gray-500 mb-1.5 block">Date</label>
@@ -389,7 +389,7 @@ export default function BookTask() {
               </div>
 
               <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
-                <h3 className="font-black text-[#0A1628] mb-4">Where should the runner go?</h3>
+                <h3 className="font-black text-[#241100] mb-4">Where should the runner go?</h3>
                 <div className="space-y-3">
                   <div>
                     <label className="text-xs font-semibold text-gray-500 mb-1.5 block">Place name</label>
@@ -408,7 +408,7 @@ export default function BookTask() {
 
               {/* From/To Area */}
               <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
-                <h3 className="font-black text-[#0A1628] mb-1">From → To</h3>
+                <h3 className="font-black text-[#241100] mb-1">From → To</h3>
                 <p className="text-xs text-gray-400 mb-3">Help the Comrade know the route</p>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
@@ -453,7 +453,7 @@ export default function BookTask() {
 
               {/* Estimated Duration */}
               <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
-                <h3 className="font-black text-[#0A1628] mb-1">Estimated Duration</h3>
+                <h3 className="font-black text-[#241100] mb-1">Estimated Duration</h3>
                 <p className="text-xs text-gray-400 mb-3">How long do you think this task will take?</p>
                 <div className="flex gap-2">
                   {[15, 30, 45, 60, 90, 120].map(mins => (
@@ -472,7 +472,7 @@ export default function BookTask() {
               </div>
 
               <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
-                <h3 className="font-black text-[#0A1628] mb-1">Approx. distance from you</h3>
+                <h3 className="font-black text-[#241100] mb-1">Approx. distance from you</h3>
                 <p className="text-xs text-gray-400 mb-3">Used to calculate travel charges</p>
                 <div className="grid grid-cols-3 gap-2">
                   {Object.entries(DISTANCE_LABELS).map(([val, label]) => (
@@ -513,7 +513,7 @@ export default function BookTask() {
                   setStep(3);
                 }}
                 className="w-full py-4 rounded-2xl font-black text-base shadow-md hover:shadow-lg transition-all"
-                style={{ background: GOLD_GRAD, color: "#0A1628" }}
+                style={{ background: GOLD_GRAD, color: "#241100" }}
               >
                 Next: Review &amp; Pay →
               </button>
@@ -531,11 +531,11 @@ export default function BookTask() {
                     <CategoryIcon category={category} size={22} />
                   </div>
                   <div>
-                    <h3 className="font-black text-[#0A1628]">{LIFE_SITUATIONS[category]?.label ?? CATEGORY_NAMES[category]}</h3>
+                    <h3 className="font-black text-[#241100]">{LIFE_SITUATIONS[category]?.label ?? CATEGORY_NAMES[category]}</h3>
                     <p className="text-xs text-gray-400 mt-0.5">{scheduledDate} · {scheduledTime} · {locationArea || "Ahmedabad"}</p>
                   </div>
                 </div>
-                <h3 className="font-bold text-[#0A1628] mb-3">Estimated Price</h3>
+                <h3 className="font-bold text-[#241100] mb-3">Estimated Price</h3>
                 <p className="text-[10px] text-gray-400 mb-3">Final price confirmed after booking · May vary based on urgency &amp; priority</p>
                 {pricingPreview.isPending && (
                   <div className="text-center py-2">
@@ -559,7 +559,7 @@ export default function BookTask() {
                   )) : pricingPreview.isPending ? null : (
                     <p className="text-xs text-gray-400 text-center py-2">Loading price from server...</p>
                   )}
-                  <div className="border-t border-gray-100 pt-3 flex justify-between font-black text-[#0A1628] text-lg">
+                  <div className="border-t border-gray-100 pt-3 flex justify-between font-black text-[#241100] text-lg">
                     <span>{displayTotal != null ? "Total" : ""}</span>
                     <span style={{ color: NAVY }}>{displayTotal != null ? formatCurrency(displayTotal) : "—"}</span>
                   </div>
@@ -591,7 +591,7 @@ export default function BookTask() {
 
               {/* [OFFLINE MODE] Payment — cash on completion, no online payment needed */}
               <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
-                <h3 className="font-bold text-[#0A1628] mb-3">Payment Method</h3>
+                <h3 className="font-bold text-[#241100] mb-3">Payment Method</h3>
                 <div className="p-4 rounded-xl border-2 bg-green-50/50" style={{ borderColor: "#22C55E40" }}>
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: "linear-gradient(135deg, #22C55E, #16A34A)" }}>
@@ -608,7 +608,7 @@ export default function BookTask() {
               {/* Phase 7: Expected Token Number for Queue Categories */}
               {["hospital","bank","govt_office"].includes(category) && (
                 <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
-                  <h3 className="font-bold text-[#0A1628] mb-1">Queue Information</h3>
+                  <h3 className="font-bold text-[#241100] mb-1">Queue Information</h3>
                   <p className="text-xs text-gray-400 mb-3">If you already know your token number, enter it to help your Comrade track queue progress</p>
                   <input
                     value={expectedTokenNumber}
@@ -628,16 +628,16 @@ export default function BookTask() {
               {/* Phase 7: Nearby Comrades Preview */}
               {nearbyComrades.length > 0 && (
                 <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
-                  <h3 className="font-bold text-[#0A1628] mb-1 text-sm flex items-center gap-1"><MapPin size={14} /> Nearby Available Comrades</h3>
+                  <h3 className="font-bold text-[#241100] mb-1 text-sm flex items-center gap-1"><MapPin size={14} /> Nearby Available Comrades</h3>
                   <p className="text-xs text-gray-400 mb-3">These comrades are available near the task area</p>
                   <div className="space-y-2">
                     {(nearbyComrades ?? []).slice(0, 3).map((c: Required<import("@workspace/api-client-react").NearbyRunner>) => (
                       <div key={c.id} className="flex items-center gap-3 bg-gray-50 rounded-xl p-3">
-                        <div className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold" style={{ background: `linear-gradient(135deg, ${NAVY}, #1D3D7C)` }}>
+                        <div className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold" style={{ background: `linear-gradient(135deg, ${NAVY}, #663100)` }}>
                           {c.name?.[0] ?? "C"}
                         </div>
                         <div className="flex-1">
-                          <p className="text-sm font-bold text-[#0A1628]">{c.name}</p>
+                          <p className="text-sm font-bold text-[#241100]">{c.name}</p>
                           <div className="flex items-center gap-2 text-[10px] text-gray-500">
                             {c.rating && <span>★ {Number(c.rating).toFixed(1)}</span>}
                             <span>Trust {c.trustScore}</span>
@@ -653,7 +653,7 @@ export default function BookTask() {
 
               {/* Coupon */}
               <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
-                <h3 className="font-bold text-[#0A1628] mb-3">Have a coupon?</h3>
+                <h3 className="font-bold text-[#241100] mb-3">Have a coupon?</h3>
                 <div className="flex gap-2">
                   <input
                     value={coupon}
@@ -709,7 +709,7 @@ export default function BookTask() {
               >
                 <Sparkles size={32} className="text-white" />
               </motion.div>
-              <h2 className="text-2xl font-black text-[#0A1628] mb-1">Request Confirmed!</h2>
+              <h2 className="text-2xl font-black text-[#241100] mb-1">Request Confirmed!</h2>
               <p className="text-gray-500 text-sm mb-6">
                 Your runner will be assigned shortly. You'll get the completion OTP from your runner when the task is done.
                 <br /><br />

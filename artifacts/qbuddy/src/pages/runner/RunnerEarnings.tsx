@@ -105,11 +105,11 @@ export default function RunnerEarnings() {
         <p className="text-white/40 text-xs mt-0.5">Your runner dashboard</p>
       </div>
 
-      <div className="mx-4 mt-4 rounded-2xl p-6 text-[#0A1628] relative overflow-hidden" style={{ background: GOLD_GRAD }}>
+      <div className="mx-4 mt-4 rounded-2xl p-6 text-[#241100] relative overflow-hidden" style={{ background: GOLD_GRAD }}>
         <div className="absolute top-0 right-0 w-32 h-32 rounded-full opacity-20" style={{ background: "radial-gradient(circle, white, transparent)", transform: "translate(20%, -20%)" }} />
         <div className="flex items-center gap-2 mb-1">
           <TrendingUp size={14} />
-          <p className="text-[#0A1628]/70 text-xs font-semibold">This Week</p>
+          <p className="text-[#241100]/70 text-xs font-semibold">This Week</p>
         </div>
         <motion.div initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} className="text-4xl font-black mb-4">
           {e ? formatCurrency(e.thisWeek ?? 0) : "Rs 0"}
@@ -121,8 +121,8 @@ export default function RunnerEarnings() {
             { label: "Lifetime", val: e?.lifetime ?? 0 },
           ].map((s) => (
             <div key={s.label} className="text-center bg-white/20 rounded-xl p-2">
-              <div className="text-[#0A1628] font-bold text-sm">{formatCurrency(s.val)}</div>
-              <div className="text-[#0A1628]/60 text-xs">{s.label}</div>
+              <div className="text-[#241100] font-bold text-sm">{formatCurrency(s.val)}</div>
+              <div className="text-[#241100]/60 text-xs">{s.label}</div>
             </div>
           ))}
         </div>
@@ -211,7 +211,7 @@ export default function RunnerEarnings() {
               <XAxis dataKey="date" tick={{ fontSize: 9, fill: "rgba(255,255,255,0.4)" }} tickFormatter={(v) => { const parts = v.split('-'); const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']; return `${months[parseInt(parts[1])-1]} ${parseInt(parts[2])}`; }} />
               <YAxis tick={{ fontSize: 9, fill: "rgba(255,255,255,0.4)" }} />
               <Tooltip
-                contentStyle={{ background: "#0F2557", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 12, color: "white", fontSize: 12 }}
+                contentStyle={{ background: "#331900", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 12, color: "white", fontSize: 12 }}
                 formatter={(v: number) => [formatCurrency(v), "Earned"]}
               />
               <Bar dataKey="amount" fill={GOLD} radius={[4, 4, 0, 0]} />
@@ -255,7 +255,7 @@ export default function RunnerEarnings() {
         <div className="flex items-center justify-between mb-3">
           <h3 className="text-white font-bold">Task History</h3>
           {completedTasks.length > 0 && (
-            <button onClick={handleExportReport} className="text-[#C9A84C] text-[10px] font-bold px-2 py-1 rounded-lg bg-[#C9A84C]/10 hover:bg-[#C9A84C]/20 transition-colors">
+            <button onClick={handleExportReport} className="text-[#ff7b00] text-[10px] font-bold px-2 py-1 rounded-lg bg-[#ff7b00]/10 hover:bg-[#ff7b00]/20 transition-colors">
               Export CSV
             </button>
           )}

@@ -1825,7 +1825,17 @@ export const ListAdminRunnersKycStatus = {
 export type ListAdminUsersParams = {
 limit?: number;
 offset?: number;
+kyc_status?: ListAdminUsersKycStatus;
 };
+
+export type ListAdminUsersKycStatus = typeof ListAdminUsersKycStatus[keyof typeof ListAdminUsersKycStatus];
+
+export const ListAdminUsersKycStatus = {
+  pending: 'pending',
+  verified: 'verified',
+  rejected: 'rejected',
+  suspended: 'suspended',
+} as const;
 
 export type GetAnalyticsParams = {
 days?: number;

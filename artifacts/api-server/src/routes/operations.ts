@@ -764,7 +764,8 @@ router.get("/admin/daily-ops", requireAdmin, async (_req, res): Promise<void> =>
 
 // 4. CUSTOMER FEEDBACK — post-task feedback submission (requires auth + task ownership)
 router.post("/admin/feedback", requireUser, async (req, res): Promise<void> => {
-  const user = req.user!;
+  const user = req.user;
+  if (!user) { res.status(401).json({ error: "Unauthorized" }); return; }
   const { taskId, rating, feedback, issueReport } = req.body;
   if (!taskId || !rating) { res.status(400).json({ error: "taskId and rating required" }); return; }
 

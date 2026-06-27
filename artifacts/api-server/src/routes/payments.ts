@@ -16,7 +16,8 @@ const router: IRouter = Router();
  * Output: { orderId, amount, currency, receipt, keyId }
  */
 router.post("/payments/create-order", requireUser, async (req, res): Promise<void> => {
-  const user = req.user!;
+  const user = req.user;
+  if (!user) { res.status(401).json({ error: "Unauthorized" }); return; }
   const { taskId } = req.body;
 
   if (!taskId) { res.status(400).json({ error: "taskId required" }); return; }

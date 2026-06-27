@@ -30,7 +30,7 @@ export default function TrustScoreDashboard({ trustMetrics }: Props) {
       className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 mb-5"
     >
       <div className="flex items-center justify-between mb-3">
-        <h3 className="font-black text-[#0A1628] text-sm">Comrade Trust Scores</h3>
+        <h3 className="font-black text-[#241100] text-sm">Comrade Trust Scores</h3>
         <span className="text-gray-400 text-xs">
           Avg: <strong className="font-black" style={{ color: NAVY }}>{trustMetrics.avgTrustScore}</strong>
         </span>

@@ -48,7 +48,7 @@ export default function PayRetry({ id }: Props) {
   //         if (paymentOrder?.mock) {
   //           setPaymentStatus("success");
   //           setResultModal("success");
-  //           confetti({ particleCount: 120, spread: 80, origin: { y: 0.6 }, colors: [NAVY, GOLD, "#1D3D7C"] });
+  //           confetti({ particleCount: 120, spread: 80, origin: { y: 0.6 }, colors: [NAVY, GOLD, "#663100"] });
   //           return;
   //         }
   //         if (!paymentOrder?.orderId || !paymentOrder?.keyId) {
@@ -69,7 +69,7 @@ export default function PayRetry({ id }: Props) {
   //         if (result.status === "success") {
   //           setPaymentStatus("success");
   //           setResultModal("success");
-  //           confetti({ particleCount: 120, spread: 80, origin: { y: 0.6 }, colors: [NAVY, GOLD, "#1D3D7C"] });
+  //           confetti({ particleCount: 120, spread: 80, origin: { y: 0.6 }, colors: [NAVY, GOLD, "#663100"] });
   //         } else if (result.status === "failed") {
   //           setPaymentStatus("failed");
   //           setLastError(result.error.description);
@@ -91,14 +91,14 @@ export default function PayRetry({ id }: Props) {
 
 
   return (
-    <div className="min-h-screen" style={{ background: "#F8F9FC" }}>
+    <div className="min-h-screen" style={{ background: "#FFF9F2" }}>
       {/* Header */}
       <div className="bg-white px-4 py-3 flex items-center gap-3 border-b border-gray-100 shadow-sm sticky top-0 z-20">
         <button onClick={() => navigate(`/app/tasks/${taskId}`)} className="text-gray-500">
           <ArrowLeft size={20} />
         </button>
         <div className="flex-1">
-          <h1 className="font-bold text-[#0A1628]">Payment</h1>
+          <h1 className="font-bold text-[#241100]">Payment</h1>
           <p className="text-xs text-gray-400">Task #{taskId}</p>
         </div>
         {t && (
@@ -125,7 +125,7 @@ export default function PayRetry({ id }: Props) {
             <div className="w-14 h-14 rounded-full bg-red-50 flex items-center justify-center mx-auto mb-4">
               <AlertCircle size={28} className="text-red-400" />
             </div>
-            <h2 className="text-lg font-black text-[#0A1628] mb-1">Task not found</h2>
+            <h2 className="text-lg font-black text-[#241100] mb-1">Task not found</h2>
             <p className="text-sm text-gray-500 mb-6">This task doesn't exist or you don't have access to it.</p>
             <button
               onClick={() => navigate("/app/tasks")}
@@ -143,7 +143,7 @@ export default function PayRetry({ id }: Props) {
             <div className="w-14 h-14 rounded-full bg-green-50 flex items-center justify-center mx-auto mb-4">
               <CheckCircle2 size={28} className="text-green-500" />
             </div>
-            <h2 className="text-lg font-black text-[#0A1628] mb-1">
+            <h2 className="text-lg font-black text-[#241100] mb-1">
               {isPaid ? "Already Paid" : "Task Completed"}
             </h2>
             <p className="text-sm text-gray-500 mb-6">
@@ -167,7 +167,7 @@ export default function PayRetry({ id }: Props) {
             <div className="w-14 h-14 rounded-full bg-gray-50 flex items-center justify-center mx-auto mb-4">
               <AlertCircle size={28} className="text-gray-400" />
             </div>
-            <h2 className="text-lg font-black text-[#0A1628] mb-1">Task Cancelled</h2>
+            <h2 className="text-lg font-black text-[#241100] mb-1">Task Cancelled</h2>
             <p className="text-sm text-gray-500 mb-6">This task has been cancelled. Payment is not required.</p>
             <button
               onClick={() => navigate("/app/tasks")}
@@ -193,7 +193,7 @@ export default function PayRetry({ id }: Props) {
                   <CategoryIcon category={t.category} size={22} />
                 </div>
                 <div>
-                  <h3 className="font-black text-[#0A1628]">{CATEGORY_NAMES[t.category] || t.category}</h3>
+                  <h3 className="font-black text-[#241100]">{CATEGORY_NAMES[t.category] || t.category}</h3>
                   <div className="flex items-center gap-1.5 mt-0.5">
                     <StatusBadge status={t.status} />
                     {t.locationArea && <span className="text-xs text-gray-400">· {t.locationArea}</span>}
@@ -213,7 +213,7 @@ export default function PayRetry({ id }: Props) {
 
             {/* [OFFLINE MODE] Cash payment — no online payment needed */}
             <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
-              <h3 className="font-bold text-[#0A1628] mb-4 flex items-center gap-2">
+              <h3 className="font-bold text-[#241100] mb-4 flex items-center gap-2">
                 <CreditCard size={18} /> Payment Method
               </h3>
               <div className="p-4 rounded-xl border-2 bg-green-50/50" style={{ borderColor: "#22C55E40" }}>

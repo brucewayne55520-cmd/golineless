@@ -23,7 +23,7 @@ export default function RevenueAnalytics({ revenueMetrics }: Props) {
       transition={{ delay: 0.59 }}
       className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 mb-5"
     >
-      <h3 className="font-black text-[#0A1628] text-sm mb-3">Revenue Analytics</h3>
+      <h3 className="font-black text-[#241100] text-sm mb-3">Revenue Analytics</h3>
       <div className="grid grid-cols-3 md:grid-cols-6 gap-3 mb-4">
         <div className="bg-gray-50 rounded-xl p-3 text-center">
           <p className="text-[9px] text-gray-400 uppercase">Today</p>

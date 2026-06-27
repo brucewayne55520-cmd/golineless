@@ -22,7 +22,7 @@ const HUBS: Record<string, { icon: string; color: string; label: string }> = {
 export default function HubOperationsOverview({ hubStats }: Props) {
   return (
     <div className="mb-5">
-      <h3 className="font-black text-[#0A1628] text-sm mb-3">Service Hub Overview</h3>
+      <h3 className="font-black text-[#241100] text-sm mb-3">Service Hub Overview</h3>
       <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
         {(Object.entries(hubStats) as [string, HubStat][]).map(([hub, stats], i) => {
           const h = HUBS[hub] || { icon: "📋", color: "#6B7280", label: hub };
@@ -36,7 +36,7 @@ export default function HubOperationsOverview({ hubStats }: Props) {
             >
               <div className="flex items-center gap-2 mb-3">
                 <span className="text-lg">{h.icon}</span>
-                <span className="text-sm font-bold text-[#0A1628]">{h.label}</span>
+                <span className="text-sm font-bold text-[#241100]">{h.label}</span>
               </div>
               <div className="grid grid-cols-3 gap-1 text-center">
                 <div>

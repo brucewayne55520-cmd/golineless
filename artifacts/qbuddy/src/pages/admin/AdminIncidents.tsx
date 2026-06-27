@@ -55,7 +55,7 @@ export default function AdminIncidents() {
       <AdminSidebar />
       <main className="flex-1 overflow-y-auto p-6">
         <div className="flex items-center justify-between mb-5">
-          <h1 className="text-xl font-bold text-[#0A1628] dark:text-[#F5F0E8]">Incident Management</h1>
+          <h1 className="text-xl font-bold text-[#241100] dark:text-[#fff2e5]">Incident Management</h1>
           <button
             onClick={() => setShowCreate(!showCreate)}
             className="flex items-center gap-2 px-4 py-2 rounded-xl text-white text-sm font-semibold gl-transition"
@@ -75,30 +75,30 @@ export default function AdminIncidents() {
               className="mb-5 bg-white dark:bg-[#111827] rounded-2xl p-5 gl-shadow-md border border-[#E5E0D8] dark:border-[#1F2937]"
             >
               <div className="flex items-center justify-between mb-4">
-                <h3 className="font-bold text-[#0A1628] dark:text-[#F5F0E8]">New Incident</h3>
+                <h3 className="font-bold text-[#241100] dark:text-[#fff2e5]">New Incident</h3>
                 <button onClick={() => setShowCreate(false)} className="text-[#9CA3AF] hover:text-[#6B7280] gl-transition"><X size={18} /></button>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                 <div>
                   <label className="text-xs font-medium text-[#6B7280] mb-1 block">Type</label>
-                  <select value={createForm.type} onChange={e => setCreateForm(prev => ({ ...prev, type: e.target.value }))} className="w-full border border-[#E5E0D8] dark:border-[#374151] rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#0A1628] bg-white dark:bg-[#1F2937] dark:text-[#F5F0E8] gl-transition">
+                  <select value={createForm.type} onChange={e => setCreateForm(prev => ({ ...prev, type: e.target.value }))} className="w-full border border-[#E5E0D8] dark:border-[#374151] rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#241100] bg-white dark:bg-[#1F2937] dark:text-[#fff2e5] gl-transition">
                     {INCIDENT_TYPES.map(t => <option key={t} value={t}>{t.replace(/_/g, " ")}</option>)}
                   </select>
                 </div>
                 <div>
                   <label className="text-xs font-medium text-[#6B7280] mb-1 block">Severity</label>
-                  <select value={createForm.severity} onChange={e => setCreateForm(prev => ({ ...prev, severity: e.target.value }))} className="w-full border border-[#E5E0D8] dark:border-[#374151] rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#0A1628] bg-white dark:bg-[#1F2937] dark:text-[#F5F0E8] gl-transition">
+                  <select value={createForm.severity} onChange={e => setCreateForm(prev => ({ ...prev, severity: e.target.value }))} className="w-full border border-[#E5E0D8] dark:border-[#374151] rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#241100] bg-white dark:bg-[#1F2937] dark:text-[#fff2e5] gl-transition">
                     {SEVERITY_LEVELS.map(s => <option key={s} value={s}>{s}</option>)}
                   </select>
                 </div>
               </div>
               <div className="mb-4">
                 <label className="text-xs font-medium text-[#6B7280] mb-1 block">Title</label>
-                <input value={createForm.title} onChange={e => setCreateForm(prev => ({ ...prev, title: e.target.value }))} placeholder="Brief incident title" className="w-full border border-[#E5E0D8] dark:border-[#374151] rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#0A1628] bg-white dark:bg-[#1F2937] dark:text-[#F5F0E8] gl-transition" />
+                <input value={createForm.title} onChange={e => setCreateForm(prev => ({ ...prev, title: e.target.value }))} placeholder="Brief incident title" className="w-full border border-[#E5E0D8] dark:border-[#374151] rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#241100] bg-white dark:bg-[#1F2937] dark:text-[#fff2e5] gl-transition" />
               </div>
               <div className="mb-4">
                 <label className="text-xs font-medium text-[#6B7280] mb-1 block">Description</label>
-                <textarea value={createForm.description} onChange={e => setCreateForm(prev => ({ ...prev, description: e.target.value }))} placeholder="Detailed description of the incident..." rows={3} className="w-full border border-[#E5E0D8] dark:border-[#374151] rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#0A1628] resize-none bg-white dark:bg-[#1F2937] dark:text-[#F5F0E8] gl-transition" />
+                <textarea value={createForm.description} onChange={e => setCreateForm(prev => ({ ...prev, description: e.target.value }))} placeholder="Detailed description of the incident..." rows={3} className="w-full border border-[#E5E0D8] dark:border-[#374151] rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#241100] resize-none bg-white dark:bg-[#1F2937] dark:text-[#fff2e5] gl-transition" />
               </div>
               <button onClick={handleCreate} className="px-6 py-2 rounded-xl text-white text-sm font-semibold" style={{ background: "linear-gradient(135deg, #EF4444, #DC2626)" }}>
                 Create Incident
@@ -130,21 +130,21 @@ export default function AdminIncidents() {
 
         <div className="bg-white dark:bg-[#111827] rounded-2xl gl-shadow-md border border-[#E5E0D8] dark:border-[#1F2937] overflow-hidden">
           <div className="px-5 py-4 border-b border-[#E5E0D8] dark:border-[#1F2937]">
-            <h3 className="font-bold text-[#0A1628] dark:text-[#F5F0E8]">All Incidents</h3>
+            <h3 className="font-bold text-[#241100] dark:text-[#fff2e5]">All Incidents</h3>
           </div>
           {loading ? <div className="p-8 text-center text-[#9CA3AF]">Loading...</div> : !incidents || incidents.length === 0 ? (
             <div className="p-8 text-center text-[#9CA3AF]"><ShieldAlert size={32} className="mx-auto mb-2 opacity-30" /><p className="font-medium">No incidents</p></div>
           ) : (
             <div className="divide-y divide-[#F3F4F6] dark:divide-[#1F2937]">
               {(Array.isArray(incidents) ? incidents : []).map((inc: Required<import("@workspace/api-client-react").Incident>) => (
-                <motion.div key={inc.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="px-5 py-4 hover:bg-[#FAF7F2] dark:hover:bg-[#1F2937] gl-transition">
+                <motion.div key={inc.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="px-5 py-4 hover:bg-[#FFF9F2] dark:hover:bg-[#1F2937] gl-transition">
                   <div className="flex items-start justify-between">
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
                         <span className="text-xs font-bold px-2 py-0.5 rounded-full" style={{ background: `${SEVERITY_COLORS[inc.severity] || "#9CA3AF"}20`, color: SEVERITY_COLORS[inc.severity] || "#9CA3AF" }}>
                           {inc.severity}
                         </span>
-                        <span className="text-sm font-semibold text-[#0A1628] dark:text-[#F5F0E8] capitalize">{inc.title || inc.type?.replace(/_/g, " ")}</span>
+                        <span className="text-sm font-semibold text-[#241100] dark:text-[#fff2e5] capitalize">{inc.title || inc.type?.replace(/_/g, " ")}</span>
                       </div>
                       <p className="text-xs text-[#9CA3AF] mt-1 line-clamp-2">{inc.description}</p>
                     </div>

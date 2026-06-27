@@ -37,7 +37,7 @@ export default function AdminPilot() {
     { label: "Acceptance Rate", val: `${data?.acceptanceRate ?? 0}%`, Icon: Percent, color: "#8B5CF6", bg: "#F5F3FF" },
     { label: "Completion Rate", val: `${data?.completedRate ?? 0}%`, Icon: CheckCircle2, color: "#059669", bg: "#ECFDF5" },
     { label: "Revenue Today", val: formatCurrency(data?.revenueToday ?? 0), Icon: Wallet, color: "#D97706", bg: "#FFFBEB" },
-    { label: "Avg Rating", val: data?.avgRating ?? "N/A", Icon: Star, color: "#D4A843", bg: "#FEF9EC" },
+    { label: "Avg Rating", val: data?.avgRating ?? "N/A", Icon: Star, color: "#ff7b00", bg: "#FEF9EC" },
     { label: "Avg Wait Saved", val: `${data?.avgWaitSaved ?? 0}m`, Icon: Clock, color: "#0EA5E9", bg: "#F0F9FF" },
   ];
 

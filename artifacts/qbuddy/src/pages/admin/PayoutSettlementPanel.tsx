@@ -3,6 +3,7 @@ import { DollarSign, CheckCircle2, Clock, AlertTriangle, Building2, Search, Chev
 import { toast } from "sonner";
 import { formatCurrency } from "@/lib/utils";
 import { NAVY } from "@/lib/theme";
+import { customFetch } from "@workspace/api-client-react";
 
 interface RunnerBalance {
   runnerId: number;
@@ -42,16 +43,11 @@ interface Props {
 }
 
 async function apiCall(path: string, method: string, body?: unknown) {
-  const token = localStorage.getItem("golineless_admin_token") || "";
-  const res = await fetch(path, {
+  return customFetch<Record<string, unknown>>(path, {
     method,
-    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+    headers: { "Content-Type": "application/json" },
     body: body ? JSON.stringify(body) : undefined,
   });
-  let data: Record<string, unknown>;
-  try { data = await res.json(); } catch { data = { error: `HTTP ${res.status}` }; }
-  if (!res.ok) throw new Error((data.error as string) || "Request failed");
-  return data;
 }
 
 export default function PayoutSettlementPanel({ data, isLoading, isError, refetch }: Props) {
@@ -80,7 +76,7 @@ export default function PayoutSettlementPanel({ data, isLoading, isError, refetc
       <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
         <div className="flex items-center gap-2 mb-3">
           <AlertTriangle size={16} className="text-red-500" />
-          <h3 className="font-bold text-[#0A1628] text-sm">Payout Settlement</h3>
+          <h3 className="font-bold text-[#241100] text-sm">Payout Settlement</h3>
         </div>
         <div className="bg-red-50 rounded-xl p-4 text-center">
           <p className="text-red-600 text-xs font-medium">Failed to load payout data</p>
@@ -159,7 +155,7 @@ export default function PayoutSettlementPanel({ data, isLoading, isError, refetc
             <DollarSign size={20} className="text-green-600" />
           </div>
           <div>
-            <h3 className="font-bold text-[#0A1628] text-sm">Payout Settlement</h3>
+            <h3 className="font-bold text-[#241100] text-sm">Payout Settlement</h3>
             <p className="text-[10px] text-gray-400">Track & settle runner earnings</p>
           </div>
         </div>
@@ -167,7 +163,7 @@ export default function PayoutSettlementPanel({ data, isLoading, isError, refetc
           <div className="flex gap-1 bg-gray-100 rounded-xl p-1">
             {(["outstanding", "history"] as const).map(v => (
               <button key={v} onClick={() => setView(v)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all capitalize ${view === v ? "bg-white text-[#0A1628] shadow-sm" : "text-gray-500 hover:text-gray-700"}`}>
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all capitalize ${view === v ? "bg-white text-[#241100] shadow-sm" : "text-gray-500 hover:text-gray-700"}`}>
                 {v}
               </button>
             ))}
@@ -226,7 +222,7 @@ export default function PayoutSettlementPanel({ data, isLoading, isError, refetc
                           {r.name[0]?.toUpperCase()}
                         </div>
                         <div>
-                          <p className="font-bold text-[#0A1628] text-sm">{r.name}</p>
+                          <p className="font-bold text-[#241100] text-sm">{r.name}</p>
                           <p className="text-[10px] text-gray-400">{r.unsettledTaskCount} unsettled tasks</p>
                         </div>
                       </div>
@@ -246,11 +242,11 @@ export default function PayoutSettlementPanel({ data, isLoading, isError, refetc
                         <div className="grid grid-cols-2 gap-2 mt-2 mb-3">
                           <div className="bg-gray-50 rounded-lg p-2 text-center">
                             <p className="text-[9px] text-gray-400 uppercase">Lifetime Earnings</p>
-                            <p className="text-xs font-bold text-[#0A1628]">{formatCurrency(r.lifetimeEarnings)}</p>
+                            <p className="text-xs font-bold text-[#241100]">{formatCurrency(r.lifetimeEarnings)}</p>
                           </div>
                           <div className="bg-gray-50 rounded-lg p-2 text-center">
                             <p className="text-[9px] text-gray-400 uppercase">Total Tasks</p>
-                            <p className="text-xs font-bold text-[#0A1628]">{r.totalTasks}</p>
+                            <p className="text-xs font-bold text-[#241100]">{r.totalTasks}</p>
                           </div>
                         </div>
                         {r.bankAccount && (
@@ -304,7 +300,7 @@ export default function PayoutSettlementPanel({ data, isLoading, isError, refetc
                       <td className="py-2.5 text-gray-500">
                         {s.settledAt ? new Date(s.settledAt).toLocaleDateString("en-IN", { day: "numeric", month: "short" }) : "—"}
                       </td>
-                      <td className="py-2.5 font-medium text-[#0A1628]">{s.runnerName}</td>
+                      <td className="py-2.5 font-medium text-[#241100]">{s.runnerName}</td>
                       <td className="py-2.5 font-bold" style={{ color: s.status === "settled" ? "#16A34A" : "#DC2626" }}>
                         {formatCurrency(s.amount)}
                       </td>
@@ -341,7 +337,7 @@ export default function PayoutSettlementPanel({ data, isLoading, isError, refetc
           <div className="fixed inset-0 bg-black/40 z-40" onClick={() => setSettleModal(null)} />
           <div className="fixed bottom-0 left-0 right-0 bg-white rounded-t-3xl z-50 p-6 shadow-2xl max-w-lg mx-auto">
             <div className="w-10 h-1 bg-gray-200 rounded-full mx-auto mb-4" />
-            <h3 className="font-black text-[#0A1628] text-lg mb-1">
+            <h3 className="font-black text-[#241100] text-lg mb-1">
               {settleModal.all ? "Settle All" : "Partial Settlement"}
             </h3>
             <p className="text-gray-400 text-sm mb-4">

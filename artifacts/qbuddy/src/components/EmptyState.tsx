@@ -80,8 +80,8 @@ export function EmptyState({
           className={cn(
             "mt-5 px-6 py-3 rounded-xl font-semibold text-sm shadow-sm hover:shadow-md transition-all",
             isDark
-              ? "bg-[#C9A84C] text-[#0A1628]"
-              : "bg-gradient-to-r from-[#C9A84C] to-[#D4B870] text-[#0A1628]"
+              ? "bg-[#ff7b00] text-[#241100]"
+              : "bg-gradient-to-r from-[#ff7b00] to-[#ffb066] text-[#241100]"
           )}
         >
           {action.label}

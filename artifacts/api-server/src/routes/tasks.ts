@@ -15,7 +15,7 @@ import { createOrder } from "../lib/payments";
 import { uploadFile, isB2Configured } from "../lib/storage";
 import { validateBody } from "../lib/validate";
 import { sendEmail } from "../lib/email";
-import { sendPaymentReceiptSms, sendPaymentConfirmedSms } from "../lib/sms";
+import { sendPaymentReceiptSms } from "../lib/sms";
 
 // Fix #14: HTML escape helper to prevent XSS in email templates
 function escapeHtml(str: string | null | undefined): string {
@@ -27,6 +27,7 @@ const router: IRouter = Router();
 const createTaskSchema = z.object({
   category: z.string().min(1),
   urgency: z.enum(["normal", "urgent", "emergency"]).optional(),
+  priorityLevel: z.enum(["normal", "high", "vip"]).optional(),
 }).passthrough();
 
 const reviewSchema = z.object({
@@ -128,13 +129,23 @@ router.get("/tasks", async (req, res): Promise<void> => {
     .limit(Number(limit))
     .offset(Number(offset));
 
-  const enriched = await Promise.all(tasks.map(async (task) => {
-    const [user] = task.userId ? await db.select().from(usersTable).where(eq(usersTable.id, task.userId)) : [null];
-    const [runner] = task.runnerId ? await db.select().from(runnersTable).where(eq(runnersTable.id, task.runnerId)) : [null];
+  // C3 FIX: Batch user/runner lookups to avoid N+1 queries
+  const userIds = [...new Set(tasks.map(t => t.userId).filter(Boolean) as number[])];
+  const runnerIds = [...new Set(tasks.map(t => t.runnerId).filter(Boolean) as number[])];
+  const [users, runners] = await Promise.all([
+    userIds.length > 0 ? db.select().from(usersTable).where(inArray(usersTable.id, userIds)) : Promise.resolve([]),
+    runnerIds.length > 0 ? db.select().from(runnersTable).where(inArray(runnersTable.id, runnerIds)) : Promise.resolve([]),
+  ]);
+  const userMap = new Map(users.map(u => [u.id, u]));
+  const runnerMap = new Map(runners.map(r => [r.id, r]));
+
+  const enriched = tasks.map((task) => {
+    const user = task.userId ? userMap.get(task.userId) ?? null : null;
+    const runner = task.runnerId ? runnerMap.get(task.runnerId) ?? null : null;
     const safeUser = user ? (({ otp, otpExpiresAt, ...u }) => u)(user) : null;
     const safeRunner = runner ? (({ otp, otpExpiresAt, aadhaarNumber, ...r }) => r)(runner) : null;
     return { ...task, user: safeUser, runner: safeRunner };
-  }));
+  });
 
   res.json(enriched);
 });
@@ -142,7 +153,8 @@ router.get("/tasks", async (req, res): Promise<void> => {
 // GET /tasks/available - for runners (Comrades)
 // B6: Exclude dismissed tasks — runners who tapped "dismiss" should not see those tasks again
 router.get("/tasks/available", requireRunner, async (req, res): Promise<void> => {
-  const runner = req.runner!;
+  const runner = req.runner;
+  if (!runner) { res.status(401).json({ error: "Unauthorized" }); return; }
   const { limit = "20", offset = "0" } = req.query as Record<string, string>;
 
   const tasks = await db
@@ -150,7 +162,7 @@ router.get("/tasks/available", requireRunner, async (req, res): Promise<void> =>
     .from(tasksTable)
     .where(eq(tasksTable.status, "pending"))
     .orderBy(desc(tasksTable.createdAt))
-    .limit(Number(limit) + 50); // fetch extra to filter dismissed
+    .limit(Number(limit) + 15); // fetch extra to filter dismissed
 
   // B6: Filter out tasks this runner has previously declined/dismissed
   // Use proofPhotos metadata or a simple heuristic: tasks where runner was notified but didn't accept within 5 minutes
@@ -163,18 +175,27 @@ router.get("/tasks/available", requireRunner, async (req, res): Promise<void> =>
     return !dismissed;
   });
 
-  const enriched = await Promise.all(availableTasks.slice(0, Number(limit)).map(async (task) => {
-    const [user] = task.userId ? await db.select().from(usersTable).where(eq(usersTable.id, task.userId)) : [null];
+  // C2 FIX: Batch user lookups to avoid N+1 queries
+  const slicedTasks = availableTasks.slice(0, Number(limit));
+  const userIds = [...new Set(slicedTasks.map(t => t.userId).filter(Boolean) as number[])];
+  const users = userIds.length > 0
+    ? await db.select().from(usersTable).where(inArray(usersTable.id, userIds))
+    : [];
+  const userMap = new Map(users.map(u => [u.id, u]));
+
+  const enriched = slicedTasks.map((task) => {
+    const user = task.userId ? userMap.get(task.userId) ?? null : null;
     const safeUser = user ? (({ otp, otpExpiresAt, phone, ...rest }) => rest)(user) : null;
     return { ...task, user: safeUser, runner: null };
-  }));
+  });
 
   res.json(enriched);
 });
 
 // POST /tasks
 router.post("/tasks", requireUser, validateBody(createTaskSchema), async (req, res): Promise<void> => {
-  const user = req.user!;
+  const user = req.user;
+  if (!user) { res.status(401).json({ error: "Unauthorized" }); return; }
 
   // S4: Enforce KYC for sensitive categories (senior care)
   const SENIOR_CATEGORIES = ["senior_care"];
@@ -266,6 +287,7 @@ router.post("/tasks", requireUser, validateBody(createTaskSchema), async (req, r
     const urgencyChargeVal = urgency === "urgent" ? 50 : 0;
     const priorityFee = getPriorityFee(priorityLevel, revenueConfig);
     const urgencyMultiplier = getUrgencyMultiplier(urgency, revenueConfig);
+    const runnerPayoutPercent = Number((settings as Record<string, unknown>)?.runnerPayoutPercent ?? 70);
     const revenue = calculateTaskRevenue({
       basePrice: basePriceVal,
       distanceCharge: distanceChargeVal,
@@ -273,7 +295,7 @@ router.post("/tasks", requireUser, validateBody(createTaskSchema), async (req, r
       waitingChargeAmount: 0,
       priorityFee,
       urgencyMultiplier,
-      runnerPayoutPercent: 70,
+      runnerPayoutPercent,
     });
     let discountAmount = 0;
     let finalPrice = revenue.price;
@@ -281,7 +303,7 @@ router.post("/tasks", requireUser, validateBody(createTaskSchema), async (req, r
       discountAmount = Math.round(revenue.price * 0.1);
       finalPrice -= discountAmount;
     }
-    const finalRunnerEarning = Math.round(finalPrice * 0.7);
+    const finalRunnerEarning = Math.round(finalPrice * (runnerPayoutPercent / 100));
     const finalPlatformFee = finalPrice - finalRunnerEarning;
 
     const otp = generateAuthOtp();
@@ -553,7 +575,8 @@ router.patch("/tasks/:id/status", async (req, res): Promise<void> => {
 
 // POST /tasks/:id/proof-photo
 router.post("/tasks/:id/proof-photo", requireRunner, async (req, res): Promise<void> => {
-  const runner = req.runner!;
+  const runner = req.runner;
+  if (!runner) { res.status(401).json({ error: "Unauthorized" }); return; }
   const id = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id, 10);
   const { imageUrl, proofType, lat, lng, address } = req.body;
 
@@ -734,7 +757,8 @@ router.post("/tasks/:id/proof-photo", requireRunner, async (req, res): Promise<v
 
 // POST /tasks/:id/accept
 router.post("/tasks/:id/accept", requireRunner, async (req, res): Promise<void> => {
-  const runner = req.runner!;
+  const runner = req.runner;
+  if (!runner) { res.status(401).json({ error: "Unauthorized" }); return; }
   const id = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id, 10);
   const now = new Date();
 
@@ -813,7 +837,7 @@ router.post("/tasks/:id/accept", requireRunner, async (req, res): Promise<void> 
         to: userData.email,
         subject: `Comrade Assigned — Task #${id}`,
         htmlContent: `<div style="font-family:Arial,sans-serif;max-width:600px;margin:auto">
-          <h2 style="color:#0F2557">Go LineLess — Comrade Assigned</h2>
+          <h2 style="color:#241100">Go LineLess — Comrade Assigned</h2>
           <p>Hi ${escapeHtml(userData.name) || "there"},</p>
           <p>A Comrade has accepted your task. They'll be there shortly!</p>
           <table style="width:100%;border-collapse:collapse;margin:16px 0">
@@ -865,7 +889,8 @@ router.post("/tasks/:id/accept", requireRunner, async (req, res): Promise<void> 
 // (#19) Logs to payment_audit_log
 // (#23) Rate limited via confirm-cash limiter in app.ts
 router.post("/tasks/:id/confirm-cash", requireRunner, async (req, res): Promise<void> => {
-  const runner = req.runner!;
+  const runner = req.runner;
+  if (!runner) { res.status(401).json({ error: "Unauthorized" }); return; }
   const id = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id, 10);
 
   // M6 FIX: Validate task is in an active status for cash confirmation
@@ -932,7 +957,7 @@ router.post("/tasks/:id/confirm-cash", requireRunner, async (req, res): Promise<
         to: userData.email,
         subject: `Payment Receipt — Task #${id}`,
         htmlContent: `<div style="font-family:Arial,sans-serif;max-width:600px;margin:auto">
-          <h2 style="color:#0F2557">Go LineLess — Payment Receipt</h2>
+          <h2 style="color:#241100">Go LineLess — Payment Receipt</h2>
           <p>Hi ${escapeHtml(userData.name) || "there"},</p>
           <p>${escapeHtml(runner.name) || "Your Comrade"} has confirmed receiving cash payment for your task.</p>
           <table style="width:100%;border-collapse:collapse;margin:16px 0">
@@ -993,7 +1018,8 @@ router.post("/tasks/:id/confirm-cash", requireRunner, async (req, res): Promise<
 
 // POST /tasks/:id/confirm-cash-user — User confirms or disputes cash payment
 router.post("/tasks/:id/confirm-cash-user", requireUser, async (req, res): Promise<void> => {
-  const user = req.user!;
+  const user = req.user;
+  if (!user) { res.status(401).json({ error: "Unauthorized" }); return; }
   const id = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id, 10);
   const { action, disputeReason } = req.body; // action: "confirm" | "dispute"
 
@@ -1100,7 +1126,8 @@ router.post("/tasks/:id/refund", requireUser, async (req, res): Promise<void> =>
 
 // POST /tasks/:id/verify-otp
 router.post("/tasks/:id/verify-otp", requireRunner, async (req, res): Promise<void> => {
-  const runner = req.runner!;
+  const runner = req.runner;
+  if (!runner) { res.status(401).json({ error: "Unauthorized" }); return; }
   const id = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id, 10);
   const { otp } = req.body;
 
@@ -1346,7 +1373,8 @@ async function cancelAndRespond(existing: typeof tasksTable.$inferSelect, id: nu
 
 // POST /tasks/:id/review
 router.post("/tasks/:id/review", requireUser, validateBody(reviewSchema), async (req, res): Promise<void> => {
-  const user = req.user!;
+  const user = req.user;
+  if (!user) { res.status(401).json({ error: "Unauthorized" }); return; }
   const id = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id, 10);
   const { rating, review } = req.body;
 
@@ -1375,7 +1403,8 @@ router.post("/tasks/:id/review", requireUser, validateBody(reviewSchema), async 
 
 // POST /tasks/:id/waiting/start — Phase 6: Waiting charge calculation
 router.post("/tasks/:id/waiting/start", requireRunner, async (req, res): Promise<void> => {
-  const runner = req.runner!;
+  const runner = req.runner;
+  if (!runner) { res.status(401).json({ error: "Unauthorized" }); return; }
   const id = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id, 10);
   const [task] = await db.select().from(tasksTable).where(eq(tasksTable.id, id));
   if (!task) { res.status(404).json({ error: "Task not found" }); return; }
@@ -1406,7 +1435,8 @@ router.post("/tasks/:id/waiting/start", requireRunner, async (req, res): Promise
 
 // POST /tasks/:id/waiting/pause — Phase 6: with waiting charge calculation
 router.post("/tasks/:id/waiting/pause", requireRunner, async (req, res): Promise<void> => {
-  const runner = req.runner!;
+  const runner = req.runner;
+  if (!runner) { res.status(401).json({ error: "Unauthorized" }); return; }
   const id = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id, 10);
   const [task] = await db.select().from(tasksTable).where(eq(tasksTable.id, id));
   if (!task) { res.status(404).json({ error: "Task not found" }); return; }
@@ -1427,7 +1457,9 @@ router.post("/tasks/:id/waiting/pause", requireRunner, async (req, res): Promise
   // Calculate waiting charge
   const revConfig = await getRevenueConfig();
   const { waitingChargeAmount } = calculateWaitingCharge(totalMin, revConfig);
-  const waitingEarnings = Math.round(waitingChargeAmount * 0.7);
+  const [adminSettings] = await db.select({ runnerPayoutPercent: adminSettingsTable.runnerPayoutPercent }).from(adminSettingsTable).limit(1);
+  const runnerPayoutPercent = Number(adminSettings?.runnerPayoutPercent ?? 70);
+  const waitingEarnings = Math.round(waitingChargeAmount * (runnerPayoutPercent / 100));
   const timeline = task.taskTimeline || [];
   timeline.push(makeTimelineEntry("waiting_paused", `Comrade paused waiting after ${elapsedMin} min`));
 
@@ -1447,7 +1479,8 @@ router.post("/tasks/:id/waiting/pause", requireRunner, async (req, res): Promise
 
 // POST /tasks/:id/waiting/end — Phase 6: with waiting charge calculation
 router.post("/tasks/:id/waiting/end", requireRunner, async (req, res): Promise<void> => {
-  const runner = req.runner!;
+  const runner = req.runner;
+  if (!runner) { res.status(401).json({ error: "Unauthorized" }); return; }
   const id = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id, 10);
   const [task] = await db.select().from(tasksTable).where(eq(tasksTable.id, id));
   if (!task) { res.status(404).json({ error: "Task not found" }); return; }
@@ -1468,7 +1501,9 @@ router.post("/tasks/:id/waiting/end", requireRunner, async (req, res): Promise<v
   // Calculate waiting charge
   const revConfig = await getRevenueConfig();
   const { waitingChargeAmount } = calculateWaitingCharge(totalMin, revConfig);
-  const waitingEarnings = Math.round(waitingChargeAmount * 0.7);
+  const [adminSettings] = await db.select({ runnerPayoutPercent: adminSettingsTable.runnerPayoutPercent }).from(adminSettingsTable).limit(1);
+  const runnerPayoutPercent = Number(adminSettings?.runnerPayoutPercent ?? 70);
+  const waitingEarnings = Math.round(waitingChargeAmount * (runnerPayoutPercent / 100));
   const timeline = task.taskTimeline || [];
   timeline.push(makeTimelineEntry("waiting_completed", `Waiting ended — ${totalMin} min total`));
 
@@ -1536,7 +1571,8 @@ async function computeQueueIntelligence(tokenNumber?: string | null, currentToke
 
 // POST /tasks/:id/queue/progress — Phase 4: Queue Intelligence Engine
 router.post("/tasks/:id/queue/progress", requireRunner, async (req, res): Promise<void> => {
-  const runner = req.runner!;
+  const runner = req.runner;
+  if (!runner) { res.status(401).json({ error: "Unauthorized" }); return; }
   const id = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id, 10);
   const { currentToken, counterNumber, queueNotes } = req.body;
   const [task] = await db.select().from(tasksTable).where(eq(tasksTable.id, id));
@@ -1585,7 +1621,8 @@ router.post("/tasks/:id/queue/progress", requireRunner, async (req, res): Promis
 
 // POST /tasks/:id/family-tracking
 router.post("/tasks/:id/family-tracking", requireUser, async (req, res): Promise<void> => {
-  const user = req.user!;
+  const user = req.user;
+  if (!user) { res.status(401).json({ error: "Unauthorized" }); return; }
   const id = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id, 10);
   const { familyContactName, familyContactPhone } = req.body;
   const [task] = await db.select().from(tasksTable).where(eq(tasksTable.id, id));
@@ -1709,7 +1746,8 @@ router.get("/family/track/:token", async (req, res): Promise<void> => {
 // GET /tasks/:id/upi-qr — Generate UPI QR code data for cash tasks (#22)
 router.get("/tasks/:id/upi-qr", requireUser, async (req, res): Promise<void> => {
   const id = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id, 10);
-  const user = req.user!;
+  const user = req.user;
+  if (!user) { res.status(401).json({ error: "Unauthorized" }); return; }
 
   const [task] = await db.select().from(tasksTable).where(eq(tasksTable.id, id));
   if (!task) { res.status(404).json({ error: "Task not found" }); return; }
@@ -1794,7 +1832,8 @@ router.get("/tasks/:id/timeline", async (req, res): Promise<void> => {
 
 // POST /tasks/:id/escalate — H2: SOS/Emergency escalation endpoint
 router.post("/tasks/:id/escalate", requireRunner, async (req, res): Promise<void> => {
-  const runner = req.runner!;
+  const runner = req.runner;
+  if (!runner) { res.status(401).json({ error: "Unauthorized" }); return; }
   const id = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id, 10);
   const { reason, severity } = req.body;
   const validSeverities = ["low", "medium", "high"];

@@ -52,7 +52,7 @@ export default function AdminSubscriptions() {
       <AdminSidebar />
       <main className="flex-1 overflow-y-auto p-6">
         <div className="mb-5">
-          <h1 className="text-2xl font-bold text-[#0A1628] dark:text-[#F5F0E8]">Subscriptions</h1>
+          <h1 className="text-2xl font-bold text-[#241100] dark:text-[#fff2e5]">Subscriptions</h1>
         </div>
         <div className="grid grid-cols-3 gap-4 mb-5">
           {cards.map(c => (
@@ -61,13 +61,13 @@ export default function AdminSubscriptions() {
                 <c.Icon size={16} style={{ color: c.color }} />
                 <p className="text-gray-400 text-xs">{c.label}</p>
               </div>
-              <p className="text-2xl font-bold text-[#0A1628] dark:text-[#D4A843]">{c.val}</p>
+              <p className="text-2xl font-bold text-[#241100] dark:text-[#ff7b00]">{c.val}</p>
             </div>
           ))}
         </div>
         <div className="flex gap-2 mb-4">
           {(["all", "active", "expired"] as const).map(f => (
-            <button key={f} onClick={() => setFilter(f)} className={`px-3 py-1.5 rounded-xl text-xs font-semibold gl-transition ${filter === f ? "bg-[#0A1628] dark:bg-[#D4A843] text-white dark:text-[#0A1628]" : "bg-white dark:bg-[#1F2937] text-[#6B7280] border border-[#E5E0D8] dark:border-[#374151] hover:bg-[#FAF7F2] dark:hover:bg-[#111827]"}`}>
+            <button key={f} onClick={() => setFilter(f)} className={`px-3 py-1.5 rounded-xl text-xs font-semibold gl-transition ${filter === f ? "bg-[#241100] dark:bg-[#ff7b00] text-white dark:text-[#241100]" : "bg-white dark:bg-[#1F2937] text-[#6B7280] border border-[#E5E0D8] dark:border-[#374151] hover:bg-[#FFF9F2] dark:hover:bg-[#111827]"}`}>
               {f.charAt(0).toUpperCase() + f.slice(1)}
             </button>
           ))}
@@ -90,7 +90,7 @@ export default function AdminSubscriptions() {
                 <tr><td colSpan={8} className="text-center py-12 text-[#9CA3AF]">No subscriptions {filter !== "all" ? `with status "${filter}"` : ""}</td></tr>
               ) : (
                 filtered.map((sub: Sub) => (
-                  <tr key={sub.id} className="border-b border-[#F3F4F6] dark:border-[#1F2937] hover:bg-[#FAF7F2] dark:hover:bg-[#1F2937] gl-transition">
+                  <tr key={sub.id} className="border-b border-[#F3F4F6] dark:border-[#1F2937] hover:bg-[#FFF9F2] dark:hover:bg-[#1F2937] gl-transition">
                     <td className="px-4 py-3">User #{sub.userId}</td>
                     <td className="px-4 py-3 font-medium text-[#7C3AED]">{sub.planName}</td>
                     <td className="px-4 py-3 capitalize">{sub.billingCycle}</td>
