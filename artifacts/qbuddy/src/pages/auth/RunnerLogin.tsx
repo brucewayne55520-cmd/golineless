@@ -101,7 +101,7 @@ export default function RunnerLogin() {
                 e.preventDefault();
                 if (!email || !email.includes("@")) { toast.error("Enter a valid email"); return; }
                 setSendingLink(true);
-                const result = await requestMagicLink(email, `${window.location.origin}/auth/magic-link/callback?role=runner`);
+                const result = await requestMagicLink(email, `${window.location.origin}/auth/magic-link/callback`, "runner");
                 setSendingLink(false);
                 if (result.success) {
                   setMagicLinkSent(true);

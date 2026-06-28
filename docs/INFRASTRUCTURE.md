@@ -8,7 +8,7 @@
    - **API Health Check**: `https://golineless.onrender.com/api/health`
      - Monitoring interval: 5 minutes
      - Alert contacts: your phone/email
-   - **Frontend**: `https://golineless.vercel.app`
+   - **Frontend + API**: `https://golineless.onrender.com`
      - Monitoring interval: 5 minutes
 3. Configure alerts:
    - SMS alerts for downtime > 2 minutes

@@ -21,7 +21,11 @@ export default function MagicLinkCallback() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const neonToken = params.get("token");
-    const role = (params.get("role") || "user") as "user" | "runner";
+    // Read role from sessionStorage first (set by requestMagicLink before redirect),
+    // fall back to URL param, then default to "user".
+    const storedRole = sessionStorage.getItem("golineless_magic_link_role");
+    if (storedRole) sessionStorage.removeItem("golineless_magic_link_role");
+    const role = (storedRole || params.get("role") || "user") as "user" | "runner";
 
     if (!neonToken) {
       setStatus("error");

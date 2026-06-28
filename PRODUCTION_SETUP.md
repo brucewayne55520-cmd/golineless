@@ -96,9 +96,13 @@ These are read by the **API server** (`artifacts/api-server`). Source of truth: 
 
 ### 🌐 Frontend (`artifacts/qbuddy`) — Vite build-time vars
 
+These are baked into the JS bundle at build time. On Render, `VITE_GOOGLE_CLIENT_ID` and `VITE_NEON_AUTH_URL` must be set as **environment variables** so the build picks them up.
+
 | Variable | Description |
 |---|---|
-| `VITE_API_URL` | Base URL of the API server, e.g. `https://api.golineless.com`. If unset, the frontend uses same-origin `/api`. |
+| `VITE_API_URL` | Base URL of the API server. If unset, the frontend uses same-origin `/api` (correct for unified Render deployment). |
+| `VITE_GOOGLE_CLIENT_ID` | Google OAuth client ID for the sign-in button. |
+| `VITE_NEON_AUTH_URL` | Neon Auth endpoint for magic-link sign-in (optional). |
 
 ---
 
@@ -152,7 +156,7 @@ SENTRY_AUTH_TOKEN=
 - [ ] **Backblaze B2** account + bucket + application key (for proof photos).
 - [ ] **Razorpay** account (KYC-verified for live mode) + API keys + webhook secret.
 - [ ] **Sentry** project (optional but recommended).
-- [ ] A **host** for the API server (Railway / Render / Fly.io / a VM) and the frontend (Vercel / Netlify / Cloudflare Pages / same VM). A `deploy/Caddyfile` and `deploy/golineless.service` already exist in the repo for a VM + Caddy setup.
+- [ ] A **host** for the API server and frontend. The app is deployed on **Render** (unified: API + SPA served from the same service). A `deploy/Caddyfile` and `deploy/golineless.service` also exist in the repo for a VM + Caddy setup.
 - [ ] (Optional) Enable **Neon Auth** in Neon Console if using managed authentication.
 
 ### B. Database

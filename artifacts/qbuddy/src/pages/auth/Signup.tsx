@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { GoogleLogin, type CredentialResponse } from "@react-oauth/google";
 import { useAuth } from "@/contexts/AuthContext";
 import { DARK_GRAD, ORANGE } from "@/lib/theme";
+import { requestMagicLink } from "@/lib/neon-auth";
 
 const API_BASE = import.meta.env.VITE_API_URL || "";
 
@@ -15,6 +16,9 @@ export default function Signup() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [sendingLink, setSendingLink] = useState(false);
+  const [magicLinkSent, setMagicLinkSent] = useState(false);
+  const [signupMode, setSignupMode] = useState<"password" | "magic">("password");
 
   const handleGoogleSuccess = async (credentialResponse: CredentialResponse) => {
     if (!credentialResponse.credential) {
@@ -105,52 +109,122 @@ export default function Signup() {
             <div className="flex-1 h-px bg-white/20" />
           </div>
 
-          {/* Email + Password Signup Form */}
-          <form onSubmit={handleSignup} className="space-y-3">
-            <div>
-              <label className="text-sm font-medium text-white/80 mb-1 block">Full name</label>
-              <input
-                type="text"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="Your name"
-                className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white text-sm placeholder:text-white/30 focus:outline-none focus:ring-2 focus:ring-white/30 transition"
-                required
-              />
+          {/* Signup Form */}
+          {magicLinkSent ? (
+            /* Magic link sent confirmation */
+            <div className="text-center py-4">
+              <div className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-green-500/20 mb-3">
+                <svg className="w-7 h-7 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
+              </div>
+              <h2 className="text-lg font-bold text-white mb-1">Check your email</h2>
+              <p className="text-white/60 text-sm mb-1">We sent a magic link to</p>
+              <p className="font-semibold text-white text-sm">{email}</p>
+              <p className="text-white/40 text-xs mt-2">Click the link in the email to create your account. No password needed!</p>
+              <button
+                type="button"
+                onClick={() => { setMagicLinkSent(false); setEmail(""); setSignupMode("password"); }}
+                className="mt-3 text-sm font-medium underline"
+                style={{ color: ORANGE }}
+              >
+                Use a different method
+              </button>
             </div>
-            <div>
-              <label className="text-sm font-medium text-white/80 mb-1 block">Email address</label>
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="you@example.com"
-                className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white text-sm placeholder:text-white/30 focus:outline-none focus:ring-2 focus:ring-white/30 transition"
-                required
-              />
-            </div>
-            <div>
-              <label className="text-sm font-medium text-white/80 mb-1 block">Password</label>
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
-                className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white text-sm placeholder:text-white/30 focus:outline-none focus:ring-2 focus:ring-white/30 transition"
-                required
-                minLength={6}
-              />
-              <p className="text-xs text-white/40 mt-1">At least 6 characters</p>
-            </div>
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full py-3.5 rounded-xl text-white font-bold text-sm transition-all disabled:opacity-60"
-              style={{ background: "linear-gradient(135deg, #ff7b00, #ff9633)", boxShadow: "0 6px 20px -4px rgba(255, 123, 0, 0.35)" }}
+          ) : signupMode === "magic" ? (
+            /* Magic link form */
+            <form
+              onSubmit={async (e) => {
+                e.preventDefault();
+                if (!email || !email.includes("@")) { toast.error("Enter a valid email"); return; }
+                setSendingLink(true);
+                const result = await requestMagicLink(email, `${window.location.origin}/auth/magic-link/callback`, "user");
+                setSendingLink(false);
+                if (result.success) {
+                  setMagicLinkSent(true);
+                  toast.success("Magic link sent!");
+                } else {
+                  toast.error(result.error || "Failed to send magic link");
+                }
+              }}
+              className="space-y-3"
             >
-              {loading ? "Creating account..." : "Create Account"}
-            </button>
-          </form>
+              <div>
+                <label className="text-sm font-medium text-white/80 mb-1 block">Email address</label>
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="you@example.com"
+                  className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white text-sm placeholder:text-white/30 focus:outline-none focus:ring-2 focus:ring-white/30 transition"
+                  required
+                />
+              </div>
+              <button
+                type="submit"
+                disabled={sendingLink}
+                className="w-full py-3.5 rounded-xl text-white font-bold text-sm transition-all disabled:opacity-60"
+                style={{ background: "linear-gradient(135deg, #ff7b00, #ff9633)", boxShadow: "0 6px 20px -4px rgba(255, 123, 0, 0.35)" }}
+              >
+                {sendingLink ? "Sending..." : "Send magic link"}
+              </button>
+              <p className="text-center text-sm text-white/60">
+                <button type="button" onClick={() => setSignupMode("password")} className="font-semibold" style={{ color: ORANGE }}>
+                  Use password instead
+                </button>
+              </p>
+            </form>
+          ) : (
+            /* Email + Password Signup Form */
+            <form onSubmit={handleSignup} className="space-y-3">
+              <div>
+                <label className="text-sm font-medium text-white/80 mb-1 block">Full name</label>
+                <input
+                  type="text"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="Your name"
+                  className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white text-sm placeholder:text-white/30 focus:outline-none focus:ring-2 focus:ring-white/30 transition"
+                  required
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium text-white/80 mb-1 block">Email address</label>
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="you@example.com"
+                  className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white text-sm placeholder:text-white/30 focus:outline-none focus:ring-2 focus:ring-white/30 transition"
+                  required
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium text-white/80 mb-1 block">Password</label>
+                <input
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="••••••••"
+                  className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white text-sm placeholder:text-white/30 focus:outline-none focus:ring-2 focus:ring-white/30 transition"
+                  required
+                  minLength={6}
+                />
+                <p className="text-xs text-white/40 mt-1">At least 6 characters</p>
+              </div>
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full py-3.5 rounded-xl text-white font-bold text-sm transition-all disabled:opacity-60"
+                style={{ background: "linear-gradient(135deg, #ff7b00, #ff9633)", boxShadow: "0 6px 20px -4px rgba(255, 123, 0, 0.35)" }}
+              >
+                {loading ? "Creating account..." : "Create Account"}
+              </button>
+              <p className="text-center text-sm text-white/60">
+                <button type="button" onClick={() => setSignupMode("magic")} className="font-semibold" style={{ color: ORANGE }}>
+                  Sign up with magic link
+                </button>
+              </p>
+            </form>
+          )}
 
           {/* Login Link */}
           <p className="text-center text-sm text-white/60 mt-5">

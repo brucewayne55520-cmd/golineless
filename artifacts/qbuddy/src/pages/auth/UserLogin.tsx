@@ -6,6 +6,7 @@ import { GoogleLogin, type CredentialResponse } from "@react-oauth/google";
 import { useAuth } from "@/contexts/AuthContext";
 import { NAVY, NAVY_GRAD } from "@/lib/theme";
 import { Loader2 } from "lucide-react";
+import { requestMagicLink } from "@/lib/neon-auth";
 
 const API_BASE = import.meta.env.VITE_API_URL || "";
 
@@ -15,6 +16,9 @@ export default function UserLogin() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [sendingLink, setSendingLink] = useState(false);
+  const [magicLinkSent, setMagicLinkSent] = useState(false);
+  const [loginMode, setLoginMode] = useState<"password" | "magic">("password");
 
   const handleGoogleSuccess = async (credentialResponse: CredentialResponse) => {
     if (!credentialResponse.credential) {
@@ -119,45 +123,114 @@ export default function UserLogin() {
             <div className="flex-1 h-px bg-gray-200" />
           </div>
 
-          {/* Email + Password Form */}
-          <form onSubmit={handleEmailLogin} className="space-y-3">
-            <div>
-              <label className="text-sm font-medium text-gray-700 mb-1 block">Email address</label>
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="you@example.com"
-                className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#331900]/30 focus:border-[#331900] transition"
-                required
-              />
-            </div>
-            <div>
-              <label className="text-sm font-medium text-gray-700 mb-1 block">Password</label>
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
-                className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#331900]/30 focus:border-[#331900] transition"
-                required
-                minLength={6}
-              />
-            </div>
-            <div className="flex justify-end">
-              <button type="button" onClick={() => navigate("/forgot-password")} className="text-xs font-medium text-gray-400 hover:text-[#331900] transition">
-                Forgot password?
+          {/* Email Login */}
+          {magicLinkSent ? (
+            /* Magic link sent confirmation */
+            <div className="text-center py-4">
+              <div className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-green-100 mb-3">
+                <svg className="w-7 h-7 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
+              </div>
+              <h2 className="text-lg font-bold text-[#241100] mb-1">Check your email</h2>
+              <p className="text-gray-500 text-sm mb-1">We sent a magic link to</p>
+              <p className="font-semibold text-[#241100] text-sm">{email}</p>
+              <p className="text-gray-400 text-xs mt-2">Click the link in the email to sign in. No password needed!</p>
+              <button
+                type="button"
+                onClick={() => { setMagicLinkSent(false); setEmail(""); setLoginMode("password"); }}
+                className="mt-3 text-sm font-medium text-[#331900] underline"
+              >
+                Use a different method
               </button>
             </div>
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full py-3.5 rounded-xl text-white font-bold text-sm transition-opacity disabled:opacity-60"
-              style={{ background: NAVY_GRAD }}
+          ) : loginMode === "magic" ? (
+            /* Magic link form */
+            <form
+              onSubmit={async (e) => {
+                e.preventDefault();
+                if (!email || !email.includes("@")) { toast.error("Enter a valid email"); return; }
+                setSendingLink(true);
+                const result = await requestMagicLink(email, `${window.location.origin}/auth/magic-link/callback`, "user");
+                setSendingLink(false);
+                if (result.success) {
+                  setMagicLinkSent(true);
+                  toast.success("Magic link sent!");
+                } else {
+                  toast.error(result.error || "Failed to send magic link");
+                }
+              }}
+              className="space-y-3"
             >
-              {loading ? "Signing in..." : "Sign In"}
-            </button>
-          </form>
+              <div>
+                <label className="text-sm font-medium text-gray-700 mb-1 block">Email address</label>
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="you@example.com"
+                  className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#331900]/30 focus:border-[#331900] transition"
+                  required
+                />
+              </div>
+              <button
+                type="submit"
+                disabled={sendingLink}
+                className="w-full py-3.5 rounded-xl text-white font-bold text-sm transition-opacity disabled:opacity-60"
+                style={{ background: NAVY_GRAD }}
+              >
+                {sendingLink ? "Sending..." : "Send magic link"}
+              </button>
+              <p className="text-center text-sm text-gray-500">
+                <button type="button" onClick={() => setLoginMode("password")} className="font-semibold" style={{ color: NAVY }}>
+                  Use password instead
+                </button>
+              </p>
+            </form>
+          ) : (
+            /* Email + Password Form */
+            <form onSubmit={handleEmailLogin} className="space-y-3">
+              <div>
+                <label className="text-sm font-medium text-gray-700 mb-1 block">Email address</label>
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="you@example.com"
+                  className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#331900]/30 focus:border-[#331900] transition"
+                  required
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium text-gray-700 mb-1 block">Password</label>
+                <input
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="••••••••"
+                  className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#331900]/30 focus:border-[#331900] transition"
+                  required
+                  minLength={6}
+                />
+              </div>
+              <div className="flex justify-end">
+                <button type="button" onClick={() => navigate("/forgot-password")} className="text-xs font-medium text-gray-400 hover:text-[#331900] transition">
+                  Forgot password?
+                </button>
+              </div>
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full py-3.5 rounded-xl text-white font-bold text-sm transition-opacity disabled:opacity-60"
+                style={{ background: NAVY_GRAD }}
+              >
+                {loading ? "Signing in..." : "Sign In"}
+              </button>
+              <p className="text-center text-sm text-gray-500">
+                <button type="button" onClick={() => setLoginMode("magic")} className="font-semibold" style={{ color: NAVY }}>
+                  Sign in with magic link
+                </button>
+              </p>
+            </form>
+          )}
 
           {/* Sign Up Link */}
           <p className="text-center text-sm text-gray-500 mt-5">

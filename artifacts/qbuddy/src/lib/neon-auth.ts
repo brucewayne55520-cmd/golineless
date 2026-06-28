@@ -18,7 +18,15 @@ const NEON_AUTH_URL =
 export async function requestMagicLink(
   email: string,
   callbackURL?: string,
+  role?: string,
 ): Promise<{ success: boolean; error?: string }> {
+  // Store the role in sessionStorage so MagicLinkCallback can read it back.
+  // Neon Auth may strip query params from the callback URL during redirect,
+  // so we can't rely on ?role= in the URL alone.
+  if (role) {
+    sessionStorage.setItem("golineless_magic_link_role", role);
+  }
+
   try {
     const res = await fetch(`${NEON_AUTH_URL}/sign-in/magic-link`, {
       method: "POST",

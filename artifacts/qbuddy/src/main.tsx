@@ -21,6 +21,15 @@ setAuthTokenGetter(() => {
 
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || "";
 
+// Warn if the Google Client ID looks like a placeholder or is empty
+if (!GOOGLE_CLIENT_ID || !GOOGLE_CLIENT_ID.includes(".apps.googleusercontent.com")) {
+  console.error(
+    "[Google Auth] VITE_GOOGLE_CLIENT_ID is missing or invalid.\n" +
+    "Current value:", GOOGLE_CLIENT_ID || "(empty)",
+    "\nSet it in your Render environment variables."
+  );
+}
+
 createRoot(document.getElementById("root")!).render(
   <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
     <App />
