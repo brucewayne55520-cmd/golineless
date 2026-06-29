@@ -7,6 +7,7 @@ import { eq, desc, and, gte, sql, inArray, or, count } from "drizzle-orm";
 import { requireRunner, requireAdmin, extractToken, getUserFromToken, getRunnerFromToken, resolveAdmin } from "../lib/auth";
 import { haversineKm } from "../lib/dispatch-engine";
 import { isValidCoordinate } from "../lib/gps-engine";
+import { logger } from "../lib/logger";
 
 const router: IRouter = Router();
 
@@ -14,260 +15,304 @@ const router: IRouter = Router();
 router.get("/runners/me", requireRunner, async (req, res): Promise<void> => {
   const runner = req.runner;
   if (!runner) { res.status(401).json({ error: "Unauthorized" }); return; }
-  const { otp, otpExpiresAt, aadhaarNumber, ...safe } = runner;
-  // Auto-generate unique_id if missing (GLR-XXXX-XXXX)
-  const runnerRecord = safe as Record<string, unknown>;
-  if (!runnerRecord.uniqueId) {
-    const suffix = crypto.randomBytes(2).toString("hex").toUpperCase();
-    const newUniqueId = `GLR-${String(runner.id).padStart(4, "0")}-${suffix}`;
-    await db.update(runnersTable).set({ uniqueId: newUniqueId } as Record<string, unknown>).where(eq(runnersTable.id, runner.id));
-    runnerRecord.uniqueId = newUniqueId;
+  try {
+    const { otp, otpExpiresAt, aadhaarNumber, ...safe } = runner;
+    // Auto-generate unique_id if missing (GLR-XXXX-XXXX)
+    const runnerRecord = safe as Record<string, unknown>;
+    if (!runnerRecord.uniqueId) {
+      const suffix = crypto.randomBytes(2).toString("hex").toUpperCase();
+      const newUniqueId = `GLR-${String(runner.id).padStart(4, "0")}-${suffix}`;
+      await db.update(runnersTable).set({ uniqueId: newUniqueId } as Record<string, unknown>).where(eq(runnersTable.id, runner.id));
+      runnerRecord.uniqueId = newUniqueId;
+    }
+    res.json({
+      ...safe,
+      rating: safe.rating ? Number(safe.rating) : null,
+      trustScore: safe.trustScore ?? 50,
+      trustBadge: safe.trustBadge ?? "improving",
+      totalEarnings: safe.totalEarnings ? Number(safe.totalEarnings) : null,
+      averageRating: safe.averageRating ? Number(safe.averageRating) : null,
+      averageResponseTime: safe.averageResponseTime ? Number(safe.averageResponseTime) : null,
+      currentLat: safe.currentLat ? Number(safe.currentLat) : null,
+      currentLng: safe.currentLng ? Number(safe.currentLng) : null,
+    });
+  } catch (err) {
+    logger.error({ err, runnerId: runner.id }, "GET /runners/me failed");
+    res.status(500).json({ error: "Failed to load profile" });
   }
-  res.json({
-    ...safe,
-    rating: safe.rating ? Number(safe.rating) : null,
-    trustScore: safe.trustScore ?? 50,
-    trustBadge: safe.trustBadge ?? "improving",
-    totalEarnings: safe.totalEarnings ? Number(safe.totalEarnings) : null,
-    averageRating: safe.averageRating ? Number(safe.averageRating) : null,
-    averageResponseTime: safe.averageResponseTime ? Number(safe.averageResponseTime) : null,
-    currentLat: safe.currentLat ? Number(safe.currentLat) : null,
-    currentLng: safe.currentLng ? Number(safe.currentLng) : null,
-  });
 });
 
 // PATCH /runners/me
 router.patch("/runners/me", requireRunner, async (req, res): Promise<void> => {
   const runner = req.runner;
   if (!runner) { res.status(401).json({ error: "Unauthorized" }); return; }
-  const { name, email, city, area, gender, fullName, bankAccount, bankIfsc, bankAccountHolder,
-    emergencyContactName, emergencyContactPhone, emergencyContactRelation } = req.body;
-  // B1 FIX: Allow updating more profile fields from the profile page
-  const updates: Record<string, unknown> = { updatedAt: new Date() };
-  if (name !== undefined) updates.name = name;
-  if (email !== undefined) updates.email = email;
-  if (city !== undefined) updates.city = city;
-  if (area !== undefined) updates.area = area;
-  if (gender !== undefined) updates.gender = gender;
-  if (fullName !== undefined) updates.fullName = fullName;
-  if (bankAccount !== undefined) updates.bankAccount = bankAccount;
-  if (bankIfsc !== undefined) updates.bankIfsc = bankIfsc;
-  if (bankAccountHolder !== undefined) updates.bankAccountHolder = bankAccountHolder;
-  if (emergencyContactName !== undefined) updates.emergencyContactName = emergencyContactName;
-  if (emergencyContactPhone !== undefined) updates.emergencyContactPhone = emergencyContactPhone;
-  if (emergencyContactRelation !== undefined) updates.emergencyContactRelation = emergencyContactRelation;
-  const [updated] = await db
-    .update(runnersTable)
-    .set(updates)
-    .where(eq(runnersTable.id, runner.id))
-    .returning();
-  const { otp, otpExpiresAt, aadhaarNumber, ...safe } = updated;
-  res.json(safe);
+  try {
+    const { name, email, city, area, gender, fullName, bankAccount, bankIfsc, bankAccountHolder,
+      emergencyContactName, emergencyContactPhone, emergencyContactRelation } = req.body;
+    // B1 FIX: Allow updating more profile fields from the profile page
+    const updates: Record<string, unknown> = { updatedAt: new Date() };
+    if (name !== undefined) updates.name = name;
+    if (email !== undefined) updates.email = email;
+    if (city !== undefined) updates.city = city;
+    if (area !== undefined) updates.area = area;
+    if (gender !== undefined) updates.gender = gender;
+    if (fullName !== undefined) updates.fullName = fullName;
+    if (bankAccount !== undefined) updates.bankAccount = bankAccount;
+    if (bankIfsc !== undefined) updates.bankIfsc = bankIfsc;
+    if (bankAccountHolder !== undefined) updates.bankAccountHolder = bankAccountHolder;
+    if (emergencyContactName !== undefined) updates.emergencyContactName = emergencyContactName;
+    if (emergencyContactPhone !== undefined) updates.emergencyContactPhone = emergencyContactPhone;
+    if (emergencyContactRelation !== undefined) updates.emergencyContactRelation = emergencyContactRelation;
+    const [updated] = await db
+      .update(runnersTable)
+      .set(updates)
+      .where(eq(runnersTable.id, runner.id))
+      .returning();
+    const { otp, otpExpiresAt, aadhaarNumber, ...safe } = updated;
+    res.json(safe);
+  } catch (err) {
+    logger.error({ err, runnerId: runner.id }, "PATCH /runners/me failed");
+    res.status(500).json({ error: "Failed to update profile" });
+  }
 });
 
 // GET /runners/me/earnings
 router.get("/runners/me/earnings", requireRunner, async (req, res): Promise<void> => {
   const runner = req.runner;
   if (!runner) { res.status(401).json({ error: "Unauthorized" }); return; }
-  const now = new Date();
-  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const weekStart = new Date(todayStart); weekStart.setDate(todayStart.getDate() - 7);
-  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+  try {
+    const now = new Date();
+    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const weekStart = new Date(todayStart); weekStart.setDate(todayStart.getDate() - 7);
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
 
-  // Fix #21: SQL aggregation instead of loading all completed tasks into memory
-  // M15: Also compute actual taskEarnings vs waitingEarnings split
-  const [agg, reviewAgg] = await Promise.all([
-    db.select({
-      lifetime: sql<number>`COALESCE(SUM(${tasksTable.runnerEarning}::numeric), 0)`,
-      totalTasks: count(),
-      today: sql<number>`COALESCE(SUM(CASE WHEN ${tasksTable.completedAt} >= ${todayStart} THEN ${tasksTable.runnerEarning}::numeric ELSE 0 END), 0)`,
-      thisWeek: sql<number>`COALESCE(SUM(CASE WHEN ${tasksTable.completedAt} >= ${weekStart} THEN ${tasksTable.runnerEarning}::numeric ELSE 0 END), 0)`,
-      thisMonth: sql<number>`COALESCE(SUM(CASE WHEN ${tasksTable.completedAt} >= ${monthStart} THEN ${tasksTable.runnerEarning}::numeric ELSE 0 END), 0)`,
-      taskEarnings: sql<number>`COALESCE(SUM(${tasksTable.runnerEarning}::numeric), 0)`,
-      waitingEarnings: sql<number>`COALESCE(SUM(${tasksTable.waitingEarnings}::numeric), 0)`,
-    }).from(tasksTable).where(and(eq(tasksTable.runnerId, runner.id), eq(tasksTable.status, "completed"))),
-    db.select({
-      avgRating: sql<number | null>`AVG(${reviewsTable.rating})`,
-      cnt: count(),
-    }).from(reviewsTable).where(eq(reviewsTable.runnerId, runner.id)),
-  ]);
+    const [agg, reviewAgg] = await Promise.all([
+      db.select({
+        lifetime: sql<number>`COALESCE(SUM(${tasksTable.runnerEarning}::numeric), 0)`,
+        totalTasks: count(),
+        today: sql<number>`COALESCE(SUM(CASE WHEN ${tasksTable.completedAt} >= ${todayStart} THEN ${tasksTable.runnerEarning}::numeric ELSE 0 END), 0)`,
+        thisWeek: sql<number>`COALESCE(SUM(CASE WHEN ${tasksTable.completedAt} >= ${weekStart} THEN ${tasksTable.runnerEarning}::numeric ELSE 0 END), 0)`,
+        thisMonth: sql<number>`COALESCE(SUM(CASE WHEN ${tasksTable.completedAt} >= ${monthStart} THEN ${tasksTable.runnerEarning}::numeric ELSE 0 END), 0)`,
+        taskEarnings: sql<number>`COALESCE(SUM(${tasksTable.runnerEarning}::numeric), 0)`,
+        waitingEarnings: sql<number>`COALESCE(SUM(${tasksTable.waitingEarnings}::numeric), 0)`,
+      }).from(tasksTable).where(and(eq(tasksTable.runnerId, runner.id), eq(tasksTable.status, "completed"))),
+      db.select({
+        avgRating: sql<number | null>`AVG(${reviewsTable.rating})`,
+        cnt: count(),
+      }).from(reviewsTable).where(eq(reviewsTable.runnerId, runner.id)),
+    ]);
 
-  const r = agg[0];
-  res.json({
-    today: Number(r.today), thisWeek: Number(r.thisWeek), thisMonth: Number(r.thisMonth),
-    lifetime: Number(r.lifetime), totalTasks: r.totalTasks,
-    taskEarnings: Number(r.taskEarnings),
-    waitingEarnings: Number(r.waitingEarnings),
-    avgRating: reviewAgg[0]?.avgRating ? Number(reviewAgg[0].avgRating).toFixed(1) : null,
-    pendingPayout: Number(r.today),
-  });
+    const r = agg[0];
+    res.json({
+      today: Number(r.today), thisWeek: Number(r.thisWeek), thisMonth: Number(r.thisMonth),
+      lifetime: Number(r.lifetime), totalTasks: r.totalTasks,
+      taskEarnings: Number(r.taskEarnings),
+      waitingEarnings: Number(r.waitingEarnings),
+      avgRating: reviewAgg[0]?.avgRating ? Number(reviewAgg[0].avgRating).toFixed(1) : null,
+      pendingPayout: Number(r.today),
+    });
+  } catch (err) {
+    logger.error({ err, runnerId: runner.id }, "GET /runners/me/earnings failed");
+    res.status(500).json({ error: "Failed to load earnings" });
+  }
 });
 
 // GET /runners/me/earnings/daily
 router.get("/runners/me/earnings/daily", requireRunner, async (req, res): Promise<void> => {
   const runner = req.runner;
   if (!runner) { res.status(401).json({ error: "Unauthorized" }); return; }
-  const weekAgo = new Date(); weekAgo.setDate(weekAgo.getDate() - 7); weekAgo.setHours(0, 0, 0, 0);
+  try {
+    const weekAgo = new Date(); weekAgo.setDate(weekAgo.getDate() - 7); weekAgo.setHours(0, 0, 0, 0);
 
-  // Fix #22: SQL GROUP BY date instead of loading all completed tasks
-  const dailyRows = await db.select({
-    date: sql<string>`DATE(${tasksTable.completedAt})`,
-    amount: sql<number>`COALESCE(SUM(${tasksTable.runnerEarning}::numeric), 0)`,
-    tasks: count(),
-  }).from(tasksTable)
-    .where(and(eq(tasksTable.runnerId, runner.id), eq(tasksTable.status, "completed"), gte(tasksTable.completedAt, weekAgo)))
-    .groupBy(sql`DATE(${tasksTable.completedAt})`);
+    const dailyRows = await db.select({
+      date: sql<string>`DATE(${tasksTable.completedAt})`,
+      amount: sql<number>`COALESCE(SUM(${tasksTable.runnerEarning}::numeric), 0)`,
+      tasks: count(),
+    }).from(tasksTable)
+      .where(and(eq(tasksTable.runnerId, runner.id), eq(tasksTable.status, "completed"), gte(tasksTable.completedAt, weekAgo)))
+      .groupBy(sql`DATE(${tasksTable.completedAt})`);
 
-  // Fill in missing days with zeros
-  const dailyMap = new Map(dailyRows.map(r => [r.date, { amount: Number(r.amount), tasks: r.tasks }]));
-  const days: { date: string; amount: number; tasks: number }[] = [];
-  for (let i = 6; i >= 0; i--) {
-    const d = new Date(); d.setDate(d.getDate() - i);
-    const dateStr = d.toISOString().split("T")[0];
-    const entry = dailyMap.get(dateStr);
-    days.push({ date: dateStr, amount: entry?.amount || 0, tasks: entry?.tasks || 0 });
+    const dailyMap = new Map(dailyRows.map(r => [r.date, { amount: Number(r.amount), tasks: r.tasks }]));
+    const days: { date: string; amount: number; tasks: number }[] = [];
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(); d.setDate(d.getDate() - i);
+      const dateStr = d.toISOString().split("T")[0];
+      const entry = dailyMap.get(dateStr);
+      days.push({ date: dateStr, amount: entry?.amount || 0, tasks: entry?.tasks || 0 });
+    }
+    res.json(days);
+  } catch (err) {
+    logger.error({ err, runnerId: runner.id }, "GET /runners/me/earnings/daily failed");
+    res.status(500).json({ error: "Failed to load daily earnings" });
   }
-  res.json(days);
 });
 
 // POST /runners/kyc
 router.post("/runners/kyc", requireRunner, async (req, res): Promise<void> => {
   const runner = req.runner;
   if (!runner) { res.status(401).json({ error: "Unauthorized" }); return; }
-  const { fullName, aadhaarNumber, aadhaarFront, aadhaarBack, selfie, bankAccount, bankIfsc,
-    bankAccountHolder, emergencyContactName, emergencyContactPhone, emergencyContactRelation } = req.body;
+  try {
+    const { fullName, aadhaarNumber, aadhaarFront, aadhaarBack, selfie, bankAccount, bankIfsc,
+      bankAccountHolder, emergencyContactName, emergencyContactPhone, emergencyContactRelation } = req.body;
 
-  // S2: Upload Aadhaar images + selfie to B2 cloud storage instead of storing base64 in DB
-  const [aadhaarFrontUrl, aadhaarBackUrl, selfieUrl] = await Promise.all([
-    uploadDataUrl(aadhaarFront, "kyc/runners"),
-    uploadDataUrl(aadhaarBack, "kyc/runners"),
-    selfie ? uploadDataUrl(selfie, "kyc/runners") : Promise.resolve(selfie),
-  ]);
+    // S2: Upload Aadhaar images + selfie to B2 cloud storage instead of storing base64 in DB
+    const [aadhaarFrontUrl, aadhaarBackUrl, selfieUrl] = await Promise.all([
+      uploadDataUrl(aadhaarFront, "kyc/runners"),
+      uploadDataUrl(aadhaarBack, "kyc/runners"),
+      selfie ? uploadDataUrl(selfie, "kyc/runners") : Promise.resolve(selfie),
+    ]);
 
-  // M12: Validate Aadhaar number format (12 digits)
-  if (aadhaarNumber && !/^\d{12}$/.test(aadhaarNumber)) {
-    res.status(400).json({ error: "Aadhaar number must be exactly 12 digits" });
-    return;
+    // M12: Validate Aadhaar number format (12 digits)
+    if (aadhaarNumber && !/^\d{12}$/.test(aadhaarNumber)) {
+      res.status(400).json({ error: "Aadhaar number must be exactly 12 digits" });
+      return;
+    }
+
+    const kycUpdates: Record<string, unknown> = {
+      fullName,
+      aadhaarNumber: aadhaarNumber ? encrypt(aadhaarNumber) : aadhaarNumber,
+      aadhaarFront: aadhaarFrontUrl ? encrypt(aadhaarFrontUrl) : aadhaarFrontUrl,
+      aadhaarBack: aadhaarBackUrl ? encrypt(aadhaarBackUrl) : aadhaarBackUrl,
+      selfie: selfieUrl,
+      emergencyContactName,
+      emergencyContactPhone,
+      emergencyContactRelation,
+      kycStatus: "pending",
+    };
+    const [updated] = await db.update(runnersTable).set(kycUpdates).where(eq(runnersTable.id, runner.id)).returning();
+
+    const { otp, otpExpiresAt, aadhaarNumber: an, ...safe } = updated;
+    res.json(safe);
+  } catch (err) {
+    logger.error({ err, runnerId: runner.id }, "POST /runners/kyc failed");
+    res.status(500).json({ error: "Failed to submit KYC" });
   }
-
-  const kycUpdates: Record<string, unknown> = {
-    fullName,
-    aadhaarNumber: aadhaarNumber ? encrypt(aadhaarNumber) : aadhaarNumber,
-    aadhaarFront: aadhaarFrontUrl ? encrypt(aadhaarFrontUrl) : aadhaarFrontUrl,
-    aadhaarBack: aadhaarBackUrl ? encrypt(aadhaarBackUrl) : aadhaarBackUrl,
-    selfie: selfieUrl,
-    emergencyContactName,
-    emergencyContactPhone,
-    emergencyContactRelation,
-    kycStatus: "pending",
-  };
-  const [updated] = await db.update(runnersTable).set(kycUpdates).where(eq(runnersTable.id, runner.id)).returning();
-
-  const { otp, otpExpiresAt, aadhaarNumber: an, ...safe } = updated;
-  res.json(safe);
 });
 
 // PATCH /runners/me/avatar — upload profile photo
 router.patch("/runners/me/avatar", requireRunner, async (req, res): Promise<void> => {
   const runner = req.runner;
   if (!runner) { res.status(401).json({ error: "Unauthorized" }); return; }
-  const { avatar } = req.body; // base64 data URL or URL string
-  if (!avatar) {
-    res.status(400).json({ error: "No avatar provided" }); return;
+  try {
+    const { avatar } = req.body; // base64 data URL or URL string
+    if (!avatar) {
+      res.status(400).json({ error: "No avatar provided" }); return;
+    }
+    const avatarUrl = await uploadDataUrl(avatar, "avatars/runners");
+    if (!avatarUrl) {
+      res.status(500).json({ error: "Failed to upload avatar" }); return;
+    }
+    const [updated] = await db
+      .update(runnersTable)
+      .set({ avatar: avatarUrl })
+      .where(eq(runnersTable.id, runner.id))
+      .returning();
+    const { otp, otpExpiresAt, aadhaarNumber, ...safe } = updated;
+    res.json({ avatar: safe.avatar });
+  } catch (err) {
+    logger.error({ err, runnerId: runner.id }, "PATCH /runners/me/avatar failed");
+    res.status(500).json({ error: "Failed to upload avatar" });
   }
-  const avatarUrl = await uploadDataUrl(avatar, "avatars/runners");
-  if (!avatarUrl) {
-    res.status(500).json({ error: "Failed to upload avatar" }); return;
-  }
-  const [updated] = await db
-    .update(runnersTable)
-    .set({ avatar: avatarUrl })
-    .where(eq(runnersTable.id, runner.id))
-    .returning();
-  const { otp, otpExpiresAt, aadhaarNumber, ...safe } = updated;
-  res.json({ avatar: safe.avatar });
 });
 
 // POST /runners/toggle-online
 router.post("/runners/toggle-online", requireRunner, async (req, res): Promise<void> => {
   const runner = req.runner;
   if (!runner) { res.status(401).json({ error: "Unauthorized" }); return; }
-  const { isOnline } = req.body;
-  const [updated] = await db.update(runnersTable)
-    .set({ isOnline })
-    .where(eq(runnersTable.id, runner.id))
-    .returning();
-  const { otp, otpExpiresAt, aadhaarNumber, ...safe } = updated;
-  res.json(safe);
+  try {
+    const { isOnline } = req.body;
+    const [updated] = await db.update(runnersTable)
+      .set({ isOnline })
+      .where(eq(runnersTable.id, runner.id))
+      .returning();
+    const { otp, otpExpiresAt, aadhaarNumber, ...safe } = updated;
+    res.json(safe);
+  } catch (err) {
+    logger.error({ err, runnerId: runner.id }, "POST /runners/toggle-online failed");
+    res.status(500).json({ error: "Failed to update online status" });
+  }
 });
 
 // POST /runners/me/onboarding — save onboarding step data
 router.post("/runners/me/onboarding", requireRunner, async (req, res): Promise<void> => {
   const runner = req.runner;
   if (!runner) { res.status(401).json({ error: "Unauthorized" }); return; }
-  const { step, name, fullName, bankAccount, bankIfsc, bankAccountHolder, selfie } = req.body;
+  try {
+    const { step, name, fullName, bankAccount, bankIfsc, bankAccountHolder, selfie } = req.body;
 
-  const updates: Record<string, unknown> = {};
-  if (step != null) updates.onboardingStep = step;
-  if (name) updates.name = name;
-  if (fullName) updates.fullName = fullName;
-  if (bankAccount) updates.bankAccount = bankAccount;
-  if (bankIfsc) updates.bankIfsc = bankIfsc;
-  if (bankAccountHolder) updates.bankAccountHolder = bankAccountHolder;
-  if (selfie) updates.selfie = await uploadDataUrl(selfie, "kyc/runners");
-  if (step === 6) {
-    updates.onboardingCompleted = true;
-    // Submit KYC as pending when wizard completes
-    updates.kycStatus = "pending";
+    const updates: Record<string, unknown> = {};
+    if (step != null) updates.onboardingStep = step;
+    if (name) updates.name = name;
+    if (fullName) updates.fullName = fullName;
+    if (bankAccount) updates.bankAccount = bankAccount;
+    if (bankIfsc) updates.bankIfsc = bankIfsc;
+    if (bankAccountHolder) updates.bankAccountHolder = bankAccountHolder;
+    if (selfie) updates.selfie = await uploadDataUrl(selfie, "kyc/runners");
+    if (step === 6) {
+      updates.onboardingCompleted = true;
+      updates.kycStatus = "pending";
+    }
+
+    const [updated] = await db.update(runnersTable).set(updates).where(eq(runnersTable.id, runner.id)).returning();
+    const { otp, otpExpiresAt, aadhaarNumber, ...safe } = updated;
+    res.json({ ...safe, trustScore: safe.trustScore ?? 50 });
+  } catch (err) {
+    logger.error({ err, runnerId: runner.id }, "POST /runners/me/onboarding failed");
+    res.status(500).json({ error: "Failed to save onboarding data" });
   }
-
-  const [updated] = await db.update(runnersTable).set(updates).where(eq(runnersTable.id, runner.id)).returning();
-  const { otp, otpExpiresAt, aadhaarNumber, ...safe } = updated;
-  res.json({ ...safe, trustScore: safe.trustScore ?? 50 });
 });
 
 // POST /runners/me/gps-check — verify GPS health
 router.post("/runners/me/gps-check", requireRunner, async (req, res): Promise<void> => {
   const runner = req.runner;
   if (!runner) { res.status(401).json({ error: "Unauthorized" }); return; }
-  const { lat, lng, status } = req.body; // status: "granted" | "denied" | "unavailable"
+  try {
+    const { lat, lng, status } = req.body;
 
-  // Fix #3: Validate GPS coordinates
-  if (lat != null && !isValidCoordinate(lat, "lat")) {
-    res.status(400).json({ error: "Invalid latitude value" });
-    return;
-  }
-  if (lng != null && !isValidCoordinate(lng, "lng")) {
-    res.status(400).json({ error: "Invalid longitude value" });
-    return;
-  }
-  const updates: Record<string, unknown> = { gpsStatus: status, gpsCheckedAt: new Date() };
-  if (lat != null) updates.currentLat = lat.toString();
-  if (lng != null) updates.currentLng = lng.toString();
+    if (lat != null && !isValidCoordinate(lat, "lat")) {
+      res.status(400).json({ error: "Invalid latitude value" });
+      return;
+    }
+    if (lng != null && !isValidCoordinate(lng, "lng")) {
+      res.status(400).json({ error: "Invalid longitude value" });
+      return;
+    }
+    const updates: Record<string, unknown> = { gpsStatus: status, gpsCheckedAt: new Date() };
+    if (lat != null) updates.currentLat = lat.toString();
+    if (lng != null) updates.currentLng = lng.toString();
 
-  const [updated] = await db.update(runnersTable).set(updates).where(eq(runnersTable.id, runner.id)).returning();
-  const { otp, otpExpiresAt, aadhaarNumber, ...safe } = updated;
-  res.json({ ...safe, trustScore: safe.trustScore ?? 50 });
+    const [updated] = await db.update(runnersTable).set(updates).where(eq(runnersTable.id, runner.id)).returning();
+    const { otp, otpExpiresAt, aadhaarNumber, ...safe } = updated;
+    res.json({ ...safe, trustScore: safe.trustScore ?? 50 });
+  } catch (err) {
+    logger.error({ err, runnerId: runner.id }, "POST /runners/me/gps-check failed");
+    res.status(500).json({ error: "Failed to update GPS status" });
+  }
 });
 
 // GET /runners/me/active-tasks
 router.get("/runners/me/active-tasks", requireRunner, async (req, res): Promise<void> => {
   const runner = req.runner;
   if (!runner) { res.status(401).json({ error: "Unauthorized" }); return; }
-  const tasks = await db
-    .select()
-    .from(tasksTable)
-    .where(and(eq(tasksTable.runnerId, runner.id), inArray(tasksTable.status, ["assigned","on_the_way","at_location","in_progress","waiting_started"])))
-    .orderBy(desc(tasksTable.createdAt))
-    .limit(1);
+  try {
+    const tasks = await db
+      .select()
+      .from(tasksTable)
+      .where(and(eq(tasksTable.runnerId, runner.id), inArray(tasksTable.status, ["assigned","on_the_way","at_location","in_progress","waiting_started"])))
+      .orderBy(desc(tasksTable.createdAt))
+      .limit(1);
 
-  const enriched = await Promise.all(tasks.map(async (task) => {
-    const [user] = task.userId ? await db.select().from(usersTable).where(eq(usersTable.id, task.userId)) : [null];
-    const safeUser = user ? (({ otp, otpExpiresAt, ...u }) => u)(user) : null;
-    return { ...task, user: safeUser };
-  }));
+    const enriched = await Promise.all(tasks.map(async (task) => {
+      const [user] = task.userId ? await db.select().from(usersTable).where(eq(usersTable.id, task.userId)) : [null];
+      const safeUser = user ? (({ otp, otpExpiresAt, ...u }) => u)(user) : null;
+      return { ...task, user: safeUser };
+    }));
 
-  res.json(enriched[0] || null);
+    res.json(enriched[0] || null);
+  } catch (err) {
+    logger.error({ err, runnerId: runner.id }, "GET /runners/me/active-tasks failed");
+    res.status(500).json({ error: "Failed to load active tasks" });
+  }
 });
 
 // GET /runners/me/readiness — compute dispatch readiness score (0-100%)
@@ -306,385 +351,425 @@ router.get("/runners/me/readiness", requireRunner, async (req, res): Promise<voi
 
 // GET /runners/available — Phase 7.1: List available online/verified comrades for booking preview (no auth)
 router.get("/runners/available", async (_req, res): Promise<void> => {
-  const available = await db
-    .select({
-      id: runnersTable.id, name: runnersTable.name,
-      rating: runnersTable.rating, trustScore: runnersTable.trustScore,
-      trustBadge: runnersTable.trustBadge, tasksCompleted: runnersTable.tasksCompleted,
-      kycStatus: runnersTable.kycStatus,
-    })
-    .from(runnersTable)
-    .where(and(
-      eq(runnersTable.isOnline, true),
-      or(eq(runnersTable.kycStatus, "verified"), eq(runnersTable.dispatchAllowed, true)),
-    ))
-    .limit(20);
+  try {
+    const available = await db
+      .select({
+        id: runnersTable.id, name: runnersTable.name,
+        rating: runnersTable.rating, trustScore: runnersTable.trustScore,
+        trustBadge: runnersTable.trustBadge, tasksCompleted: runnersTable.tasksCompleted,
+        kycStatus: runnersTable.kycStatus,
+      })
+      .from(runnersTable)
+      .where(and(
+        eq(runnersTable.isOnline, true),
+        or(eq(runnersTable.kycStatus, "verified"), eq(runnersTable.dispatchAllowed, true)),
+      ))
+      .limit(20);
 
-  res.json(available.map(r => ({
-    id: r.id, name: r.name || "Comrade",
-    rating: r.rating ? Number(r.rating) : null,
-    trustScore: r.trustScore ?? 50,
-    trustBadge: r.trustBadge ?? "improving",
-    tasksCompleted: r.tasksCompleted ?? 0,
-    isOnline: true,
-    kycStatus: r.kycStatus,
-  })));
-});
-
-// GET /runners/nearby/:taskId — Phase 7: Preview nearby available comrades for booking
-router.get("/runners/nearby/:taskId", async (req, res): Promise<void> => {
-  const taskId = parseInt(Array.isArray(req.params.taskId) ? req.params.taskId[0] : req.params.taskId, 10);
-  const [task] = await db.select().from(tasksTable).where(eq(tasksTable.id, taskId));
-  if (!task) { res.status(404).json({ error: "Task not found" }); return; }
-
-  const taskLat = task.taskLat ? Number(task.taskLat) : task.locationLat ? Number(task.locationLat) : null;
-  const taskLng = task.taskLng ? Number(task.taskLng) : task.locationLng ? Number(task.locationLng) : null;
-
-  const nearby = await db
-    .select({
-      id: runnersTable.id, name: runnersTable.name,
-      rating: runnersTable.rating, trustScore: runnersTable.trustScore,
-      tasksCompleted: runnersTable.tasksCompleted, trustBadge: runnersTable.trustBadge,
-      currentLat: runnersTable.currentLat, currentLng: runnersTable.currentLng,
-      isOnline: runnersTable.isOnline, kycStatus: runnersTable.kycStatus,
-    })
-    .from(runnersTable)
-    .where(and(
-      eq(runnersTable.isOnline, true),
-      or(eq(runnersTable.kycStatus, "verified"), eq(runnersTable.dispatchAllowed, true)),
-    ))
-    .limit(20);
-
-  const enriched = nearby.map(r => {
-    const lat = r.currentLat ? Number(r.currentLat) : null;
-    const lng = r.currentLng ? Number(r.currentLng) : null;
-    let distanceKm = null;
-    if (lat && lng && taskLat && taskLng) {
-      distanceKm = Math.round(haversineKm(taskLat, taskLng, lat, lng) * 10) / 10;
-    }
-    return {
+    res.json(available.map(r => ({
       id: r.id, name: r.name || "Comrade",
       rating: r.rating ? Number(r.rating) : null,
       trustScore: r.trustScore ?? 50,
       trustBadge: r.trustBadge ?? "improving",
       tasksCompleted: r.tasksCompleted ?? 0,
-      distanceKm,
-    };
-  }).sort((a, b) => (a.distanceKm ?? 999) - (b.distanceKm ?? 999));
+      isOnline: true,
+      kycStatus: r.kycStatus,
+    })));
+  } catch (err) {
+    logger.error({ err }, "GET /runners/available failed");
+    res.status(500).json({ error: "Failed to load available runners" });
+  }
+});
 
-  res.json(enriched);
+// GET /runners/nearby/:taskId — Phase 7: Preview nearby available comrades for booking
+router.get("/runners/nearby/:taskId", async (req, res): Promise<void> => {
+  try {
+    const taskId = parseInt(Array.isArray(req.params.taskId) ? req.params.taskId[0] : req.params.taskId, 10);
+    const [task] = await db.select().from(tasksTable).where(eq(tasksTable.id, taskId));
+    if (!task) { res.status(404).json({ error: "Task not found" }); return; }
+
+    const taskLat = task.taskLat ? Number(task.taskLat) : task.locationLat ? Number(task.locationLat) : null;
+    const taskLng = task.taskLng ? Number(task.taskLng) : task.locationLng ? Number(task.locationLng) : null;
+
+    const nearby = await db
+      .select({
+        id: runnersTable.id, name: runnersTable.name,
+        rating: runnersTable.rating, trustScore: runnersTable.trustScore,
+        tasksCompleted: runnersTable.tasksCompleted, trustBadge: runnersTable.trustBadge,
+        currentLat: runnersTable.currentLat, currentLng: runnersTable.currentLng,
+        isOnline: runnersTable.isOnline, kycStatus: runnersTable.kycStatus,
+      })
+      .from(runnersTable)
+      .where(and(
+        eq(runnersTable.isOnline, true),
+        or(eq(runnersTable.kycStatus, "verified"), eq(runnersTable.dispatchAllowed, true)),
+      ))
+      .limit(20);
+
+    const enriched = nearby.map(r => {
+      const lat = r.currentLat ? Number(r.currentLat) : null;
+      const lng = r.currentLng ? Number(r.currentLng) : null;
+      let distanceKm = null;
+      if (lat && lng && taskLat && taskLng) {
+        distanceKm = Math.round(haversineKm(taskLat, taskLng, lat, lng) * 10) / 10;
+      }
+      return {
+        id: r.id, name: r.name || "Comrade",
+        rating: r.rating ? Number(r.rating) : null,
+        trustScore: r.trustScore ?? 50,
+        trustBadge: r.trustBadge ?? "improving",
+        tasksCompleted: r.tasksCompleted ?? 0,
+        distanceKm,
+      };
+    }).sort((a, b) => (a.distanceKm ?? 999) - (b.distanceKm ?? 999));
+
+    res.json(enriched);
+  } catch (err) {
+    logger.error({ err }, "GET /runners/nearby/:taskId failed");
+    res.status(500).json({ error: "Failed to load nearby runners" });
+  }
 });
 
 // GET /runners/:id
 router.get("/runners/:id", async (req, res): Promise<void> => {
-  const id = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id, 10);
-  const [runner] = await db.select().from(runnersTable).where(eq(runnersTable.id, id));
-  if (!runner) { res.status(404).json({ error: "Runner not found" }); return; }
-  const { otp, otpExpiresAt, aadhaarNumber, aadhaarFront, aadhaarBack, selfie, phone, bankAccount, bankIfsc, bankAccountHolder, emergencyContactName, emergencyContactPhone, emergencyContactRelation, email, ...safe } = runner;
-  res.json({
-    id: safe.id,
-    name: safe.name,
-    fullName: safe.fullName,
-    rating: safe.rating ? Number(safe.rating) : null,
-    trustScore: safe.trustScore ?? 50,
-    trustBadge: safe.trustBadge ?? "improving",
-    tasksCompleted: safe.tasksCompleted ?? 0,
-    isOnline: safe.isOnline,
-    kycStatus: safe.kycStatus,
-    dispatchAllowed: safe.dispatchAllowed,
-    currentLat: safe.currentLat ? Number(safe.currentLat) : null,
-    currentLng: safe.currentLng ? Number(safe.currentLng) : null,
-    city: safe.city,
-    area: safe.area,
-    avatar: safe.avatar,
-  });
+  try {
+    const id = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id, 10);
+    const [runner] = await db.select().from(runnersTable).where(eq(runnersTable.id, id));
+    if (!runner) { res.status(404).json({ error: "Runner not found" }); return; }
+    const { otp, otpExpiresAt, aadhaarNumber, aadhaarFront, aadhaarBack, selfie, phone, bankAccount, bankIfsc, bankAccountHolder, emergencyContactName, emergencyContactPhone, emergencyContactRelation, email, ...safe } = runner;
+    res.json({
+      id: safe.id,
+      name: safe.name,
+      fullName: safe.fullName,
+      rating: safe.rating ? Number(safe.rating) : null,
+      trustScore: safe.trustScore ?? 50,
+      trustBadge: safe.trustBadge ?? "improving",
+      tasksCompleted: safe.tasksCompleted ?? 0,
+      isOnline: safe.isOnline,
+      kycStatus: safe.kycStatus,
+      dispatchAllowed: safe.dispatchAllowed,
+      currentLat: safe.currentLat ? Number(safe.currentLat) : null,
+      currentLng: safe.currentLng ? Number(safe.currentLng) : null,
+      city: safe.city,
+      area: safe.area,
+      avatar: safe.avatar,
+    });
+  } catch (err) {
+    logger.error({ err }, "GET /runners/:id failed");
+    res.status(500).json({ error: "Failed to load runner profile" });
+  }
 });
 
 // GET /runners/:id/location/:taskId
 router.get("/runners/:id/location/:taskId", async (req, res): Promise<void> => {
-  const runnerId = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id, 10);
-  const taskId = parseInt(Array.isArray(req.params.taskId) ? req.params.taskId[0] : req.params.taskId, 10);
+  try {
+    const runnerId = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id, 10);
+    const taskId = parseInt(Array.isArray(req.params.taskId) ? req.params.taskId[0] : req.params.taskId, 10);
 
-  // Require auth: admin, task owner, assigned runner, or valid family tracking token
-  const token = extractToken(req);
-  let authorized = false;
+    const token = extractToken(req);
+    let authorized = false;
 
-  if (token) {
-    // Check admin
-    const admin = await resolveAdmin(token);
-    if (admin) {
-      authorized = true;
-    } else {
-      // Check if token is from the task owner (user)
-      const user = await getUserFromToken(token);
-      if (user) {
-        const [task] = await db.select({ userId: tasksTable.userId }).from(tasksTable).where(eq(tasksTable.id, taskId));
-        if (task && task.userId === user.id) {
-          authorized = true;
+    if (token) {
+      const admin = await resolveAdmin(token);
+      if (admin) {
+        authorized = true;
+      } else {
+        const user = await getUserFromToken(token);
+        if (user) {
+          const [task] = await db.select({ userId: tasksTable.userId }).from(tasksTable).where(eq(tasksTable.id, taskId));
+          if (task && task.userId === user.id) {
+            authorized = true;
+          }
         }
-      }
-      // Check if token is from the assigned runner
-      if (!authorized) {
-        const runner = await getRunnerFromToken(token);
-        if (runner && runner.id === runnerId) {
-          authorized = true;
+        if (!authorized) {
+          const runner = await getRunnerFromToken(token);
+          if (runner && runner.id === runnerId) {
+            authorized = true;
+          }
         }
       }
     }
-  }
 
-  if (!authorized) {
-    res.status(401).json({ error: "Authentication required" });
-    return;
-  }
-
-  const [loc] = await db.select().from(runnerLocationsTable)
-    .where(and(eq(runnerLocationsTable.runnerId, runnerId), eq(runnerLocationsTable.taskId, taskId)))
-    .orderBy(desc(runnerLocationsTable.recordedAt))
-    .limit(1);
-
-  if (!loc) {
-    // Fall back to runner's current location
-    const [runner] = await db.select().from(runnersTable).where(eq(runnersTable.id, runnerId));
-    if (!runner || !runner.currentLat) {
-      res.json({ runnerId, taskId, lat: null, lng: null, heading: null, speed: null, recordedAt: null });
+    if (!authorized) {
+      res.status(401).json({ error: "Authentication required" });
       return;
     }
-    res.json({ runnerId, taskId, lat: Number(runner.currentLat), lng: Number(runner.currentLng), heading: null, speed: null, recordedAt: new Date().toISOString() });
-    return;
-  }
 
-  res.json({
-    runnerId: loc.runnerId, taskId: loc.taskId,
-    lat: Number(loc.lat), lng: Number(loc.lng),
-    heading: loc.heading ? Number(loc.heading) : null,
-    speed: loc.speed ? Number(loc.speed) : null,
-    recordedAt: loc.recordedAt.toISOString(),
-  });
+    const [loc] = await db.select().from(runnerLocationsTable)
+      .where(and(eq(runnerLocationsTable.runnerId, runnerId), eq(runnerLocationsTable.taskId, taskId)))
+      .orderBy(desc(runnerLocationsTable.recordedAt))
+      .limit(1);
+
+    if (!loc) {
+      const [runner] = await db.select().from(runnersTable).where(eq(runnersTable.id, runnerId));
+      if (!runner || !runner.currentLat) {
+        res.json({ runnerId, taskId, lat: null, lng: null, heading: null, speed: null, recordedAt: null });
+        return;
+      }
+      res.json({ runnerId, taskId, lat: Number(runner.currentLat), lng: Number(runner.currentLng), heading: null, speed: null, recordedAt: new Date().toISOString() });
+      return;
+    }
+
+    res.json({
+      runnerId: loc.runnerId, taskId: loc.taskId,
+      lat: Number(loc.lat), lng: Number(loc.lng),
+      heading: loc.heading ? Number(loc.heading) : null,
+      speed: loc.speed ? Number(loc.speed) : null,
+      recordedAt: loc.recordedAt.toISOString(),
+    });
+  } catch (err) {
+    logger.error({ err }, "GET /runners/:id/location/:taskId failed");
+    res.status(500).json({ error: "Failed to load runner location" });
+  }
 });
 
 // GET /runners/me/payouts — payout settlement history for the logged-in runner
 router.get("/runners/me/payouts", requireRunner, async (req, res): Promise<void> => {
   const runner = req.runner;
   if (!runner) { res.status(401).json({ error: "Unauthorized" }); return; }
-  const payouts = await db.select().from(runnerPayoutsTable)
-    .where(eq(runnerPayoutsTable.runnerId, runner.id))
-    .orderBy(desc(runnerPayoutsTable.createdAt));
+  try {
+    const payouts = await db.select().from(runnerPayoutsTable)
+      .where(eq(runnerPayoutsTable.runnerId, runner.id))
+      .orderBy(desc(runnerPayoutsTable.createdAt));
 
-  // Total paid out and pending
-  const settledPayouts = payouts.filter(p => p.status === "settled");
-  const totalPaidOut = settledPayouts.reduce((s, p) => s + Number(p.amount || 0), 0);
-  const cancelledPayouts = payouts.filter(p => p.status === "cancelled");
+    const settledPayouts = payouts.filter(p => p.status === "settled");
+    const totalPaidOut = settledPayouts.reduce((s, p) => s + Number(p.amount || 0), 0);
+    const cancelledPayouts = payouts.filter(p => p.status === "cancelled");
 
-  res.json({
-    payouts: payouts.map(p => ({
-      id: p.id,
-      amount: Number(p.amount),
-      taskCount: p.taskCount,
-      status: p.status,
-      reference: p.reference,
-      notes: p.notes,
-      settledAt: p.settledAt,
-      createdAt: p.createdAt,
-    })),
-    totalPaidOut,
-    settledCount: settledPayouts.length,
-    cancelledCount: cancelledPayouts.length,
-  });
+    res.json({
+      payouts: payouts.map(p => ({
+        id: p.id,
+        amount: Number(p.amount),
+        taskCount: p.taskCount,
+        status: p.status,
+        reference: p.reference,
+        notes: p.notes,
+        settledAt: p.settledAt,
+        createdAt: p.createdAt,
+      })),
+      totalPaidOut,
+      settledCount: settledPayouts.length,
+      cancelledCount: cancelledPayouts.length,
+    });
+  } catch (err) {
+    logger.error({ err, runnerId: runner.id }, "GET /runners/me/payouts failed");
+    res.status(500).json({ error: "Failed to load payout history" });
+  }
 });
 
 // POST /runners/me/payout-request — Runner requests payout of pending earnings
 router.post("/runners/me/payout-request", requireRunner, async (req, res): Promise<void> => {
   const runner = req.runner;
   if (!runner) { res.status(401).json({ error: "Unauthorized" }); return; }
-  const { amount, notes } = req.body;
+  try {
+    const { amount, notes } = req.body;
 
-  // Prevent duplicate pending payout requests
-  const [existingPending] = await db.select({ id: runnerPayoutsTable.id })
-    .from(runnerPayoutsTable)
-    .where(and(eq(runnerPayoutsTable.runnerId, runner.id), eq(runnerPayoutsTable.status, "pending")))
-    .limit(1);
-  if (existingPending) {
-    res.status(400).json({ error: "You already have a pending payout request. Please wait for it to be processed." });
-    return;
+    const [existingPending] = await db.select({ id: runnerPayoutsTable.id })
+      .from(runnerPayoutsTable)
+      .where(and(eq(runnerPayoutsTable.runnerId, runner.id), eq(runnerPayoutsTable.status, "pending")))
+      .limit(1);
+    if (existingPending) {
+      res.status(400).json({ error: "You already have a pending payout request. Please wait for it to be processed." });
+      return;
+    }
+
+    const [earningsAgg, settledAgg] = await Promise.all([
+      db.select({
+        totalEarned: sql<number>`COALESCE(SUM(${tasksTable.runnerEarning}::numeric), 0)`,
+      }).from(tasksTable).where(and(
+        eq(tasksTable.runnerId, runner.id),
+        eq(tasksTable.status, "completed"),
+      )),
+      db.select({
+        totalSettled: sql<number>`COALESCE(SUM(${runnerPayoutsTable.amount}::numeric), 0)`,
+      }).from(runnerPayoutsTable).where(and(
+        eq(runnerPayoutsTable.runnerId, runner.id),
+        eq(runnerPayoutsTable.status, "settled"),
+      )),
+    ]);
+
+    const totalEarned = Number(earningsAgg[0]?.totalEarned || 0);
+    const totalSettled = Number(settledAgg[0]?.totalSettled || 0);
+    const pendingAmount = Math.max(0, totalEarned - totalSettled);
+    const requestAmount = amount ? Number(amount) : pendingAmount;
+
+    if (requestAmount <= 0) {
+      res.status(400).json({ error: "No pending earnings to withdraw", pendingEarnings: pendingAmount });
+      return;
+    }
+
+    if (requestAmount > pendingAmount) {
+      res.status(400).json({ error: "Requested amount exceeds pending earnings", pendingEarnings: pendingAmount, requested: requestAmount });
+      return;
+    }
+
+    const [payout] = await db.insert(runnerPayoutsTable).values({
+      runnerId: runner.id,
+      amount: requestAmount.toString(),
+      taskCount: 0,
+      status: "pending",
+      notes: notes || `Runner payout request for Rs ${requestAmount}`,
+    }).returning();
+
+    res.json({
+      payout: { id: payout.id, amount: Number(payout.amount), status: payout.status, createdAt: payout.createdAt },
+      message: `Payout request of Rs ${requestAmount} submitted. Admin will review and process it.`,
+      pendingEarnings: pendingAmount - requestAmount,
+    });
+  } catch (err) {
+    logger.error({ err, runnerId: runner.id }, "POST /runners/me/payout-request failed");
+    res.status(500).json({ error: "Failed to submit payout request" });
   }
-
-  // Calculate total pending earnings: total earned minus already-settled payouts
-  const [earningsAgg, settledAgg] = await Promise.all([
-    db.select({
-      totalEarned: sql<number>`COALESCE(SUM(${tasksTable.runnerEarning}::numeric), 0)`,
-    }).from(tasksTable).where(and(
-      eq(tasksTable.runnerId, runner.id),
-      eq(tasksTable.status, "completed"),
-    )),
-    db.select({
-      totalSettled: sql<number>`COALESCE(SUM(${runnerPayoutsTable.amount}::numeric), 0)`,
-    }).from(runnerPayoutsTable).where(and(
-      eq(runnerPayoutsTable.runnerId, runner.id),
-      eq(runnerPayoutsTable.status, "settled"),
-    )),
-  ]);
-
-  const totalEarned = Number(earningsAgg[0]?.totalEarned || 0);
-  const totalSettled = Number(settledAgg[0]?.totalSettled || 0);
-  const pendingAmount = Math.max(0, totalEarned - totalSettled);
-  const requestAmount = amount ? Number(amount) : pendingAmount;
-
-  if (requestAmount <= 0) {
-    res.status(400).json({ error: "No pending earnings to withdraw", pendingEarnings: pendingAmount });
-    return;
-  }
-
-  if (requestAmount > pendingAmount) {
-    res.status(400).json({ error: "Requested amount exceeds pending earnings", pendingEarnings: pendingAmount, requested: requestAmount });
-    return;
-  }
-
-  // Create payout request
-  const [payout] = await db.insert(runnerPayoutsTable).values({
-    runnerId: runner.id,
-    amount: requestAmount.toString(),
-    taskCount: 0, // Admin will reconcile
-    status: "pending",
-    notes: notes || `Runner payout request for Rs ${requestAmount}`,
-  }).returning();
-
-  res.json({
-    payout: { id: payout.id, amount: Number(payout.amount), status: payout.status, createdAt: payout.createdAt },
-    message: `Payout request of Rs ${requestAmount} submitted. Admin will review and process it.`,
-    pendingEarnings: pendingAmount - requestAmount,
-  });
 });
 
 // GET /runners/me/reviews — list reviews for the logged-in runner
 router.get("/runners/me/reviews", requireRunner, async (req, res): Promise<void> => {
   const runner = req.runner;
   if (!runner) { res.status(401).json({ error: "Unauthorized" }); return; }
-  const { limit = "20", offset = "0" } = req.query as Record<string, string>;
+  try {
+    const { limit = "20", offset = "0" } = req.query as Record<string, string>;
 
-  const reviews = await db
-    .select({
-      id: reviewsTable.id,
-      taskId: reviewsTable.taskId,
-      userId: reviewsTable.userId,
-      rating: reviewsTable.rating,
-      review: reviewsTable.review,
-      createdAt: reviewsTable.createdAt,
-    })
-    .from(reviewsTable)
-    .where(eq(reviewsTable.runnerId, runner.id))
-    .orderBy(desc(reviewsTable.createdAt))
-    .limit(Number(limit))
-    .offset(Number(offset));
+    const reviews = await db
+      .select({
+        id: reviewsTable.id,
+        taskId: reviewsTable.taskId,
+        userId: reviewsTable.userId,
+        rating: reviewsTable.rating,
+        review: reviewsTable.review,
+        createdAt: reviewsTable.createdAt,
+      })
+      .from(reviewsTable)
+      .where(eq(reviewsTable.runnerId, runner.id))
+      .orderBy(desc(reviewsTable.createdAt))
+      .limit(Number(limit))
+      .offset(Number(offset));
 
-  // Fetch user names for each review
-  const enriched = await Promise.all(reviews.map(async (r) => {
-    const [user] = r.userId ? await db.select({ name: usersTable.name }).from(usersTable).where(eq(usersTable.id, r.userId)) : [null];
-    return { ...r, userName: user?.name ?? "Client" };
-  }));
+    const enriched = await Promise.all(reviews.map(async (r) => {
+      const [user] = r.userId ? await db.select({ name: usersTable.name }).from(usersTable).where(eq(usersTable.id, r.userId)) : [null];
+      return { ...r, userName: user?.name ?? "Client" };
+    }));
 
-  res.json(enriched);
+    res.json(enriched);
+  } catch (err) {
+    logger.error({ err, runnerId: runner.id }, "GET /runners/me/reviews failed");
+    res.status(500).json({ error: "Failed to load reviews" });
+  }
 });
 
 // GET /runners/me/stats — aggregated stats endpoint (E4)
 router.get("/runners/me/stats", requireRunner, async (req, res): Promise<void> => {
   const runner = req.runner;
   if (!runner) { res.status(401).json({ error: "Unauthorized" }); return; }
-  const now = new Date();
-  const weekStart = new Date(now); weekStart.setDate(now.getDate() - 7); weekStart.setHours(0, 0, 0, 0);
-  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+  try {
+    const now = new Date();
+    const weekStart = new Date(now); weekStart.setDate(now.getDate() - 7); weekStart.setHours(0, 0, 0, 0);
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
 
-  const [weekAgg, monthAgg, totalAgg] = await Promise.all([
-    db.select({
-      count: count(),
-      avgResponse: sql<number | null>`AVG(${tasksTable.timeToAcceptance})`,
-    }).from(tasksTable).where(and(
-      eq(tasksTable.runnerId, runner.id),
-      eq(tasksTable.status, "completed"),
-      gte(tasksTable.completedAt, weekStart),
-    )),
-    db.select({
-      total: count(),
-      cancelled: sql<number>`SUM(CASE WHEN ${tasksTable.status} = 'cancelled' THEN 1 ELSE 0 END)`,
-    }).from(tasksTable).where(and(
-      eq(tasksTable.runnerId, runner.id),
-      gte(tasksTable.createdAt, monthStart),
-    )),
-    db.select({
-      totalTasks: count(),
-      completedTasks: sql<number>`SUM(CASE WHEN ${tasksTable.status} = 'completed' THEN 1 ELSE 0 END)`,
-      totalEarnings: sql<number>`COALESCE(SUM(CASE WHEN ${tasksTable.status} = 'completed' THEN ${tasksTable.runnerEarning}::numeric ELSE 0 END), 0)`,
-    }).from(tasksTable).where(eq(tasksTable.runnerId, runner.id)),
-  ]);
+    const [weekAgg, monthAgg, totalAgg] = await Promise.all([
+      db.select({
+        count: count(),
+        avgResponse: sql<number | null>`AVG(${tasksTable.timeToAcceptance})`,
+      }).from(tasksTable).where(and(
+        eq(tasksTable.runnerId, runner.id),
+        eq(tasksTable.status, "completed"),
+        gte(tasksTable.completedAt, weekStart),
+      )),
+      db.select({
+        total: count(),
+        cancelled: sql<number>`SUM(CASE WHEN ${tasksTable.status} = 'cancelled' THEN 1 ELSE 0 END)`,
+      }).from(tasksTable).where(and(
+        eq(tasksTable.runnerId, runner.id),
+        gte(tasksTable.createdAt, monthStart),
+      )),
+      db.select({
+        totalTasks: count(),
+        completedTasks: sql<number>`SUM(CASE WHEN ${tasksTable.status} = 'completed' THEN 1 ELSE 0 END)`,
+        totalEarnings: sql<number>`COALESCE(SUM(CASE WHEN ${tasksTable.status} = 'completed' THEN ${tasksTable.runnerEarning}::numeric ELSE 0 END), 0)`,
+      }).from(tasksTable).where(eq(tasksTable.runnerId, runner.id)),
+    ]);
 
-  const w = weekAgg[0];
-  const m = monthAgg[0];
-  const t = totalAgg[0];
-  res.json({
-    tasksThisWeek: w?.count ?? 0,
-    avgResponseTimeSeconds: w?.avgResponse != null ? Math.round(Number(w.avgResponse)) : null,
-    cancellationRate: m?.total ? Math.round(((Number(m.cancelled) ?? 0) / m.total) * 100) : 0,
-    totalTasks: t?.totalTasks ?? 0,
-    completedTasks: Number(t?.completedTasks ?? 0),
-    totalEarnings: Number(t?.totalEarnings ?? 0),
-    completionRate: t?.totalTasks ? Math.round((Number(t.completedTasks ?? 0) / t.totalTasks) * 100) : 0,
-  });
+    const w = weekAgg[0];
+    const m = monthAgg[0];
+    const t = totalAgg[0];
+    res.json({
+      tasksThisWeek: w?.count ?? 0,
+      avgResponseTimeSeconds: w?.avgResponse != null ? Math.round(Number(w.avgResponse)) : null,
+      cancellationRate: m?.total ? Math.round(((Number(m.cancelled) ?? 0) / m.total) * 100) : 0,
+      totalTasks: t?.totalTasks ?? 0,
+      completedTasks: Number(t?.completedTasks ?? 0),
+      totalEarnings: Number(t?.totalEarnings ?? 0),
+      completionRate: t?.totalTasks ? Math.round((Number(t.completedTasks ?? 0) / t.totalTasks) * 100) : 0,
+    });
+  } catch (err) {
+    logger.error({ err, runnerId: runner.id }, "GET /runners/me/stats failed");
+    res.status(500).json({ error: "Failed to load stats" });
+  }
 });
 
 // PATCH /runners/me/specializations — toggle specialization badges
 router.patch("/runners/me/specializations", requireRunner, async (req, res): Promise<void> => {
   const runner = req.runner;
   if (!runner) { res.status(401).json({ error: "Unauthorized" }); return; }
-  const { specializations } = req.body; // string[]
-  if (!Array.isArray(specializations)) {
-    res.status(400).json({ error: "specializations must be an array of strings" }); return;
+  try {
+    const { specializations } = req.body;
+    if (!Array.isArray(specializations)) {
+      res.status(400).json({ error: "specializations must be an array of strings" }); return;
+    }
+    const filteredSpecs = specializations.filter(s => typeof s === "string");
+    await db.update(runnersTable).set({
+      specializations: filteredSpecs,
+    } as Record<string, unknown>).where(eq(runnersTable.id, runner.id));
+    res.json({ specializations: filteredSpecs });
+  } catch (err) {
+    logger.error({ err, runnerId: runner.id }, "PATCH /runners/me/specializations failed");
+    res.status(500).json({ error: "Failed to update specializations" });
   }
-  const filteredSpecs = specializations.filter(s => typeof s === "string");
-  // B5 FIX: Use Drizzle's array column support instead of raw SQL
-  await db.update(runnersTable).set({
-    specializations: filteredSpecs,
-  } as Record<string, unknown>).where(eq(runnersTable.id, runner.id));
-  // Note: `as Record<string, unknown>` is used because specializations is a pg text[] column
-  res.json({ specializations: filteredSpecs });
 });
 
 // POST /runners/me/gps-background — B2: GPS background update endpoint
 router.post("/runners/me/gps-background", requireRunner, async (req, res): Promise<void> => {
   const runner = req.runner;
   if (!runner) { res.status(401).json({ error: "Unauthorized" }); return; }
-  const { lat, lng } = req.body;
-  if (lat != null && !isValidCoordinate(lat, "lat")) { res.status(400).json({ error: "Invalid latitude" }); return; }
-  if (lng != null && !isValidCoordinate(lng, "lng")) { res.status(400).json({ error: "Invalid longitude" }); return; }
-  const updates: Record<string, unknown> = { lastActiveAt: new Date(), updatedAt: new Date() };
-  if (lat != null) updates.currentLat = lat.toString();
-  if (lng != null) updates.currentLng = lng.toString();
-  await db.update(runnersTable).set(updates).where(eq(runnersTable.id, runner.id));
-  res.json({ ok: true });
+  try {
+    const { lat, lng } = req.body;
+    if (lat != null && !isValidCoordinate(lat, "lat")) { res.status(400).json({ error: "Invalid latitude" }); return; }
+    if (lng != null && !isValidCoordinate(lng, "lng")) { res.status(400).json({ error: "Invalid longitude" }); return; }
+    const updates: Record<string, unknown> = { lastActiveAt: new Date(), updatedAt: new Date() };
+    if (lat != null) updates.currentLat = lat.toString();
+    if (lng != null) updates.currentLng = lng.toString();
+    await db.update(runnersTable).set(updates).where(eq(runnersTable.id, runner.id));
+    res.json({ ok: true });
+  } catch (err) {
+    logger.error({ err, runnerId: runner.id }, "POST /runners/me/gps-background failed");
+    res.status(500).json({ error: "Failed to update GPS" });
+  }
 });
 
 // POST /runners/delete-account — Runner requests account deletion (requires password confirmation)
 router.post("/runners/delete-account", requireRunner, async (req, res): Promise<void> => {
   const runner = req.runner;
   if (!runner) { res.status(401).json({ error: "Unauthorized" }); return; }
-  const { password } = req.body;
-  // L7 FIX: Require password confirmation for account deletion
-  if (!password) {
-    res.status(400).json({ error: "Password confirmation required to delete account" }); return;
+  try {
+    const { password } = req.body;
+    if (!password) {
+      res.status(400).json({ error: "Password confirmation required to delete account" }); return;
+    }
+    const { verifyPassword } = await import("../lib/auth");
+    if (!runner.passwordHash || !await verifyPassword(password, runner.passwordHash)) {
+      res.status(403).json({ error: "Incorrect password" }); return;
+    }
+    await db.update(runnersTable).set({
+      name: "[Deleted Comrade]",
+      isOnline: false,
+      dispatchAllowed: false,
+    } as Record<string, unknown>).where(eq(runnersTable.id, runner.id));
+    const { runnerSessionsTable } = await import("@workspace/db");
+    await db.delete(runnerSessionsTable).where(eq(runnerSessionsTable.runnerId, runner.id));
+    res.json({ message: "Account deleted" });
+  } catch (err) {
+    logger.error({ err, runnerId: runner.id }, "POST /runners/delete-account failed");
+    res.status(500).json({ error: "Failed to delete account" });
   }
-  const { verifyPassword } = await import("../lib/auth");
-  if (!runner.passwordHash || !await verifyPassword(password, runner.passwordHash)) {
-    res.status(403).json({ error: "Incorrect password" }); return;
-  }
-  // Soft-delete: set name to null, mark as deleted, go offline
-  await db.update(runnersTable).set({
-    name: "[Deleted Comrade]",
-    isOnline: false,
-    dispatchAllowed: false,
-  } as Record<string, unknown>).where(eq(runnersTable.id, runner.id));
-  // Delete sessions
-  const { runnerSessionsTable } = await import("@workspace/db");
-  await db.delete(runnerSessionsTable).where(eq(runnerSessionsTable.runnerId, runner.id));
-  res.json({ message: "Account deleted" });
 });
 
 export default router;
