@@ -6,6 +6,8 @@ export * from "./notifications";
 export * from "./reviews";
 export * from "./subscriptions";
 export * from "./locations";
+export * from "./admin-settings";
+export * from "./device-tokens";
 export * from "./recruitments";
 export * from "./trainings";
 export * from "./quality";
