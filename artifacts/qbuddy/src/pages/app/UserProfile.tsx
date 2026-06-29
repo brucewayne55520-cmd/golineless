@@ -10,6 +10,7 @@ import { getInitials, formatCurrency } from "@/lib/utils";
 import type { LucideIcon } from "lucide-react";
 import { DARK_GRAD, BLUE, DARK } from "@/lib/theme";
 import { LoadingSkeleton } from "@/components/LoadingSkeleton";
+import LanguageSelector from "@/components/LanguageSelector";
 
 /** Extended user fields not in the generated User type */
 interface UserProfileFields {
@@ -47,6 +48,7 @@ export default function UserProfile() {
   const [aadhaarBack, setAadhaarBack] = useState<string | null>(null);
   const [kycLoading, setKycLoading] = useState(false);
   const [kycError, setKycError] = useState<string | null>(null);
+  const [showLanguage, setShowLanguage] = useState(false);
 
   const { data: notifications } = useListNotifications();
   const unreadCount = ((notifications ?? []) as NotificationType[]).filter(n => !n.isRead).length;
@@ -130,11 +132,11 @@ export default function UserProfile() {
     { Icon: Edit3, label: "Edit Profile", action: startEditProfile },
     { Icon: Shield, label: kycStatus === "verified" ? "KYC Verified ✓" : kycStatus === "pending" ? "KYC Under Review" : "Verify Identity (KYC)", action: kycStatus === "none" ? () => { setKycStep(0); setShowKyc(true); } : undefined },
     { Icon: Bell, label: "Notifications", action: () => navigate("/app/notifications"), badge: unreadCount > 0 ? unreadCount : undefined },
-    { Icon: Globe, label: "Language" },
-    { Icon: HelpCircle, label: "Help & Support" },
-    { Icon: Lock, label: "Privacy Policy" },
-    { Icon: FileText, label: "Terms of Service" },
-    { Icon: Info, label: "About Go LineLess" },
+    { Icon: Globe, label: "Language", action: () => setShowLanguage(true) },
+    { Icon: HelpCircle, label: "Help & Support", action: () => navigate("/app/help") },
+    { Icon: Lock, label: "Privacy Policy", action: () => navigate("/app/privacy") },
+    { Icon: FileText, label: "Terms of Service", action: () => navigate("/app/terms") },
+    { Icon: Info, label: "About Go LineLess", action: () => navigate("/app/about") },
   ];
 
   const inputClass = "w-full border border-gray-200 rounded-xl px-3.5 py-3 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-all bg-white";
@@ -338,6 +340,22 @@ export default function UserProfile() {
         </div>
       )}
 
+      {showLanguage && (
+        <LanguageSelector
+          currentLanguage={user?.language ?? "en"}
+          onSelect={async (code) => {
+            try {
+              const res = await fetch("/api/users/me", {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json", Authorization: `Bearer ${localStorage.getItem("golineless_user_token")}` },
+                body: JSON.stringify({ language: code }),
+              });
+              if (res.ok) refetch();
+            } catch { /* ignore */ }
+          }}
+          onClose={() => setShowLanguage(false)}
+        />
+      )}
       <UserBottomNav />
     </div>
   );

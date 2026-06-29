@@ -47,6 +47,10 @@ const NotificationsPage = lazy(() => import("@/pages/app/NotificationsPage"));
 const RunnerNotificationsPage = lazy(() => import("@/pages/runner/RunnerNotificationsPage"));
 const RunnerReviewsPage = lazy(() => import("@/pages/runner/RunnerReviewsPage"));
 const NotFound = lazy(() => import("@/pages/not-found"));
+const PrivacyPolicy = lazy(() => import("@/pages/app/PrivacyPolicy"));
+const TermsOfService = lazy(() => import("@/pages/app/TermsOfService"));
+const HelpSupport = lazy(() => import("@/pages/app/HelpSupport"));
+const About = lazy(() => import("@/pages/app/About"));
 const FamilyTrack = lazy(() => import("@/pages/app/FamilyTrack"));
 const PayRetry = lazy(() => import("@/pages/app/PayRetry"));
 const Signup = lazy(() => import("@/pages/auth/Signup"));
@@ -108,6 +112,10 @@ function Router() {
       <Route path="/app/senior"><ProtectedRoute><SeniorCare /></ProtectedRoute></Route>
       <Route path="/app/profile"><ProtectedRoute><UserProfile /></ProtectedRoute></Route>
       <Route path="/app/notifications"><ProtectedRoute><NotificationsPage /></ProtectedRoute></Route>
+      <Route path="/app/privacy" component={PrivacyPolicy} />
+      <Route path="/app/terms" component={TermsOfService} />
+      <Route path="/app/help" component={HelpSupport} />
+      <Route path="/app/about" component={About} />
 
       <Route path="/runner/feed"><RunnerProtectedRoute><RunnerFeed /></RunnerProtectedRoute></Route>
       <Route path="/runner/active"><RunnerProtectedRoute><ActiveTask /></RunnerProtectedRoute></Route>
