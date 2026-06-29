@@ -10,8 +10,7 @@ import { StatusBadge } from "@/components/StatusBadge";
 import { PaymentBadge } from "@/components/PaymentBadge";
 import { PayButton } from "@/components/PayButton";
 import { CATEGORY_NAMES, STATUS_LABELS, formatCurrency, calculateQueueGap, estimateWaitTime, calculateQueueProgress } from "@/lib/utils";
-import { NAVY, NAVY_GRAD, GOLD, GOLD_GRAD } from "@/lib/theme";
-
+import { DARK, DARK_GRAD, BLUE, SURFACE_DIM } from "@/lib/theme";
 interface Props { id: string; }
 
 const TIMELINE_STEPS = [
@@ -54,7 +53,7 @@ function LeafletMap({ task, runnerLoc }: { task: import("@workspace/api-client-r
 
       // Task location marker
       const blueIcon = L.divIcon({
-        html: `<div style="background:#331900;width:24px;height:24px;border-radius:50%;border:3px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.3);display:flex;align-items:center;justify-content:center;"><svg width="12" height="12" viewBox="0 0 24 24" fill="white"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/></svg></div>`,
+        html: `<div style="background:#0F172A;width:24px;height:24px;border-radius:50%;border:3px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.3);display:flex;align-items:center;justify-content:center;"><svg width="12" height="12" viewBox="0 0 24 24" fill="white"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/></svg></div>`,
         className: "",
         iconSize: [24, 24],
       });
@@ -63,7 +62,7 @@ function LeafletMap({ task, runnerLoc }: { task: import("@workspace/api-client-r
       // Pickup marker if applicable
       if (task.pickupRequired && task.pickupLat && task.pickupLng) {
         const goldIcon = L.divIcon({
-          html: `<div style="background:#ff7b00;width:20px;height:20px;border-radius:50%;border:3px solid white;box-shadow:0 2px 6px rgba(0,0,0,0.3);font-size:10px;display:flex;align-items:center;justify-content:center;color:white;font-weight:bold;">P</div>`,
+          html: `<div style="background:#3B82F6;width:20px;height:20px;border-radius:50%;border:3px solid white;box-shadow:0 2px 6px rgba(0,0,0,0.3);font-size:10px;display:flex;align-items:center;justify-content:center;color:white;font-weight:bold;">P</div>`,
           className: "",
           iconSize: [20, 20],
         });
@@ -101,7 +100,7 @@ function ProofGallery({ photos }: { photos: string[] }) {
   if (!photos || photos.length === 0) return null;
   return (
     <div>
-      <h3 className="font-bold text-[#241100] text-sm flex items-center gap-1 mb-3"><Camera size={14} /> Proof Photos</h3>
+      <h3 className="font-bold text-gray-900 text-sm flex items-center gap-1 mb-3"><Camera size={14} /> Proof Photos</h3>
       <div className="grid grid-cols-2 gap-2">
         {photos.map((photoStr: string, i: number) => {
           let proof: { imageUrl?: string; proofType?: string; timestamp?: string; address?: string; lat?: number; lng?: number; id?: number; runnerId?: number; taskStatus?: string; uploadedBy?: string; gpsVerified?: boolean };
@@ -328,9 +327,9 @@ export default function TaskDetail({ id }: Props) {
   };
 
   if (isLoading) return (
-    <div className="min-h-screen flex items-center justify-center" style={{ background: "#FFF9F2" }}>
+    <div className="min-h-screen flex items-center justify-center bg-gray-50">
       <div className="text-center">
-        <div className="w-12 h-12 border-4 border-t-transparent rounded-full animate-spin mx-auto mb-3" style={{ borderColor: NAVY, borderTopColor: "transparent" }} />
+        <div className="w-12 h-12 border-4 border-t-transparent rounded-full animate-spin mx-auto mb-3" style={{ borderColor: DARK, borderTopColor: "transparent" }} />
         <p className="text-gray-500">Loading task...</p>
       </div>
     </div>
@@ -354,20 +353,20 @@ export default function TaskDetail({ id }: Props) {
   }
 
   return (
-    <div className="min-h-screen pb-24" style={{ background: "#FFF9F2" }}>
+    <div className="min-h-screen pb-24 bg-gray-50">
       {/* Header */}
       <div className="bg-white px-4 py-3 flex items-center gap-3 border-b border-gray-100 shadow-sm sticky top-0 z-20">
         <button onClick={() => navigate("/app/tasks")} className="text-gray-500">
           <ArrowLeft size={20} />
         </button>
         <div className="flex-1">
-          <h1 className="font-bold text-[#241100]">Task #{t.id}</h1>
+          <h1 className="font-bold text-gray-900">Task #{t.id}</h1>
           <div className="flex items-center gap-1.5 flex-wrap mt-0.5">
             <StatusBadge status={t.status} />
             <PaymentBadge paymentStatus={t.paymentStatus} taskStatus={t.status} paymentMethod={t.paymentMethod} />
           </div>
         </div>
-        <div style={{ color: NAVY }}>
+        <div style={{ color: DARK }}>
           <CategoryIcon category={t.category} size={22} />
         </div>
       </div>
@@ -393,11 +392,11 @@ export default function TaskDetail({ id }: Props) {
         {/* Comrade card overlay at bottom of map */}
         {t.runner && (
           <div className="absolute bottom-0 left-0 right-0 bg-white/95 backdrop-blur-sm px-4 py-3 flex items-center gap-3 border-t border-gray-100">
-            <div className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold" style={{ background: NAVY_GRAD }}>
+            <div className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold" style={{ background: DARK_GRAD }}>
               {t.runner.name?.[0] ?? "C"}
             </div>
             <div className="flex-1">
-              <p className="font-semibold text-sm text-[#241100]">{t.runner.name ?? "Comrade"}</p>
+              <p className="font-semibold text-sm text-gray-900">{t.runner.name ?? "Comrade"}</p>
               <p className="text-xs text-gray-500 flex items-center gap-1">
                 {t.runner.rating && <><Star size={10} className="text-yellow-400" /> {Number(t.runner.rating).toFixed(1)}</>}
                 {!t.runner.rating && "New Comrade"}
@@ -421,11 +420,11 @@ export default function TaskDetail({ id }: Props) {
         {/* Task details card */}
         <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
           <div className="flex items-center gap-3 mb-3">
-            <div style={{ color: NAVY }}>
+            <div style={{ color: DARK }}>
               <CategoryIcon category={t.category} size={28} />
             </div>
             <div>
-              <h2 className="font-bold text-[#241100]">{CATEGORY_NAMES[t.category]}</h2>
+              <h2 className="font-bold text-gray-900">{CATEGORY_NAMES[t.category]}</h2>
               {t.locationName && <p className="text-xs text-gray-500">{t.locationName}, {t.locationArea}</p>}
             </div>
           </div>
@@ -480,7 +479,7 @@ export default function TaskDetail({ id }: Props) {
             )}
             <div className="flex justify-between pt-1.5 border-t border-gray-100">
               <span className="text-sm font-semibold text-gray-600">Total</span>
-              <span className="font-bold" style={{ color: NAVY }}>{formatCurrency((Number(t.price) || 0) + (Number(t.waitingChargeAmount) || 0))}</span>
+              <span className="font-bold" style={{ color: DARK }}>{formatCurrency((Number(t.price) || 0) + (Number(t.waitingChargeAmount) || 0))}</span>
             </div>
           </div>
           {/* (#16) Cash payment confirm/dispute actions */}           {t.paymentStatus === "cash_pending" && (
@@ -528,28 +527,28 @@ export default function TaskDetail({ id }: Props) {
           {eta && (
             <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
               <p className="text-[10px] font-semibold text-gray-400 uppercase mb-1">Est. Completion</p>
-              <p className="text-lg font-black" style={{ color: NAVY }}>{eta}</p>
+              <p className="text-lg font-black" style={{ color: DARK }}>{eta}</p>
               <p className="text-[10px] text-gray-400">Estimated time</p>
             </div>
           )}
           {(t.totalWaitingMinutes ?? 0) > 0 && (
             <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
               <p className="text-[10px] font-semibold text-gray-400 uppercase mb-1">Total Waiting</p>
-              <p className="text-lg font-black" style={{ color: GOLD }}>{t.totalWaitingMinutes ?? 0} min</p>
+              <p className="text-lg font-black" style={{ color: BLUE }}>{t.totalWaitingMinutes ?? 0} min</p>
               <p className="text-[10px] text-gray-400">At location</p>
             </div>
           )}
           {t.estimatedDurationMinutes && !eta && !(t.totalWaitingMinutes) && (
             <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
               <p className="text-[10px] font-semibold text-gray-400 uppercase mb-1">Duration</p>
-              <p className="text-lg font-black" style={{ color: NAVY }}>~{t.estimatedDurationMinutes} min</p>
+              <p className="text-lg font-black" style={{ color: DARK }}>~{t.estimatedDurationMinutes} min</p>
               <p className="text-[10px] text-gray-400">Estimated</p>
             </div>
           )}
           {waitingActive && (
-            <div className="bg-white rounded-2xl p-4 shadow-sm border-2" style={{ borderColor: GOLD }}>
+            <div className="bg-white rounded-2xl p-4 shadow-sm border-2" style={{ borderColor: BLUE }}>
               <p className="text-[10px] font-semibold text-gray-400 uppercase mb-1">Waiting Now</p>
-              <p className="text-lg font-black font-mono" style={{ color: GOLD }}>{formatTime(waitingElapsed)}</p>
+              <p className="text-lg font-black font-mono" style={{ color: BLUE }}>{formatTime(waitingElapsed)}</p>
               <p className="text-[10px] text-gray-400">Comrade is waiting</p>
             </div>
           )}
@@ -557,8 +556,8 @@ export default function TaskDetail({ id }: Props) {
 
         {/* Phase 4: Queue Intelligence Card — Premium Navy/Gold Design */}
         {t.tokenNumber && (
-          <div className="rounded-2xl p-5 shadow-md border overflow-hidden relative" style={{ background: "linear-gradient(135deg, #331900, #663100)", borderColor: NAVY }}>
-            <div className="absolute top-0 right-0 w-32 h-32 rounded-full opacity-10" style={{ background: `radial-gradient(circle, ${GOLD}, transparent)`, transform: "translate(30%,-30%)" }} />
+          <div className="rounded-2xl p-5 shadow-md border overflow-hidden relative" style={{ background: "linear-gradient(135deg, #0F172A, #1E293B)", borderColor: DARK }}>
+            <div className="absolute top-0 right-0 w-32 h-32 rounded-full opacity-10" style={{ background: `radial-gradient(circle, ${BLUE}, transparent)`, transform: "translate(30%,-30%)" }} />
             <h3 className="font-bold text-white/80 text-xs uppercase tracking-wider mb-4 flex items-center gap-1.5">
               <Crosshair size={12} /> Queue Intelligence
             </h3>
@@ -569,7 +568,7 @@ export default function TaskDetail({ id }: Props) {
               </div>
               <div className="bg-white/10 backdrop-blur-sm rounded-xl p-3 text-center border border-white/10">
                 <p className="text-white/50 text-[9px] uppercase tracking-wide">Current</p>
-                <p className="text-2xl font-black mt-0.5" style={{ color: GOLD }}>{t.currentToken || "—"}</p>
+                <p className="text-2xl font-black mt-0.5" style={{ color: BLUE }}>{t.currentToken || "—"}</p>
               </div>
               <div className="bg-white/10 backdrop-blur-sm rounded-xl p-3 text-center border border-white/10">
                 <p className="text-white/50 text-[9px] uppercase tracking-wide">Counter</p>
@@ -587,11 +586,11 @@ export default function TaskDetail({ id }: Props) {
                   <>
                     <div className="bg-white/8 backdrop-blur-sm rounded-xl p-3 text-center border border-white/5">
                       <p className="text-white/40 text-[9px] uppercase">Tokens Ahead</p>
-                      <p className="text-lg font-black mt-0.5" style={{ color: GOLD }}>{gap != null ? gap : "—"}</p>
+                      <p className="text-lg font-black mt-0.5" style={{ color: BLUE }}>{gap != null ? gap : "—"}</p>
                     </div>
                     <div className="bg-white/8 backdrop-blur-sm rounded-xl p-3 text-center border border-white/5">
                       <p className="text-white/40 text-[9px] uppercase">Est. Wait</p>
-                      <p className="text-lg font-black mt-0.5" style={{ color: GOLD }}>{wait != null ? `${wait} min` : "—"}</p>
+                      <p className="text-lg font-black mt-0.5" style={{ color: BLUE }}>{wait != null ? `${wait} min` : "—"}</p>
                     </div>
                   </>
                 );
@@ -609,7 +608,7 @@ export default function TaskDetail({ id }: Props) {
                     <span className="text-white/70 text-xs font-bold">{progress}%</span>
                   </div>
                   <div className="w-full h-2 bg-white/10 rounded-full overflow-hidden">
-                    <div className="h-full rounded-full transition-all duration-500" style={{ width: `${progress}%`, background: `linear-gradient(90deg, ${GOLD}, #ffb066)` }} />
+                    <div className="h-full rounded-full transition-all duration-500" style={{ width: `${progress}%`, background: `linear-gradient(90deg, ${BLUE}, #ffb066)` }} />
                   </div>
                 </div>
               );
@@ -633,7 +632,7 @@ export default function TaskDetail({ id }: Props) {
                   </div>
                   <div className="text-center">
                     <p className="text-white/30 text-[8px] uppercase">Total Est.</p>
-                    <p className="font-bold text-sm" style={{ color: GOLD }}>{totalEst != null ? `${totalEst}m` : "—"}</p>
+                    <p className="font-bold text-sm" style={{ color: BLUE }}>{totalEst != null ? `${totalEst}m` : "—"}</p>
                   </div>
                 </div>
               );
@@ -648,7 +647,7 @@ export default function TaskDetail({ id }: Props) {
 
         {/* Live Status Timeline */}
         <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
-          <h3 className="font-bold text-[#241100] mb-4">Live Status</h3>
+          <h3 className="font-bold text-gray-900 mb-4">Live Status</h3>
           <div className="space-y-0">
             {TIMELINE_STEPS.map((step, i) => {
               const done = STATUS_ORDER.indexOf(step.status) <= statusIdx;
@@ -658,17 +657,17 @@ export default function TaskDetail({ id }: Props) {
                 <div key={step.status} className="flex items-start gap-3">
                   <div className="flex flex-col items-center">
                     <div className={`w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 transition-all border-2`}
-                      style={done ? { background: NAVY, borderColor: NAVY } : { background: "#F3F4F6", borderColor: "#E5E7EB" }}>
+                      style={done ? { background: DARK, borderColor: DARK } : { background: SURFACE_DIM, borderColor: "#E5E7EB" }}>
                       {done ? <CheckCircle2 size={14} className="text-white" /> : <span className="w-2 h-2 rounded-full bg-gray-300" />}
                     </div>
-                    {!isLast && <div className={`w-0.5 h-6 mt-1 ${done ? "" : "bg-gray-200"}`} style={done ? { background: NAVY } : {}} />}
+                    {!isLast && <div className={`w-0.5 h-6 mt-1 ${done ? "" : "bg-gray-200"}`} style={done ? { background: DARK } : {}} />}
                   </div>
                   <div className="pb-4">
                     <span className={`text-sm ${current ? "font-bold" : done ? "text-gray-700 font-medium" : "text-gray-400"}`}
-                      style={current ? { color: NAVY } : {}}>
+                      style={current ? { color: DARK } : {}}>
                       {step.label}
                       {current && ["assigned","on_the_way","at_location","in_progress","waiting_started"].includes(step.status) && (
-                        <span className="ml-2 w-1.5 h-1.5 rounded-full inline-block animate-pulse" style={{ background: GOLD }} />
+                        <span className="ml-2 w-1.5 h-1.5 rounded-full inline-block animate-pulse" style={{ background: BLUE }} />
                       )}
                     </span>
                   </div>
@@ -684,13 +683,13 @@ export default function TaskDetail({ id }: Props) {
           if (queueEntries.length === 0) return null;
           return (
             <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
-              <h3 className="font-bold text-[#241100] text-sm mb-3 flex items-center gap-1">
+              <h3 className="font-bold text-gray-900 text-sm mb-3 flex items-center gap-1">
                 <Navigation size={14} /> Queue Timeline
               </h3>
               <div className="space-y-2">
                 {queueEntries.map((entry: { status?: string; label?: string; timestamp?: string; proofType?: string }, i: number) => (
                   <div key={i} className="flex items-start gap-2 text-xs">
-                    <div className="w-2 h-2 rounded-full mt-1 flex-shrink-0" style={{ background: GOLD }} />
+                    <div className="w-2 h-2 rounded-full mt-1 flex-shrink-0" style={{ background: BLUE }} />
                     <div className="flex-1 min-w-0">
                       <p className="text-gray-700 font-medium">{entry.label}</p>
                       <p className="text-gray-400 mt-0.5">{entry.timestamp ? new Date(entry.timestamp).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" }) : ""}</p>
@@ -713,13 +712,13 @@ export default function TaskDetail({ id }: Props) {
         {t.status !== "completed" && t.status !== "cancelled" && !familyToken && !t.familyTrackingToken && (
           <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
             <div className="flex items-center justify-between mb-2">
-              <h3 className="font-bold text-[#241100] text-sm flex items-center gap-1"><Share2 size={14} /> Family Tracking</h3>
+              <h3 className="font-bold text-gray-900 text-sm flex items-center gap-1"><Share2 size={14} /> Family Tracking</h3>
             </div>
             <p className="text-xs text-gray-500 mb-3">Let your family track this task live — share a read-only link with them.</p>
             <button
               onClick={() => setShowFamilyModal(true)}
               className="w-full py-2.5 rounded-xl border-2 border-dashed flex items-center justify-center gap-2 text-sm font-semibold transition-all"
-              style={{ borderColor: NAVY + "40", color: NAVY }}
+              style={{ borderColor: DARK + "40", color: DARK }}
             >
               <UserPlus size={16} /> Add Family Contact
             </button>
@@ -728,7 +727,7 @@ export default function TaskDetail({ id }: Props) {
 
         {/* OTP section */}
         {t.otp && t.status !== "completed" && t.status !== "cancelled" && (
-          <div className="rounded-2xl p-5 text-white shadow-md" style={{ background: NAVY_GRAD }}>
+          <div className="rounded-2xl p-5 text-white shadow-md" style={{ background: DARK_GRAD }}>
             <p className="text-white/80 text-xs mb-2">Share this OTP with your Comrade to complete the task:</p>
             <div className="flex gap-2 mb-3">
               {String(t.otp).split("").map((d: string, i: number) => (
@@ -744,7 +743,7 @@ export default function TaskDetail({ id }: Props) {
         {/* Review section */}
         {t.status === "completed" && (
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
-            <h3 className="font-bold text-[#241100] mb-4">Rate your Comrade</h3>
+            <h3 className="font-bold text-gray-900 mb-4">Rate your Comrade</h3>
             <div className="flex gap-2 justify-center mb-4">
               {[1, 2, 3, 4, 5].map((star) => (
                 <button key={star} onClick={() => setRating(star)} className="transition-transform hover:scale-110">
@@ -757,16 +756,16 @@ export default function TaskDetail({ id }: Props) {
               value={reviewText} onChange={(e) => setReviewText(e.target.value)}
               placeholder="Write a review (optional)" rows={3}
               className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm mb-3 focus:outline-none focus:ring-2 resize-none"
-              style={{ "--tw-ring-color": NAVY } as React.CSSProperties}
+              style={{ "--tw-ring-color": DARK } as React.CSSProperties}
             />
             <textarea
               value={issueReport} onChange={(e) => setIssueReport(e.target.value)}
               placeholder="Report an issue? (optional)" rows={2}
               className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm mb-3 focus:outline-none focus:ring-2 resize-none"
-              style={{ "--tw-ring-color": NAVY, color: "#DC2626" } as React.CSSProperties}
+              style={{ "--tw-ring-color": DARK, color: "#DC2626" } as React.CSSProperties}
             />
             <button onClick={handleReview} disabled={submitReview.isPending || submitReview.isSuccess || feedbackLoading}
-              className="w-full py-3 rounded-xl text-white font-semibold" style={{ background: submitReview.isSuccess && feedbackSent ? "linear-gradient(135deg, #16A34A, #22C55E)" : NAVY_GRAD }}>
+              className="w-full py-3 rounded-xl text-white font-semibold" style={{ background: submitReview.isSuccess && feedbackSent ? "linear-gradient(135deg, #16A34A, #22C55E)" : DARK_GRAD }}>
               {submitReview.isSuccess && feedbackSent ? "✓ Review & Feedback Submitted" : submitReview.isPending || feedbackLoading ? "Submitting..." : "Submit Review"}
             </button>
           </motion.div>
@@ -783,7 +782,7 @@ export default function TaskDetail({ id }: Props) {
               <div className="w-10 h-1 bg-gray-200 rounded-full mx-auto mb-4" />
               <div className="flex items-center gap-2 mb-2">
                 <AlertTriangle size={18} className="text-red-500" />
-                <h3 className="font-black text-[#241100] text-lg">Dispute Payment</h3>
+                <h3 className="font-black text-gray-900 text-lg">Dispute Payment</h3>
               </div>
               <p className="text-gray-400 text-sm mb-4">Are you sure you want to dispute this payment? Admin will review the case.</p>
               <div className="space-y-3">
@@ -815,7 +814,7 @@ export default function TaskDetail({ id }: Props) {
             <motion.div initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }} transition={{ type: "spring", stiffness: 200, damping: 25 }}
               className="fixed bottom-0 left-0 right-0 bg-white rounded-t-3xl z-50 p-6 shadow-2xl">
               <div className="w-10 h-1 bg-gray-200 rounded-full mx-auto mb-4" />
-              <h3 className="font-black text-[#241100] text-lg mb-1">Family Tracking</h3>
+              <h3 className="font-black text-gray-900 text-lg mb-1">Family Tracking</h3>
               <p className="text-gray-400 text-sm mb-4">Add a family contact to generate a read-only tracking link.</p>
               {familyToken ? (
                 <div>
@@ -823,18 +822,18 @@ export default function TaskDetail({ id }: Props) {
                     <p className="text-green-700 font-bold text-sm">✓ Tracking Link Created!</p>
                     <p className="text-green-600 text-xs mt-1">The link has been copied to your clipboard. Share it with your family.</p>
                   </div>
-                  <button onClick={() => setShowFamilyModal(false)} className="w-full py-3 rounded-xl text-white font-bold" style={{ background: NAVY_GRAD }}>
+                  <button onClick={() => setShowFamilyModal(false)} className="w-full py-3 rounded-xl text-white font-bold" style={{ background: DARK_GRAD }}>
                     Done
                   </button>
                 </div>
               ) : (
                 <div className="space-y-3">
                   <input value={familyName} onChange={e => setFamilyName(e.target.value)} placeholder="Family member name"
-                    className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2" style={{ "--tw-ring-color": NAVY } as React.CSSProperties} />
+                    className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2" style={{ "--tw-ring-color": DARK } as React.CSSProperties} />
                   <input value={familyPhone} onChange={e => setFamilyPhone(e.target.value)} placeholder="Phone number"
-                    className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2" style={{ "--tw-ring-color": NAVY } as React.CSSProperties} />
+                    className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2" style={{ "--tw-ring-color": DARK } as React.CSSProperties} />
                   <button onClick={handleFamilyTracking}
-                    className="w-full py-3 rounded-xl text-white font-bold" style={{ background: NAVY_GRAD }}>
+                    className="w-full py-3 rounded-xl text-white font-bold" style={{ background: DARK_GRAD }}>
                     Generate Tracking Link
                   </button>
                 </div>

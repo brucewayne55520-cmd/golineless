@@ -8,7 +8,7 @@ import type { Task, Runner } from "@workspace/api-client-react";
 import { RunnerBottomNav } from "@/components/BottomNav";
 import { CategoryIcon } from "@/components/CategoryIcon";
 import { CATEGORY_NAMES, formatCurrency } from "@/lib/utils";
-import { NAVY, NAVY_GRAD, GOLD, GOLD_GRAD } from "@/lib/theme";
+import { BLUE, BLUE_GRAD } from "@/lib/theme";
 import { EmptyState } from "@/components/EmptyState";
 import { useGpsTracking } from "@/hooks/useGpsTracking";
 
@@ -32,13 +32,13 @@ function ReadinessBanner({ runner }: { runner: Runner }) {
 
   if (isLoading || !score) return (
     <div className="bg-white/8 border border-white/10 rounded-xl p-3 flex items-center gap-3">
-      <Loader2 size={16} className="animate-spin text-[#ff7b00]" />
+      <Loader2 size={16} className="animate-spin text-blue-600" />
       <span className="text-white/50 text-xs">Checking readiness...</span>
     </div>
   );
 
   const scoreVal = score.score ?? 0;
-  const scoreColor = scoreVal >= 80 ? "#22C55E" : scoreVal >= 50 ? "#ff7b00" : "#EF4444";
+  const scoreColor = scoreVal >= 80 ? "#22C55E" : scoreVal >= 50 ? "#3B82F6" : "#EF4444";
   const scoreLabel = score.status === "ready" ? "Ready for Dispatch" : score.status === "partial" ? "Almost Ready" : "Setup Required";
 
   const items: { key: string; label: string; icon: import("lucide-react").LucideIcon; ok: boolean }[] = [
@@ -55,7 +55,7 @@ function ReadinessBanner({ runner }: { runner: Runner }) {
     <div className="bg-white/8 border border-white/10 rounded-xl p-3">
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center gap-2">
-          <Wifi size={14} className="text-[#ff7b00]" />
+          <Wifi size={14} className="text-blue-600" />
           <span className="text-white text-xs font-bold">Dispatch Readiness</span>
         </div>
         <div className="flex items-center gap-1.5">
@@ -82,8 +82,8 @@ function ReadinessBanner({ runner }: { runner: Runner }) {
       {score.missingItems && score.missingItems.length > 0 && scoreVal < 100 && runner.kycStatus === "pending" && (
         <button
           onClick={() => navigate("/runner/onboarding")}
-          className="mt-2 w-full py-2 rounded-xl text-[#241100] text-xs font-black flex items-center justify-center gap-1"
-          style={{ background: "linear-gradient(135deg, #ff7b00, #ffb066)" }}
+          className="mt-2 w-full py-2 rounded-xl text-gray-900 text-xs font-black flex items-center justify-center gap-1"
+          style={{ background: "linear-gradient(135deg, #3B82F6, #60A5FA)" }}
         >
           Complete Setup ({score.missingItems?.length} steps left)
         </button>
@@ -93,7 +93,7 @@ function ReadinessBanner({ runner }: { runner: Runner }) {
 }
 
 function getTrustLevel(tasks: number, rating: number): { label: string; color: string; icon: string } {
-  if (tasks >= 100 && rating >= 4.7) return { label: "Elite Comrade", color: "#ff7b00", icon: "⭐" };
+  if (tasks >= 100 && rating >= 4.7) return { label: "Elite Comrade", color: "#3B82F6", icon: "⭐" };
   if (tasks >= 50 && rating >= 4.5) return { label: "Pro Comrade", color: "#10B981", icon: "🏆" };
   if (tasks >= 20 && rating >= 4.0) return { label: "Trusted Comrade", color: "#3B82F6", icon: "✓" };
   if (tasks >= 5) return { label: "Active Comrade", color: "#9CA3AF", icon: "◎" };
@@ -120,7 +120,7 @@ function TaskCard({ task, onAccept, acceptingId, expanded, detail, loadingDetail
               <h3 className="font-black text-white text-sm">{CATEGORY_NAMES[task.category]}</h3>
             </div>
             <div className="text-right flex-shrink-0">
-              <div className="text-sm font-black" style={{ color: GOLD }}>
+              <div className="text-sm font-black" style={{ color: BLUE }}>
                 {formatCurrency(runnerCut)}
               </div>
               <div className="text-[9px] text-white/40">your payout</div>
@@ -161,7 +161,7 @@ function TaskCard({ task, onAccept, acceptingId, expanded, detail, loadingDetail
           )}
           {/* M14: Show actual computed distance */}
           {distance != null && (
-            <span className="bg-white/8 border border-white/10 text-[#ff7b00] text-[10px] font-bold px-2 py-1 rounded-lg flex items-center gap-1">
+            <span className="bg-white/8 border border-white/10 text-blue-600 text-[10px] font-bold px-2 py-1 rounded-lg flex items-center gap-1">
               📍 {distance} km away
             </span>
           )}
@@ -229,8 +229,8 @@ function TaskCard({ task, onAccept, acceptingId, expanded, detail, loadingDetail
           <button
             onClick={() => onAccept(task.id)}
             disabled={acceptingId === task.id}
-            className="flex-1 py-2.5 rounded-xl text-[#241100] text-sm font-black flex items-center justify-center gap-1.5 transition-all hover:shadow-lg disabled:opacity-60"
-            style={{ background: GOLD_GRAD }}
+            className="flex-1 py-2.5 rounded-xl text-gray-900 text-sm font-black flex items-center justify-center gap-1.5 transition-all hover:shadow-lg disabled:opacity-60"
+            style={{ background: BLUE_GRAD }}
           >
             <CheckCircle size={14} />
             {acceptingId === task.id ? "Accepting..." : "Accept Task"}
@@ -431,11 +431,11 @@ export default function RunnerFeed() {
               <div className="flex-1">
                 <div className="flex items-center justify-between mb-1">
                   <span className="text-white text-xs font-bold">{trust.label}</span>
-                  <span className="text-xs font-bold" style={{ color: GOLD }}>{formatCurrency(earningsToday)} today</span>
+                  <span className="text-xs font-bold" style={{ color: BLUE }}>{formatCurrency(earningsToday)} today</span>
                 </div>
                 <div className="flex items-center gap-3">
                   <div className="flex items-center gap-1">
-                    <Star size={10} fill={GOLD} style={{ color: GOLD }} />
+                    <Star size={10} fill={BLUE} style={{ color: BLUE }} />
                     <span className="text-white/60 text-[10px]">{rating > 0 ? rating.toFixed(1) : "—"} rating</span>
                   </div>
                   <div className="flex items-center gap-1">
@@ -466,7 +466,7 @@ export default function RunnerFeed() {
             {runner.kycStatus === "rejected"
               ? `Reason: ${runner.kycRejectionReason ?? "Documents unclear. Please resubmit."} `
               : "Complete your identity verification to start earning. Usually verified within 24 hours. "}
-            <button onClick={() => navigate("/runner/profile")} className="font-bold underline" style={{ color: GOLD }}>
+            <button onClick={() => navigate("/runner/profile")} className="font-bold underline" style={{ color: BLUE }}>
               {runner.kycStatus === "rejected" ? "Resubmit KYC →" : "Complete KYC →"}
             </button>
           </p>
@@ -509,7 +509,7 @@ export default function RunnerFeed() {
         {/* M4: Pull-to-refresh indicator + refresh button */}
         {isFetching && !isLoading && (
           <div className="flex items-center justify-center gap-2 py-2 mb-2">
-            <RotateCw size={12} className="animate-spin text-[#ff7b00]" />
+            <RotateCw size={12} className="animate-spin text-blue-600" />
             <span className="text-white/40 text-[10px]">Refreshing...</span>
           </div>
         )}

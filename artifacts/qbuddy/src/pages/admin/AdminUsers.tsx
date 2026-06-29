@@ -60,10 +60,10 @@ export default function AdminUsers() {
       <main className="flex-1 overflow-y-auto p-6">
         <div className="flex items-center justify-between mb-5">
           <div>
-            <h1 className="text-2xl font-bold text-[#241100] dark:text-[#fff2e5] flex items-center gap-2">Users</h1>
-            <p className="text-[#6B7280] text-sm">Page {page + 1} · {filtered.length} users shown{kycFilter !== "all" ? ` (${kycFilter})` : ""}{selectedIds.size > 0 ? ` · ${selectedIds.size} selected` : ""}</p>
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">Users</h1>
+            <p className="text-gray-500 text-sm">Page {page + 1} · {filtered.length} users shown{kycFilter !== "all" ? ` (${kycFilter})` : ""}{selectedIds.size > 0 ? ` · ${selectedIds.size} selected` : ""}</p>
           </div>
-          <button onClick={exportCsv} disabled={filtered.length === 0} className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold bg-white dark:bg-[#1F2937] border border-[#E5E0D8] dark:border-[#374151] hover:bg-[#FFF9F2] dark:hover:bg-[#111827] disabled:opacity-40 gl-transition">
+          <button onClick={exportCsv} disabled={filtered.length === 0} className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold bg-white dark:bg-[#1F2937] border border-gray-200 dark:border-[#374151] hover:bg-gray-50 dark:hover:bg-[#111827] disabled:opacity-40 gl-transition">
             <Download size={14} /> Export CSV{selectedIds.size > 0 ? ` (${selectedIds.size})` : ""}
           </button>
         </div>
@@ -71,17 +71,17 @@ export default function AdminUsers() {
         {/* Search + KYC Filter */}
         <div className="flex flex-wrap gap-3 mb-4">
           <div className="relative flex-1 min-w-[200px] max-w-md">
-            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#9CA3AF]" />
+            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
             <input
               value={search}
               onChange={e => { setSearch(e.target.value); setPage(0); }}
               placeholder="Search by name, phone, email, or ID..."
-              className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-[#E5E0D8] dark:border-[#374151] text-sm focus:outline-none focus:ring-2 focus:ring-[#241100] bg-white dark:bg-[#1F2937] dark:text-[#fff2e5] gl-transition"
+              className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-gray-200 dark:border-[#374151] text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-[#1F2937] dark:text-gray-100 gl-transition"
             />
           </div>
-          <div className="flex gap-1 bg-white dark:bg-[#1F2937] p-1 rounded-xl border border-[#E5E0D8] dark:border-[#374151]">
+          <div className="flex gap-1 bg-white dark:bg-[#1F2937] p-1 rounded-xl border border-gray-200 dark:border-[#374151]">
             {["all", "pending", "verified", "rejected"].map(f => (
-              <button key={f} onClick={() => { setKycFilter(f); setPage(0); }} className={`px-3 py-1.5 rounded-lg text-xs font-semibold gl-transition ${kycFilter === f ? "bg-[#241100] dark:bg-[#ff7b00] text-white dark:text-[#241100]" : "text-[#6B7280] hover:bg-[#F3F4F6] dark:hover:bg-[#374151]"}`}>
+              <button key={f} onClick={() => { setKycFilter(f); setPage(0); }} className={`px-3 py-1.5 rounded-lg text-xs font-semibold gl-transition ${kycFilter === f ? "bg-gray-900 dark:bg-blue-600 text-white dark:text-gray-900" : "text-gray-500 hover:bg-gray-100 dark:hover:bg-[#374151]"}`}>
                 {f === "all" ? "All" : f.charAt(0).toUpperCase() + f.slice(1)}
 
               </button>
@@ -89,13 +89,13 @@ export default function AdminUsers() {
           </div>
         </div>
 
-        <div className="bg-white dark:bg-[#111827] rounded-2xl gl-shadow-md border border-[#E5E0D8] dark:border-[#1F2937] overflow-hidden">
+        <div className="bg-white dark:bg-[#111827] rounded-2xl gl-shadow-md border border-gray-200 dark:border-[#1F2937] overflow-hidden">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-[#E5E0D8] dark:border-[#1F2937]">
+              <tr className="border-b border-gray-200 dark:border-[#1F2937]">
                 <th className="px-4 py-3"><input type="checkbox" checked={allSelected} onChange={toggleSelectAll} className="rounded" /></th>
                 {["User", "Unique ID", "Phone", "KYC", "City", "Joined"].map(h => (
-                  <th key={h} className="text-left px-4 py-3 text-xs font-semibold text-[#6B7280] uppercase">{h}</th>
+                  <th key={h} className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">{h}</th>
                 ))}
               </tr>
             </thead>
@@ -108,24 +108,24 @@ export default function AdminUsers() {
                 <tr><td colSpan={6} className="text-center py-12 text-gray-400">No users found</td></tr>
               ) : (
                 filtered.map(user => (
-                  <tr key={user.id} className="border-b border-[#F3F4F6] dark:border-[#1F2937] hover:bg-[#FFF9F2] dark:hover:bg-[#1F2937] gl-transition">
+                  <tr key={user.id} className="border-b border-gray-100 dark:border-[#1F2937] hover:bg-gray-50 dark:hover:bg-[#1F2937] gl-transition">
                     <td className="px-4 py-3"><input type="checkbox" checked={selectedIds.has(user.id)} onChange={() => toggleSelect(user.id)} className="rounded" onClick={e => e.stopPropagation()} /></td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 gl-navy rounded-full flex items-center justify-center text-[#ff7b00] text-xs font-bold">
+                        <div className="w-8 h-8 gl-navy rounded-full flex items-center justify-center text-blue-600 text-xs font-bold">
                           {getInitials(user.name ?? user.phone)}
                         </div>
                         <div>
-                          <span className="font-medium text-[#241100] dark:text-[#fff2e5] block">{user.name ?? "—"}</span>
-                          {user.email && <span className="text-[10px] text-[#9CA3AF]">{user.email}</span>}
+                          <span className="font-medium text-gray-900 dark:text-gray-100 block">{user.name ?? "—"}</span>
+                          {user.email && <span className="text-[10px] text-gray-400">{user.email}</span>}
                         </div>
                       </div>
                     </td>
-                    <td className="px-4 py-3 font-mono text-xs text-[#6B7280]">{user.uniqueId ?? <span className="text-[#D1D5DB]">—</span>}</td>
-                    <td className="px-4 py-3 text-[#6B7280]">{user.phone ?? "—"}</td>
+                    <td className="px-4 py-3 font-mono text-xs text-gray-500">{user.uniqueId ?? <span className="text-[#D1D5DB]">—</span>}</td>
+                    <td className="px-4 py-3 text-gray-500">{user.phone ?? "—"}</td>
                     <td className="px-4 py-3"><KycBadge status={user.kycStatus} /></td>
-                    <td className="px-4 py-3 text-[#6B7280]">{user.city ?? "—"}</td>
-                    <td className="px-4 py-3 text-[#9CA3AF] text-xs">{user.createdAt ? new Date(user.createdAt).toLocaleDateString("en-IN") : "—"}</td>
+                    <td className="px-4 py-3 text-gray-500">{user.city ?? "—"}</td>
+                    <td className="px-4 py-3 text-gray-400 text-xs">{user.createdAt ? new Date(user.createdAt).toLocaleDateString("en-IN") : "—"}</td>
                   </tr>
                 ))
               )}

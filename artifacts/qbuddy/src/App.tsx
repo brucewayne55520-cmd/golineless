@@ -61,7 +61,7 @@ const queryClient = new QueryClient({
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { token, role, isLoading } = useAuth();
   const [, navigate] = useLocation();
-  if (isLoading) return <div className="min-h-screen flex items-center justify-center gl-surface"><div className="w-8 h-8 border-4 rounded-full animate-spin border-[#ff7b00] border-t-transparent" /></div>;
+  if (isLoading) return <div className="min-h-screen flex items-center justify-center gl-surface"><div className="w-8 h-8 border-4 rounded-full animate-spin border-blue-600 border-t-transparent" /></div>;
   if (!token || role !== "user") { navigate("/login"); return null; }
   return <>{children}</>;
 }
@@ -69,7 +69,7 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 function RunnerProtectedRoute({ children }: { children: React.ReactNode }) {
   const { token, role, isLoading } = useAuth();
   const [, navigate] = useLocation();
-  if (isLoading) return <div className="min-h-screen flex items-center justify-center gl-surface"><div className="w-8 h-8 border-4 rounded-full animate-spin border-[#ff7b00] border-t-transparent" /></div>;
+  if (isLoading) return <div className="min-h-screen flex items-center justify-center gl-surface"><div className="w-8 h-8 border-4 rounded-full animate-spin border-blue-600 border-t-transparent" /></div>;
   if (!token || role !== "runner") { navigate("/runner/login"); return null; }
   return <>{children}</>;
 }
@@ -86,8 +86,8 @@ function Router() {
     <Suspense fallback={
       <div className="min-h-screen flex items-center justify-center gl-surface">
         <div className="text-center">
-          <div className="w-10 h-10 border-4 rounded-full animate-spin mx-auto mb-3 border-[#ff7b00] border-t-transparent" />
-          <p className="text-[#2A3F5F] text-sm font-medium">Loading...</p>
+          <div className="w-10 h-10 border-4 rounded-full animate-spin mx-auto mb-3 border-blue-600 border-t-transparent" />
+          <p className="text-gray-500 text-sm font-medium">Loading...</p>
         </div>
       </div>
     }>
@@ -152,7 +152,7 @@ function Router() {
 import { useState, useEffect } from "react";
 import { useAdminLogin } from "@workspace/api-client-react";
 import { toast } from "sonner";
-import { NAVY_GRAD, GOLD_GRAD } from "@/lib/theme";
+import { DARK_GRAD } from "@/lib/theme";
 
 function AdminLoginPage() {
   const [password, setPassword] = useState("");
@@ -171,13 +171,14 @@ function AdminLoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4" style={{ background: NAVY_GRAD }}>        <div className="bg-white rounded-2xl p-8 gl-shadow-xl w-full max-w-sm">
+    <div className="min-h-screen flex items-center justify-center px-4" style={{ background: DARK_GRAD }}>
+      <div className="bg-white rounded-2xl p-8 gl-shadow-xl w-full max-w-sm border border-gray-100">
         <div className="text-center mb-6">
           <div className="gl-navy rounded-xl p-3 inline-block mb-4">
             <img src="/logo.jpg" alt="Go LineLess" className="h-14 w-auto" />
           </div>
-          <h1 className="text-2xl font-bold text-[#241100]">Admin Panel</h1>
-          <p className="text-[#2A3F5F] text-sm mt-1">Go LineLess Command Center</p>
+          <h1 className="text-2xl font-bold text-gray-900">Admin Panel</h1>
+          <p className="text-gray-500 text-sm mt-1">Go LineLess Command Center</p>
         </div>
         <form onSubmit={handleSubmit} className="space-y-4">
           <input
@@ -185,13 +186,12 @@ function AdminLoginPage() {
             placeholder="Admin password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="w-full px-4 py-3 rounded-xl border border-[#E5E0D8] focus:outline-none focus:ring-2 focus:ring-[#241100] text-[#241100] bg-[#FFF9F2] gl-transition"
+            className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 text-gray-900 bg-gray-50 gl-transition"
           />
           <button
             type="submit"
             disabled={mutation.isPending}
-            className="w-full py-3 rounded-xl font-bold text-[#241100] gl-transition hover:gl-shadow-lg active:scale-[0.98]"
-            style={{ background: GOLD_GRAD }}
+            className="w-full py-3 rounded-xl font-bold text-white bg-blue-600 gl-transition hover:bg-blue-700 hover:gl-shadow-lg active:scale-[0.98]"
           >
             {mutation.isPending ? "Verifying..." : "Enter Admin Panel"}
           </button>
@@ -241,12 +241,11 @@ function App() {
             <Router />
           </WouterRouter>
           {updateAvailable && (
-            <div className="fixed bottom-20 left-1/2 -translate-x-1/2 z-[100] gl-navy border border-[#ff7b00]/30 text-white px-5 py-3 rounded-2xl gl-shadow-xl flex items-center gap-3" style={{ maxWidth: "90vw" }}>
+            <div className="fixed bottom-20 left-1/2 -translate-x-1/2 z-[100] gl-navy border border-blue-500/30 text-white px-5 py-3 rounded-2xl gl-shadow-xl flex items-center gap-3" style={{ maxWidth: "90vw" }}>
               <span className="text-sm font-semibold">New version available</span>
               <button
                 onClick={() => window.location.reload()}
-                className="px-3 py-1.5 rounded-xl text-xs font-bold text-[#241100] shrink-0 gl-transition hover:gl-shadow-gold active:scale-[0.98]"
-                style={{ background: GOLD_GRAD }}
+                className="px-3 py-1.5 rounded-xl text-xs font-bold text-white shrink-0 bg-blue-600 gl-transition hover:bg-blue-700 active:scale-[0.98]"
               >
                 Update
               </button>

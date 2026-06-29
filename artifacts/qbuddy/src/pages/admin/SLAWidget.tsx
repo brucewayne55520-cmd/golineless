@@ -1,7 +1,7 @@
 import { motion } from "framer-motion";
 import { useGetSlaMonitoring } from "@workspace/api-client-react";
 import { Timer } from "lucide-react";
-import { NAVY, GOLD } from "@/lib/theme";
+import { DARK, BLUE, DARK_MUTED } from "@/lib/theme";
 
 export default function SLAWidget() {
   const { data: sla } = useGetSlaMonitoring({ query: { queryKey: ["slaMonitoring"], refetchInterval: 30000 } });
@@ -21,13 +21,13 @@ export default function SLAWidget() {
       className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 mb-5"
       style={{ borderLeft: "4px solid #3B82F6" }}
     >
-      <h3 className="font-black text-[#241100] text-sm mb-3 flex items-center gap-2">
+      <h3 className="font-black text-gray-900 text-sm mb-3 flex items-center gap-2">
         <Timer size={14} className="text-blue-500" /> SLA Monitoring
       </h3>
 
       <div className="grid grid-cols-4 gap-3 mb-4">
         {(Object.entries(sla.gradeDist || {}) as [string, number][]).map(([grade, count]) => (
-          <div key={grade} className="rounded-xl p-3 text-center" style={{ background: `${gradeColors[grade] || "#6B7280"}10` }}>
+          <div key={grade} className="rounded-xl p-3 text-center" style={{ background: `${gradeColors[grade] || DARK_MUTED}10` }}>
             <p className="text-lg font-black" style={{ color: gradeColors[grade] }}>{count}</p>
             <p className="text-[9px] font-semibold uppercase tracking-wide" style={{ color: gradeColors[grade] }}>{grade}</p>
           </div>
@@ -37,13 +37,13 @@ export default function SLAWidget() {
       <div className="grid grid-cols-2 gap-4">
         <div className="bg-gray-50 rounded-xl p-3">
           <p className="text-[10px] text-gray-400 font-semibold uppercase mb-1">Avg Acceptance</p>
-          <p className="text-lg font-black" style={{ color: NAVY }}>
+          <p className="text-lg font-black" style={{ color: DARK }}>
             {(sla.avgAcceptanceTime ?? 0) > 60 ? `${Math.round((sla.avgAcceptanceTime ?? 0) / 60)}m ${(sla.avgAcceptanceTime ?? 0) % 60}s` : `${sla.avgAcceptanceTime || 0}s`}
           </p>
         </div>
         <div className="bg-gray-50 rounded-xl p-3">
           <p className="text-[10px] text-gray-400 font-semibold uppercase mb-1">Avg Completion</p>
-          <p className="text-lg font-black" style={{ color: GOLD }}>
+          <p className="text-lg font-black" style={{ color: BLUE }}>
             {sla.avgCompletionTime || 0}<span className="text-sm font-medium text-gray-400"> min</span>
           </p>
         </div>
@@ -56,7 +56,7 @@ export default function SLAWidget() {
               key={grade}
               initial={{ width: 0 }}
               animate={{ width: `${(Number(count) / total) * 100}%` }}
-              style={{ background: gradeColors[grade] || "#6B7280" }}
+              style={{ background: gradeColors[grade] || DARK_MUTED }}
             />
           ) : null
         ))}

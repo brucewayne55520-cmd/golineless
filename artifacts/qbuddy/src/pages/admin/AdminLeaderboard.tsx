@@ -3,7 +3,7 @@ import { motion } from "framer-motion";
 import { useGetLeaderboard } from "@workspace/api-client-react";
 import AdminSidebar from "@/components/AdminSidebar";
 import { Medal } from "lucide-react";
-import { NAVY, GOLD } from "@/lib/theme";
+import { DARK, BLUE } from "@/lib/theme";
 
 const BADGE_COLORS: Record<string, string> = {
   elite: "text-yellow-500", reliable: "text-green-500", improving: "text-blue-500", at_risk: "text-red-500",
@@ -19,14 +19,14 @@ export default function AdminLeaderboard() {
       <main className="flex-1 overflow-y-auto p-6">
         <div className="flex items-center justify-between mb-5">
           <div>
-            <h1 className="text-xl font-black text-[#241100]">Comrade Leaderboard</h1>
+            <h1 className="text-xl font-black text-gray-900">Comrade Leaderboard</h1>
             <p className="text-gray-400 text-xs mt-0.5">{data?.total ?? 0} verified comrades</p>
           </div>
           <div className="flex items-center gap-2 bg-white rounded-xl border border-gray-200 p-1">
             {["lifetime", "weekly", "monthly"].map(p => (
               <button key={p} onClick={() => setPeriod(p)}
                 className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${period === p ? "text-white" : "text-gray-400 hover:text-gray-700"}`}
-                style={period === p ? { background: NAVY } : {}}
+                style={period === p ? { background: DARK } : {}}
               >
                 {p.charAt(0).toUpperCase() + p.slice(1)}
               </button>
@@ -60,13 +60,13 @@ export default function AdminLeaderboard() {
 
                     {/* Avatar */}
                     <div className="w-10 h-10 rounded-full flex items-center justify-center text-white text-sm font-bold flex-shrink-0"
-                      style={{ background: i < 3 ? `linear-gradient(135deg, ${GOLD}, #ffb066)` : `linear-gradient(135deg, ${NAVY}, #663100)` }}>
+                      style={{ background: i < 3 ? `linear-gradient(135deg, ${BLUE}, #60A5FA)` : `linear-gradient(135deg, ${DARK}, #1E293B)` }}>
                       {c.name?.[0] ?? "C"}
                     </div>
 
                     {/* Info */}
                     <div className="flex-1 min-w-0">
-                      <p className="font-bold text-[#241100] text-sm truncate">{c.name}</p>
+                      <p className="font-bold text-gray-900 text-sm truncate">{c.name}</p>
                       <div className="flex items-center gap-2 text-[10px] text-gray-400 mt-0.5">
                         <span className={`flex items-center gap-0.5 ${BADGE_COLORS[c.trustBadge] || "text-gray-400"}`}>
                           <Medal size={10} /> {c.trustBadge?.replace("_", " ")}
@@ -81,7 +81,7 @@ export default function AdminLeaderboard() {
                     {/* Metrics */}
                     <div className="flex items-center gap-4 text-right">
                       <div>
-                        <p className="text-xs font-bold" style={{ color: GOLD }}>{c.trustScore}</p>
+                        <p className="text-xs font-bold" style={{ color: BLUE }}>{c.trustScore}</p>
                         <p className="text-[9px] text-gray-400">Trust</p>
                       </div>
                       <div>

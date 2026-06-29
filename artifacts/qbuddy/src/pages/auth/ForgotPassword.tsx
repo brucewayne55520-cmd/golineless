@@ -21,41 +21,40 @@ export default function ForgotPassword() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, role: "user" }),
       });
-      await res.json(); // Always shows success message (prevents email enumeration)
+      await res.json();
       setSent(true);
     } catch { toast.error("Network error"); }
     setLoading(false);
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4" style={{ background: "linear-gradient(135deg, #FFF9F2, #EEF2FA)" }}>
+    <div className="min-h-screen flex items-center justify-center px-4 bg-gray-50">
       <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }} className="w-full max-w-sm">
-        <div className="bg-white rounded-3xl p-8 shadow-xl border border-gray-100">
+        <div className="bg-white rounded-2xl p-8 shadow-lg border border-gray-100">
           <div className="text-center mb-8">
-            <div className="inline-block bg-white border border-gray-100 rounded-2xl p-3 shadow-sm mb-4">
+            <div className="inline-block bg-white border border-gray-100 rounded-xl p-3 shadow-sm mb-4">
               <img src="/logo.jpg" alt="Go LineLess" className="h-14 w-auto" />
             </div>
-            <h1 className="text-2xl font-black text-[#241100]">
+            <h1 className="text-2xl font-extrabold text-gray-900">
               {sent ? "Check your email" : "Forgot password?"}
             </h1>
-            <p className="text-gray-500 text-sm mt-1">
+            <p className="text-gray-400 text-sm mt-1">
               {sent ? "We sent a reset link to your email." : "Enter your email and we'll send you a reset link."}
             </p>
           </div>
 
           {sent ? (
             <div className="text-center py-4">
-              <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-green-100 mb-4">
-                <svg className="w-8 h-8 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
+              <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-blue-50 mb-4">
+                <svg className="w-8 h-8 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
               </div>
               <p className="text-gray-500 text-sm mb-1">We sent a password reset link to</p>
-              <p className="font-semibold text-[#241100] text-sm">{email}</p>
+              <p className="font-semibold text-gray-900 text-sm">{email}</p>
               <p className="text-gray-400 text-xs mt-3">Click the link in the email to reset your password. The link expires in 1 hour.</p>
               <button
                 type="button"
                 onClick={() => navigate("/login")}
-                className="mt-6 w-full py-3 rounded-xl text-white font-bold text-sm"
-                style={{ background: "linear-gradient(135deg, #331900, #1A3A7A)" }}
+                className="mt-6 w-full py-3 rounded-xl bg-blue-600 text-white font-bold text-sm hover:bg-blue-700 transition-all shadow-md"
               >
                 Back to login
               </button>
@@ -69,15 +68,14 @@ export default function ForgotPassword() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="you@example.com"
-                  className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#331900]/30 focus:border-[#331900] transition"
+                  className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition"
                   required
                 />
               </div>
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full py-3 rounded-xl text-white font-bold text-sm transition-opacity disabled:opacity-60"
-                style={{ background: "linear-gradient(135deg, #331900, #1A3A7A)" }}
+                className="w-full py-3 rounded-xl bg-blue-600 text-white font-bold text-sm transition-all hover:bg-blue-700 disabled:opacity-60 shadow-md"
               >
                 {loading ? "Sending..." : "Send reset link"}
               </button>
@@ -86,7 +84,7 @@ export default function ForgotPassword() {
         </div>
 
         <p className="text-center text-sm text-gray-500 mt-4">
-          <button type="button" onClick={() => navigate("/login")} className="font-semibold" style={{ color: "#331900" }}>
+          <button type="button" onClick={() => navigate("/login")} className="font-semibold text-blue-600 hover:text-blue-700">
             Back to login
           </button>
         </p>

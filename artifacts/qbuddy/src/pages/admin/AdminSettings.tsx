@@ -3,7 +3,7 @@ import { toast } from "sonner";
 import { useGetAdminSettings, useUpdateAdminSettings } from "@workspace/api-client-react";
 import type { AdminSettings } from "@workspace/api-client-react";
 import AdminSidebar from "@/components/AdminSidebar";
-import { GOLD_GRAD } from "@/lib/theme";
+import { BLUE_GRAD } from "@/lib/theme";
 
 export default function AdminSettings() {
   const { data: settings, isLoading, refetch } = useGetAdminSettings();
@@ -56,17 +56,17 @@ export default function AdminSettings() {
       <AdminSidebar />
       <main className="flex-1 overflow-y-auto p-6">
         <div className="mb-5">
-          <h1 className="text-2xl font-bold text-[#241100] dark:text-[#fff2e5]">Settings</h1>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Settings</h1>
         </div>
 
         {isLoading || !form ? (
           <div className="max-w-2xl space-y-4">
-            {[1,2,3,4].map(i => <div key={i} className="h-24 bg-[#E5E0D8] rounded-2xl animate-pulse" />)}
+            {[1,2,3,4].map(i => <div key={i} className="h-24 bg-gray-200 rounded-2xl animate-pulse" />)}
           </div>
         ) : (
           <div className="max-w-2xl space-y-5">
-            <div className="bg-white dark:bg-[#111827] rounded-2xl p-5 gl-shadow-md border border-[#E5E0D8] dark:border-[#1F2937]">
-              <h2 className="font-bold text-[#241100] dark:text-[#fff2e5] mb-4">App Info</h2>
+            <div className="bg-white dark:bg-[#111827] rounded-2xl p-5 gl-shadow-md border border-gray-200 dark:border-[#1F2937]">
+              <h2 className="font-bold text-gray-900 dark:text-gray-100 mb-4">App Info</h2>
               <div className="space-y-3">
                 {[
                   { key: "appName" as const, label: "App Name" },
@@ -76,19 +76,19 @@ export default function AdminSettings() {
                   { key: "whatsappNumber" as const, label: "WhatsApp Number" },
                 ].map(f => (
                   <div key={f.key}>
-                    <label className="text-xs font-medium text-[#6B7280] mb-1 block">{f.label}</label>
+                    <label className="text-xs font-medium text-gray-500 mb-1 block">{f.label}</label>
                     <input
                       value={form[f.key] ?? ""}
                       onChange={e => set(f.key, e.target.value)}
-                      className="w-full border border-[#E5E0D8] dark:border-[#374151] rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#241100] bg-white dark:bg-[#1F2937] dark:text-[#fff2e5] gl-transition"
+                      className="w-full border border-gray-200 dark:border-[#374151] rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-[#1F2937] dark:text-gray-100 gl-transition"
                     />
                   </div>
                 ))}
               </div>
             </div>
 
-            <div className="bg-white dark:bg-[#111827] rounded-2xl p-5 gl-shadow-md border border-[#E5E0D8] dark:border-[#1F2937]">
-              <h2 className="font-bold text-[#241100] dark:text-[#fff2e5] mb-4">Platform Settings</h2>
+            <div className="bg-white dark:bg-[#111827] rounded-2xl p-5 gl-shadow-md border border-gray-200 dark:border-[#1F2937]">
+              <h2 className="font-bold text-gray-900 dark:text-gray-100 mb-4">Platform Settings</h2>
               <div className="space-y-3">
                 {[
                   { key: "runnerPayoutPercent" as const, label: "Runner Payout %", type: "number" },
@@ -97,20 +97,20 @@ export default function AdminSettings() {
                   { key: "maxTasksPerRunnerPerDay" as const, label: "Max Tasks/Runner/Day", type: "number" },
                 ].map(f => (
                   <div key={f.key}>
-                    <label className="text-xs font-medium text-[#6B7280] mb-1 block">{f.label}</label>
+                    <label className="text-xs font-medium text-gray-500 mb-1 block">{f.label}</label>
                     <input
                       type={f.type}
                       value={form[f.key] ?? ""}
                       onChange={e => set(f.key, Number(e.target.value))}
-                      className="w-full border border-[#E5E0D8] dark:border-[#374151] rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#241100] bg-white dark:bg-[#1F2937] dark:text-[#fff2e5] gl-transition"
+                      className="w-full border border-gray-200 dark:border-[#374151] rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-[#1F2937] dark:text-gray-100 gl-transition"
                     />
                   </div>
                 ))}
               </div>
             </div>
 
-            <div className="bg-white dark:bg-[#111827] rounded-2xl p-5 gl-shadow-md border border-[#E5E0D8] dark:border-[#1F2937]">
-              <h2 className="font-bold text-[#241100] dark:text-[#fff2e5] mb-4">Phase 6: Revenue Settings</h2>
+            <div className="bg-white dark:bg-[#111827] rounded-2xl p-5 gl-shadow-md border border-gray-200 dark:border-[#1F2937]">
+              <h2 className="font-bold text-gray-900 dark:text-gray-100 mb-4">Phase 6: Revenue Settings</h2>
               <div className="space-y-3">
                 {[
                   { key: "freeWaitingMinutes" as const, label: "Free Waiting Minutes", type: "number" },
@@ -128,7 +128,7 @@ export default function AdminSettings() {
                       step={f.step}
                       value={form[f.key] ?? ""}
                       onChange={e => set(f.key, Number(e.target.value))}
-                      className="w-full border border-[#E5E0D8] dark:border-[#374151] rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#241100] bg-white dark:bg-[#1F2937] dark:text-[#fff2e5] gl-transition"
+                      className="w-full border border-gray-200 dark:border-[#374151] rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-[#1F2937] dark:text-gray-100 gl-transition"
                     />
                   </div>
                 ))}
@@ -152,27 +152,27 @@ export default function AdminSettings() {
 
             <div className="bg-white dark:bg-[#111827] rounded-2xl p-5 gl-shadow-md border border-[#EEF2FF] dark:border-[#4338CA]">
               <h2 className="font-bold text-[#4F46E5] mb-4">UPI Configuration</h2>
-              <p className="text-xs text-[#6B7280] mb-4">Configure the UPI ID shown to users for cash payments. Users will see this when paying via UPI QR code.</p>
+              <p className="text-xs text-gray-500 mb-4">Configure the UPI ID shown to users for cash payments. Users will see this when paying via UPI QR code.</p>
               <div className="space-y-3">
                 <div>
-                  <label className="text-xs font-medium text-[#6B7280] mb-1 block">UPI ID</label>
+                  <label className="text-xs font-medium text-gray-500 mb-1 block">UPI ID</label>
                   <input
                     value={form.upiId ?? "golineless@upi"}
                     onChange={e => set("upiId", e.target.value)}
                     placeholder="e.g. golineless@upi"
-                    className={`w-full border rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 ${formErrors.upiId ? "border-[#FECACA] focus:ring-[#DC2626]" : "border-[#E5E0D8] dark:border-[#374151] focus:ring-[#4F46E5]"} bg-white dark:bg-[#1F2937] dark:text-[#fff2e5] gl-transition`}
+                    className={`w-full border rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 ${formErrors.upiId ? "border-[#FECACA] focus:ring-[#DC2626]" : "border-gray-200 dark:border-[#374151] focus:ring-[#4F46E5]"} bg-white dark:bg-[#1F2937] dark:text-gray-100 gl-transition`}
                   />
-                  {formErrors.upiId ? <p className="text-[10px] text-[#DC2626] mt-1">{formErrors.upiId}</p> : <p className="text-[10px] text-[#9CA3AF] mt-1">This is your Google Pay / PhonePe / Paytm UPI ID</p>}
+                  {formErrors.upiId ? <p className="text-[10px] text-[#DC2626] mt-1">{formErrors.upiId}</p> : <p className="text-[10px] text-gray-400 mt-1">This is your Google Pay / PhonePe / Paytm UPI ID</p>}
                 </div>
                 <div>
-                  <label className="text-xs font-medium text-[#6B7280] mb-1 block">Payee Name</label>
+                  <label className="text-xs font-medium text-gray-500 mb-1 block">Payee Name</label>
                   <input
                     value={form.upiPayeeName ?? "Go LineLess"}
                     onChange={e => set("upiPayeeName", e.target.value)}
                     placeholder="e.g. Go LineLess"
                     className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
-                  <p className="text-[10px] text-[#9CA3AF] mt-1">Name shown in UPI payment confirmation</p>
+                  <p className="text-[10px] text-gray-400 mt-1">Name shown in UPI payment confirmation</p>
                 </div>
               </div>
             </div>
@@ -180,8 +180,8 @@ export default function AdminSettings() {
             <button
               onClick={handleSave}
               disabled={updateSettings.isPending}
-              className="w-full py-4 rounded-2xl text-[#241100] font-bold text-lg gl-transition hover:gl-shadow-xl active:scale-[0.98]"
-              style={{ background: GOLD_GRAD }}
+              className="w-full py-4 rounded-2xl text-gray-900 font-bold text-lg gl-transition hover:gl-shadow-xl active:scale-[0.98]"
+              style={{ background: BLUE_GRAD }}
             >
               {updateSettings.isPending ? "Saving..." : "Save Settings"}
             </button>

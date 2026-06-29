@@ -52,45 +52,45 @@ export default function AdminSubscriptions() {
       <AdminSidebar />
       <main className="flex-1 overflow-y-auto p-6">
         <div className="mb-5">
-          <h1 className="text-2xl font-bold text-[#241100] dark:text-[#fff2e5]">Subscriptions</h1>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Subscriptions</h1>
         </div>
         <div className="grid grid-cols-3 gap-4 mb-5">
           {cards.map(c => (
-            <div key={c.label} className="bg-white dark:bg-[#111827] rounded-2xl p-5 gl-shadow-md border border-[#E5E0D8] dark:border-[#1F2937] gl-transition">
+            <div key={c.label} className="bg-white dark:bg-[#111827] rounded-2xl p-5 gl-shadow-md border border-gray-200 dark:border-[#1F2937] gl-transition">
               <div className="flex items-center gap-2 mb-1">
                 <c.Icon size={16} style={{ color: c.color }} />
                 <p className="text-gray-400 text-xs">{c.label}</p>
               </div>
-              <p className="text-2xl font-bold text-[#241100] dark:text-[#ff7b00]">{c.val}</p>
+              <p className="text-2xl font-bold text-gray-900 dark:text-blue-600">{c.val}</p>
             </div>
           ))}
         </div>
         <div className="flex gap-2 mb-4">
           {(["all", "active", "expired"] as const).map(f => (
-            <button key={f} onClick={() => setFilter(f)} className={`px-3 py-1.5 rounded-xl text-xs font-semibold gl-transition ${filter === f ? "bg-[#241100] dark:bg-[#ff7b00] text-white dark:text-[#241100]" : "bg-white dark:bg-[#1F2937] text-[#6B7280] border border-[#E5E0D8] dark:border-[#374151] hover:bg-[#FFF9F2] dark:hover:bg-[#111827]"}`}>
+            <button key={f} onClick={() => setFilter(f)} className={`px-3 py-1.5 rounded-xl text-xs font-semibold gl-transition ${filter === f ? "bg-gray-900 dark:bg-blue-600 text-white dark:text-gray-900" : "bg-white dark:bg-[#1F2937] text-gray-500 border border-gray-200 dark:border-[#374151] hover:bg-gray-50 dark:hover:bg-[#111827]"}`}>
               {f.charAt(0).toUpperCase() + f.slice(1)}
             </button>
           ))}
         </div>
-        <div className="bg-white dark:bg-[#111827] rounded-2xl gl-shadow-md border border-[#E5E0D8] dark:border-[#1F2937] overflow-hidden">
+        <div className="bg-white dark:bg-[#111827] rounded-2xl gl-shadow-md border border-gray-200 dark:border-[#1F2937] overflow-hidden">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-[#E5E0D8] dark:border-[#1F2937]">
+              <tr className="border-b border-gray-200 dark:border-[#1F2937]">
                 {["User", "Plan", "Billing", "Status", "Tasks Used", "Amount", "Expires", "Actions"].map(h => (
-                  <th key={h} className="text-left px-4 py-3 text-xs font-semibold text-[#6B7280] uppercase">{h}</th>
+                  <th key={h} className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {isLoading ? (
                 Array.from({ length: 4 }).map((_, i) => (
-                  <tr key={i}>{Array.from({ length: 8 }).map((_, j) => <td key={j} className="px-4 py-3"><div className="h-4 bg-[#E5E0D8] rounded animate-pulse" /></td>)}</tr>
+                  <tr key={i}>{Array.from({ length: 8 }).map((_, j) => <td key={j} className="px-4 py-3"><div className="h-4 bg-gray-200 rounded animate-pulse" /></td>)}</tr>
                 ))
               ) : filtered.length === 0 ? (
-                <tr><td colSpan={8} className="text-center py-12 text-[#9CA3AF]">No subscriptions {filter !== "all" ? `with status "${filter}"` : ""}</td></tr>
+                <tr><td colSpan={8} className="text-center py-12 text-gray-400">No subscriptions {filter !== "all" ? `with status "${filter}"` : ""}</td></tr>
               ) : (
                 filtered.map((sub: Sub) => (
-                  <tr key={sub.id} className="border-b border-[#F3F4F6] dark:border-[#1F2937] hover:bg-[#FFF9F2] dark:hover:bg-[#1F2937] gl-transition">
+                  <tr key={sub.id} className="border-b border-gray-100 dark:border-[#1F2937] hover:bg-gray-50 dark:hover:bg-[#1F2937] gl-transition">
                     <td className="px-4 py-3">User #{sub.userId}</td>
                     <td className="px-4 py-3 font-medium text-[#7C3AED]">{sub.planName}</td>
                     <td className="px-4 py-3 capitalize">{sub.billingCycle}</td>
@@ -101,7 +101,7 @@ export default function AdminSubscriptions() {
                     </td>
                     <td className="px-4 py-3">{sub.tasksUsed} / {sub.tasksPerMonth ?? "∞"}</td>
                     <td className="px-4 py-3 font-semibold">{formatCurrency(sub.amount)}</td>
-                    <td className="px-4 py-3 text-[#9CA3AF] text-xs">{sub.endDate ? new Date(sub.endDate).toLocaleDateString("en-IN") : "—"}</td>
+                    <td className="px-4 py-3 text-gray-400 text-xs">{sub.endDate ? new Date(sub.endDate).toLocaleDateString("en-IN") : "—"}</td>
                     <td className="px-4 py-3">
                       <div className="flex gap-1">
                         {sub.status === "active" && (

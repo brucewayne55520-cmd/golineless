@@ -84,3 +84,5 @@ jobs:
           else
             echo "No console.log found ✅"
           fi
+      - name: Check for hardcoded hex colors in frontend
+        run: node scripts/check-hex-colors.mjs

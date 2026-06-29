@@ -8,8 +8,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { RunnerBottomNav } from "@/components/BottomNav";
 import { getInitials } from "@/lib/utils";
 import type { LucideIcon } from "lucide-react";
-import { GOLD, GOLD_GRAD, NAVY_GRAD } from "@/lib/theme";
-
+import { BLUE, BLUE_GRAD, DARK } from "@/lib/theme";
 const BG = "#080E1E";
 
 const KYC_STEPS = [
@@ -31,7 +30,7 @@ const SPECIALIZATIONS = [
 ];
 
 function getTrustBadgeInfo(score: number): { label: string; color: string; progress: number; next?: string } {
-  if (score >= 95) return { label: "Elite Comrade", next: "Maximum trust level", progress: 100, color: "#ff7b00" };
+  if (score >= 95) return { label: "Elite Comrade", next: "Maximum trust level", progress: 100, color: "#3B82F6" };
   if (score >= 90) return { label: "Trusted Comrade", next: "5 more points for Elite (95+)", progress: score, color: "#10B981" };
   if (score >= 80) return { label: "Verified Comrade", next: "10 more points for Trusted (90+)", progress: score, color: "#3B82F6" };
   if (score >= 70) return { label: "Active Comrade", next: "10 more points for Verified (80+)", progress: score, color: "#9CA3AF" };
@@ -133,7 +132,7 @@ export default function RunnerProfile() {
 
   const stats: { Icon: LucideIcon; val: string | number; label: string; color: string; bg: string }[] = [
     { Icon: CheckCircle2, val: runner?.totalTasks ?? 0, label: "Tasks Done", color: "#22C55E", bg: "#22C55E20" },
-    { Icon: Star, val: rating > 0 ? rating.toFixed(1) : "—", label: "Avg Rating", color: GOLD, bg: `${GOLD}20` },
+    { Icon: Star, val: rating > 0 ? rating.toFixed(1) : "—", label: "Avg Rating", color: BLUE, bg: `${BLUE}20` },
     { Icon: Wallet, val: runner?.totalEarnings ? `Rs ${Math.round(Number(runner.totalEarnings))}` : "Rs 0", label: "Total Earned", color: "#60A5FA", bg: "#60A5FA20" },
   ];
 
@@ -194,8 +193,8 @@ export default function RunnerProfile() {
               };
               reader.readAsDataURL(file);
             }} />
-            <div className="w-16 h-16 rounded-2xl flex items-center justify-center text-xl font-black text-[#241100] shadow-lg overflow-hidden group-hover:opacity-80 transition-opacity"
-              style={{ background: (runner as unknown as { avatar?: string })?.avatar ? undefined : GOLD_GRAD }}>
+            <div className="w-16 h-16 rounded-2xl flex items-center justify-center text-xl font-black text-gray-900 shadow-lg overflow-hidden group-hover:opacity-80 transition-opacity"
+              style={{ background: (runner as unknown as { avatar?: string })?.avatar ? undefined : BLUE_GRAD }}>
               {(runner as unknown as { avatar?: string })?.avatar
                 ? <img src={(runner as unknown as { avatar?: string }).avatar} alt="" className="w-full h-full object-cover" />
                 : getInitials(runner?.name)}
@@ -213,8 +212,8 @@ export default function RunnerProfile() {
             {rating > 0 && (
               <div className="flex items-center gap-3 mt-1">
                 <div className="flex items-center gap-1">
-                  <Star size={12} fill={GOLD} style={{ color: GOLD }} />
-                  <span className="text-xs font-bold" style={{ color: GOLD }}>{rating.toFixed(1)}</span>
+                  <Star size={12} fill={BLUE} style={{ color: BLUE }} />
+                  <span className="text-xs font-bold" style={{ color: BLUE }}>{rating.toFixed(1)}</span>
                 </div>
                 <span className="text-white/30 text-xs">·</span>
                 <span className="text-white/40 text-xs">{totalTasks} tasks completed</span>
@@ -300,8 +299,8 @@ export default function RunnerProfile() {
             {runner?.kycStatus !== "verified" && (
               <button
                 onClick={openKycModal}
-                className="px-3 py-1.5 rounded-xl text-[#241100] text-xs font-black flex-shrink-0 ml-3"
-                style={{ background: GOLD_GRAD }}
+                className="px-3 py-1.5 rounded-xl text-gray-900 text-xs font-black flex-shrink-0 ml-3"
+                style={{ background: BLUE_GRAD }}
               >
                 {runner?.kycStatus === "rejected" ? "Resubmit" : runner?.fullName ? "Update" : "Submit KYC"}
               </button>
@@ -340,7 +339,7 @@ export default function RunnerProfile() {
                 } catch { toast.error("Network error"); }
               }}
               className="text-[10px] font-bold px-2 py-1 rounded-lg"
-              style={{ color: GOLD, background: `${GOLD}15` }}
+              style={{ color: BLUE, background: `${BLUE}15` }}
             >
               Save
             </button>
@@ -419,7 +418,7 @@ export default function RunnerProfile() {
               exit={{ y: "100%" }}
               transition={{ type: "spring", stiffness: 200, damping: 25 }}
               className="w-full max-h-[92vh] rounded-t-3xl overflow-y-auto p-5"
-              style={{ background: "#331900" }}
+              style={{ background: DARK }}
             >
               <div className="flex items-center justify-between mb-5">
                 <div>
@@ -435,7 +434,7 @@ export default function RunnerProfile() {
               <div className="flex gap-1 mb-4">
                 {KYC_STEPS.map((s, i) => (
                   <div key={s.key} className="flex-1 h-1.5 rounded-full transition-all"
-                    style={{ background: i <= kycStep ? GOLD : "rgba(255,255,255,0.15)" }} />
+                    style={{ background: i <= kycStep ? BLUE : "rgba(255,255,255,0.15)" }} />
                 ))}
               </div>
 
@@ -510,7 +509,7 @@ export default function RunnerProfile() {
                       <div className={`border-2 border-dashed rounded-2xl p-8 text-center transition-all ${selfie ? "border-green-500/50 bg-green-500/10" : "border-white/20 hover:border-white/30"}`}>
                         {selfie ? (
                           <div>
-                            <img src={selfie} alt="" className="w-28 h-28 object-cover rounded-full mx-auto mb-3 shadow-xl border-4" style={{ borderColor: GOLD }} />
+                            <img src={selfie} alt="" className="w-28 h-28 object-cover rounded-full mx-auto mb-3 shadow-xl border-4" style={{ borderColor: BLUE }} />
                             <p className="text-green-400 text-sm font-bold">Selfie uploaded ✓</p>
                             <p className="text-green-400/60 text-xs mt-0.5">Tap to retake</p>
                           </div>
@@ -587,7 +586,7 @@ export default function RunnerProfile() {
                       <p>✓ I understand that earnings are paid out weekly via bank transfer.</p>
                     </div>
                     <label className="flex items-start gap-3 cursor-pointer bg-white/8 border border-white/15 rounded-xl p-3">
-                      <input type="checkbox" checked={!!form.agreed} onChange={(e) => setForm(prev => ({ ...prev, agreed: e.target.checked }))} className="mt-0.5 flex-shrink-0" style={{ accentColor: GOLD }} />
+                      <input type="checkbox" checked={!!form.agreed} onChange={(e) => setForm(prev => ({ ...prev, agreed: e.target.checked }))} className="mt-0.5 flex-shrink-0" style={{ accentColor: BLUE }} />
                       <span className="text-white/70 text-xs leading-relaxed">I have read and agree to the runner agreement and code of conduct above.</span>
                     </label>
                   </div>
@@ -596,8 +595,8 @@ export default function RunnerProfile() {
                 {kycStep < KYC_STEPS.length - 1 ? (
                   <button
                     onClick={() => setKycStep(s => s + 1)}
-                    className="w-full py-4 rounded-2xl text-[#241100] font-black mt-2 text-base"
-                    style={{ background: GOLD_GRAD }}
+                    className="w-full py-4 rounded-2xl text-gray-900 font-black mt-2 text-base"
+                    style={{ background: BLUE_GRAD }}
                   >
                     Continue →
                   </button>
@@ -605,8 +604,8 @@ export default function RunnerProfile() {
                   <button
                     onClick={handleSubmitKyc}
                     disabled={submitKyc.isPending}
-                    className="w-full py-4 rounded-2xl text-[#241100] font-black mt-2 text-base"
-                    style={{ background: GOLD_GRAD }}
+                    className="w-full py-4 rounded-2xl text-gray-900 font-black mt-2 text-base"
+                    style={{ background: BLUE_GRAD }}
                   >
                     {submitKyc.isPending ? "Submitting..." : "Submit for Verification"}
                   </button>

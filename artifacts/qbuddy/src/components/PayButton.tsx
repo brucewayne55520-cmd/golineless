@@ -1,5 +1,5 @@
 import { useLocation } from "wouter";
-import { NAVY_GRAD, GOLD_GRAD } from "@/lib/theme";
+import { DARK_GRAD, BLUE_GRAD, DARK } from "@/lib/theme";
 import { formatCurrency } from "@/lib/utils";
 import { useState } from "react";
 
@@ -60,7 +60,7 @@ export function PayButton({ taskId, price, variant = "gold", label, paymentMetho
         onClick={handleClick}
         disabled={loading}
         className="w-full py-3 rounded-xl text-white font-bold text-sm shadow-md hover:shadow-lg transition-all disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-        style={{ background: NAVY_GRAD }}
+        style={{ background: DARK_GRAD }}
       >
         {loading ? (
           <>
@@ -82,7 +82,7 @@ export function PayButton({ taskId, price, variant = "gold", label, paymentMetho
       onClick={handleClick}
       disabled={loading}
       className="text-[10px] font-bold px-2.5 py-1 rounded-lg transition-all hover:shadow-md disabled:opacity-60 disabled:cursor-not-allowed flex items-center gap-1"
-      style={{ background: GOLD_GRAD, color: "#241100" }}
+      style={{ background: BLUE_GRAD, color: DARK }}
     >
       {loading ? (
         <svg className="animate-spin h-3 w-3" viewBox="0 0 24 24" fill="none">

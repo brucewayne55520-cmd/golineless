@@ -3,7 +3,7 @@ import { Banknote, TrendingUp, TrendingDown, CheckCircle2, Clock, AlertTriangle,
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend, LineChart, Line } from "recharts";
 import { toast } from "sonner";
 import { formatCurrency } from "@/lib/utils";
-import { NAVY, GOLD } from "@/lib/theme";
+import { DARK, BLUE } from "@/lib/theme";
 
 interface DailyBreakdown {
   date: string;
@@ -236,7 +236,7 @@ export default function CashReconciliationPanel({ data, isLoading, isError }: Pr
       <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
         <div className="flex items-center gap-2 mb-3">
           <AlertTriangle size={16} className="text-red-500" />
-          <h3 className="font-bold text-[#241100] text-sm">Cash Reconciliation</h3>
+          <h3 className="font-bold text-gray-900 text-sm">Cash Reconciliation</h3>
         </div>
         <div className="bg-red-50 rounded-xl p-4 text-center">
           <p className="text-red-600 text-xs font-medium">Failed to load reconciliation data</p>
@@ -257,7 +257,7 @@ export default function CashReconciliationPanel({ data, isLoading, isError }: Pr
             <Banknote size={20} className="text-amber-600" />
           </div>
           <div>
-            <h3 className="font-bold text-[#241100] text-sm">Cash Reconciliation</h3>
+            <h3 className="font-bold text-gray-900 text-sm">Cash Reconciliation</h3>
             <p className="text-[10px] text-gray-400">Offline payment tracking & payouts</p>
           </div>
         </div>
@@ -282,7 +282,7 @@ export default function CashReconciliationPanel({ data, isLoading, isError }: Pr
             <Banknote size={20} className="text-amber-600" />
           </div>
           <div>
-            <h3 className="font-bold text-[#241100] text-sm">Cash Reconciliation</h3>
+            <h3 className="font-bold text-gray-900 text-sm">Cash Reconciliation</h3>
             <p className="text-[10px] text-gray-400">Offline payment tracking & payouts</p>
           </div>
         </div>
@@ -290,7 +290,7 @@ export default function CashReconciliationPanel({ data, isLoading, isError }: Pr
           <div className="flex gap-1 bg-gray-100 rounded-xl p-1">
             {(["overview", "daily", "runners"] as const).map(v => (
               <button key={v} onClick={() => setView(v)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all capitalize ${view === v ? "bg-white text-[#241100] shadow-sm" : "text-gray-500 hover:text-gray-700"}`}>
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all capitalize ${view === v ? "bg-white text-gray-900 shadow-sm" : "text-gray-500 hover:text-gray-700"}`}>
                 {v}
               </button>
             ))}
@@ -300,7 +300,7 @@ export default function CashReconciliationPanel({ data, isLoading, isError }: Pr
               <button
                 onClick={() => { setExporting("csv"); try { exportCsv(data); } finally { setExporting(null); } }}
                 disabled={exporting !== null}
-                className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold bg-white border border-gray-200 text-gray-600 hover:bg-gray-50 hover:text-[#241100] transition-all disabled:opacity-50"
+                className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold bg-white border border-gray-200 text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition-all disabled:opacity-50"
                 title="Download CSV"
               >
                 <Download size={12} /> CSV
@@ -308,7 +308,7 @@ export default function CashReconciliationPanel({ data, isLoading, isError }: Pr
               <button
                 onClick={() => { setExporting("pdf"); exportPdf(data).finally(() => setExporting(null)); }}
                 disabled={exporting !== null}
-                className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold bg-white border border-gray-200 text-gray-600 hover:bg-gray-50 hover:text-[#241100] transition-all disabled:opacity-50"
+                className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold bg-white border border-gray-200 text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition-all disabled:opacity-50"
                 title="Download PDF"
               >
                 <FileText size={12} /> PDF
@@ -377,15 +377,15 @@ export default function CashReconciliationPanel({ data, isLoading, isError }: Pr
       <div className="grid grid-cols-3 gap-3 mb-4">
         <div className="bg-white border border-gray-100 rounded-xl p-3 text-center">
           <p className="text-[10px] font-semibold text-gray-400 uppercase mb-1">Cash Runner Payouts</p>
-          <p className="text-sm font-black text-[#241100]">{formatCurrency(s.cashRunnerPayouts)}</p>
+          <p className="text-sm font-black text-gray-900">{formatCurrency(s.cashRunnerPayouts)}</p>
         </div>
         <div className="bg-white border border-gray-100 rounded-xl p-3 text-center">
           <p className="text-[10px] font-semibold text-gray-400 uppercase mb-1">Online Runner Payouts</p>
-          <p className="text-sm font-black text-[#241100]">{formatCurrency(s.onlineRunnerPayouts)}</p>
+          <p className="text-sm font-black text-gray-900">{formatCurrency(s.onlineRunnerPayouts)}</p>
         </div>
         <div className="bg-white border border-gray-100 rounded-xl p-3 text-center">
           <p className="text-[10px] font-semibold text-gray-400 uppercase mb-1">Platform Fees (Cash)</p>
-          <p className="text-sm font-black" style={{ color: GOLD }}>{formatCurrency(s.cashPlatformFees)}</p>
+          <p className="text-sm font-black" style={{ color: BLUE }}>{formatCurrency(s.cashPlatformFees)}</p>
         </div>
       </div>
 
@@ -393,7 +393,7 @@ export default function CashReconciliationPanel({ data, isLoading, isError }: Pr
       {view === "daily" && daily.length > 0 && (
         <div className="space-y-4">
           <div>
-            <h4 className="text-xs font-bold text-[#241100] mb-3">Daily Cash vs Online Collections</h4>
+            <h4 className="text-xs font-bold text-gray-900 mb-3">Daily Cash vs Online Collections</h4>
             <ResponsiveContainer width="100%" height={220}>
               <BarChart data={daily}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
@@ -408,7 +408,7 @@ export default function CashReconciliationPanel({ data, isLoading, isError }: Pr
             </ResponsiveContainer>
           </div>
           <div>
-            <h4 className="text-xs font-bold text-[#241100] mb-3">Runner Payouts vs Platform Fees</h4>
+            <h4 className="text-xs font-bold text-gray-900 mb-3">Runner Payouts vs Platform Fees</h4>
             <ResponsiveContainer width="100%" height={180}>
               <LineChart data={daily}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
@@ -417,7 +417,7 @@ export default function CashReconciliationPanel({ data, isLoading, isError }: Pr
                 <Tooltip contentStyle={{ borderRadius: 12, fontSize: 11 }} formatter={(val: number) => formatCurrency(val)} />
                 <Legend wrapperStyle={{ fontSize: 11 }} />
                 <Line type="monotone" dataKey="runnerPayouts" stroke="#DC2626" strokeWidth={2} dot={false} name="Runner Payouts" />
-                <Line type="monotone" dataKey="platformFees" stroke={GOLD} strokeWidth={2} dot={false} name="Platform Fees" />
+                <Line type="monotone" dataKey="platformFees" stroke={BLUE} strokeWidth={2} dot={false} name="Platform Fees" />
               </LineChart>
             </ResponsiveContainer>
           </div>
@@ -426,7 +426,7 @@ export default function CashReconciliationPanel({ data, isLoading, isError }: Pr
 
       {view === "runners" && (
         <div>
-          <h4 className="text-xs font-bold text-[#241100] mb-3">Per-Runner Cash Reconciliation</h4>
+          <h4 className="text-xs font-bold text-gray-900 mb-3">Per-Runner Cash Reconciliation</h4>
           {runners.length === 0 ? (
             <div className="text-center py-8 text-gray-400 text-sm">No cash payments confirmed yet</div>
           ) : (
@@ -442,14 +442,14 @@ export default function CashReconciliationPanel({ data, isLoading, isError }: Pr
                 <tbody>
                   {runners.map(r => (
                     <tr key={r.runnerId} className="border-b border-gray-50">
-                      <td className="py-2.5 font-medium text-[#241100]">{r.name}</td>
+                      <td className="py-2.5 font-medium text-gray-900">{r.name}</td>
                       <td className="py-2.5 text-center">
                         <span className="bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-bold">{r.cashTasksCollected}</span>
                       </td>
                       <td className="py-2.5 font-bold text-green-700">{formatCurrency(r.cashCollected)}</td>
                       <td className="py-2.5 font-bold text-red-600">{formatCurrency(r.runnerPayout)}</td>
                       <td className="py-2.5">{r.totalTasks}</td>
-                      <td className="py-2.5 font-bold" style={{ color: NAVY }}>{formatCurrency(r.totalEarnings)}</td>
+                      <td className="py-2.5 font-bold" style={{ color: DARK }}>{formatCurrency(r.totalEarnings)}</td>
                     </tr>
                   ))}
                 </tbody>

@@ -3,7 +3,7 @@ import { useLocation } from "wouter";
 import { Home, ClipboardList, HeartHandshake, User, List, Play, Wallet } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { LucideIcon } from "lucide-react";
-import { NAVY, GOLD } from "@/lib/theme";
+import { BLUE } from "@/lib/theme";
 import { customFetch } from "@workspace/api-client-react";
 
 interface NavItem {
@@ -42,11 +42,11 @@ export function UserBottomNav() {
                 "flex-1 flex flex-col items-center gap-0.5 py-3 transition-all min-h-[56px]",
                 active ? "" : "text-gray-400"
               )}
-              style={active ? { color: NAVY } : {}}
+              style={active ? { color: BLUE } : {}}
             >
               <Icon size={active ? 22 : 20} className="transition-all" />
               <span className={cn("text-[10px] font-semibold", active && "font-bold")}>{item.label}</span>
-              {active && <div className="absolute top-0 w-10 h-0.5 rounded-full" style={{ background: GOLD }} />}
+              {active && <div className="absolute top-0 w-10 h-0.5 rounded-full" style={{ background: BLUE }} />}
             </button>
           );
         })}
@@ -82,7 +82,7 @@ export function RunnerBottomNav() {
                 "flex-1 flex flex-col items-center gap-0.5 py-3 transition-all relative",
                 active ? "" : "text-white/40"
               )}
-              style={active ? { color: GOLD } : {}}
+              style={active ? { color: BLUE } : {}}
             >
               <div className="relative">
                 <Icon size={active ? 22 : 20} className="transition-all" />

@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { NAVY, GOLD } from "@/lib/theme";
+import { DARK, BLUE } from "@/lib/theme";
 
 export interface QueueMetricsProps {
   activeQueues?: number | null;
@@ -22,14 +22,14 @@ export default function QueueIntelligence({ queueMetrics }: Props) {
       transition={{ delay: 0.55 }}
       className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 mb-5"
     >
-      <h3 className="font-black text-[#241100] text-sm mb-3">Queue Intelligence</h3>
+      <h3 className="font-black text-gray-900 text-sm mb-3">Queue Intelligence</h3>
       <div className="grid grid-cols-3 md:grid-cols-6 gap-3">
         <div className="bg-gray-50 rounded-xl p-3 text-center">
-          <p className="text-[9px] text-gray-400 uppercase tracking-wide">Active Queues</p>            <p className="text-2xl font-black" style={{ color: NAVY }}>{queueMetrics.activeQueues ?? 0}</p>
+          <p className="text-[9px] text-gray-400 uppercase tracking-wide">Active Queues</p>            <p className="text-2xl font-black" style={{ color: DARK }}>{queueMetrics.activeQueues ?? 0}</p>
         </div>
         <div className="bg-gray-50 rounded-xl p-3 text-center">
           <p className="text-[9px] text-gray-400 uppercase tracking-wide">Avg Wait</p>
-          <p className="text-2xl font-black" style={{ color: GOLD }}>
+          <p className="text-2xl font-black" style={{ color: BLUE }}>
             {queueMetrics.avgWaitTime ?? 0}<span className="text-sm font-medium text-gray-400">m</span>
           </p>
         </div>

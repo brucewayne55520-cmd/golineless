@@ -9,7 +9,7 @@ import { StatusBadge } from "@/components/StatusBadge";
 import { PaymentBadge } from "@/components/PaymentBadge";
 import { PayButton } from "@/components/PayButton";
 import { CATEGORY_NAMES, formatCurrency } from "@/lib/utils";
-import { NAVY, NAVY_GRAD, GOLD, GOLD_GRAD } from "@/lib/theme";
+import { BLUE, BLUE_GRAD, DARK_GRAD } from "@/lib/theme";
 import { LoadingSkeleton } from "@/components/LoadingSkeleton";
 
 const SERVICE_HUBS: Record<string, { name: string; desc: string; icon: string; categories: string[]; color: string }> = {
@@ -49,12 +49,12 @@ export default function UserHome() {
   ];
 
   return (
-    <div className="min-h-screen pb-20" style={{ background: "#FFF9F2" }}>
+    <div className="min-h-screen pb-20 bg-gray-50">
       {/* Header */}
       <div className="bg-white px-4 py-3 flex items-center justify-between border-b border-gray-100 sticky top-0 z-30 shadow-sm">
         <img src="/logo.jpg" alt="Go LineLess" className="h-8 w-auto" />
         <div className="flex items-center gap-1.5 bg-gray-50 border border-gray-100 rounded-full px-2.5 py-1">
-          <MapPin size={11} style={{ color: NAVY }} />
+          <MapPin size={11} className="text-blue-500" />
           <span className="text-xs font-semibold text-gray-600">Ahmedabad, GJ</span>
         </div>
         <div className="flex items-center gap-3">
@@ -64,7 +64,7 @@ export default function UserHome() {
               <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full text-white text-[9px] font-bold flex items-center justify-center">{unreadCount}</span>
             )}
           </button>
-          <div className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-black shadow-sm" style={{ background: NAVY_GRAD }}>
+          <div className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-black shadow-sm bg-blue-600">
             {user?.name?.[0]?.toUpperCase() ?? "U"}
           </div>
         </div>
@@ -77,16 +77,15 @@ export default function UserHome() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4 }}
           className="rounded-2xl p-5 text-white shadow-lg relative overflow-hidden"
-          style={{ background: NAVY_GRAD }}
+          style={{ background: DARK_GRAD }}
         >
-          <div className="absolute top-0 right-0 w-40 h-40 rounded-full opacity-10" style={{ background: `radial-gradient(circle, ${GOLD}, transparent)`, transform: "translate(30%,-30%)" }} />
+          <div className="absolute top-0 right-0 w-40 h-40 rounded-full opacity-10" style={{ background: `radial-gradient(circle, ${BLUE}, transparent)`, transform: "translate(30%,-30%)" }} />
           <p className="text-white/60 text-sm font-medium mb-1">{getGreeting(user?.name)}</p>
           <h2 className="text-2xl font-black mb-1 leading-tight">Life without<br/>waiting.</h2>
           <p className="text-white/60 text-xs mb-4">What do you need help with today?</p>
           <button
             onClick={() => navigate("/app/book")}
-            className="px-5 py-2.5 rounded-xl font-bold text-sm shadow-md"
-            style={{ background: GOLD_GRAD, color: "#241100" }}
+            className="px-5 py-2.5 rounded-xl bg-blue-600 text-white font-bold text-sm shadow-md hover:bg-blue-700 transition-all"
           >
             Request Assistance
           </button>
@@ -96,7 +95,7 @@ export default function UserHome() {
       {/* Notifications section */}
       <div className="px-4 mt-4">
         <div className="flex items-center justify-between mb-3">
-          <h3 className="font-black text-[#241100] text-base">Notifications</h3>
+          <h3 className="font-extrabold text-gray-900 text-base">Notifications</h3>
           {(notifs?.length ?? 0) > 0 && (
             <span className="text-[10px] text-gray-400">{unreadCount} unread</span>
           )}
@@ -123,7 +122,7 @@ export default function UserHome() {
                   {n.type === "kyc_approved" ? "✓" : n.type === "task_completed" ? "📋" : n.type === "payment_received" ? "₹" : "ℹ"}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className={`text-xs ${!n.isRead ? "font-bold text-[#241100]" : "text-gray-600"}`}>{n.title}</p>
+                  <p className={`text-xs ${!n.isRead ? "font-bold text-gray-900" : "text-gray-600"}`}>{n.title}</p>
                   <p className="text-[10px] text-gray-400 mt-0.5 line-clamp-1">{n.message}</p>
                   <p className="text-[9px] text-gray-300 mt-0.5">
                     {new Date(n.createdAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
@@ -145,21 +144,9 @@ export default function UserHome() {
       </div>
 
       {/* Trust micro-strip */}
-      <div className="px-4 mt-3">
-        <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
-          {trustStrip.map((s) => (
-            <div key={s.text} className="flex-shrink-0 bg-white rounded-full px-3 py-1.5 flex items-center gap-1.5 border border-gray-100 shadow-sm">
-              <s.Icon size={11} style={{ color: GOLD }} />
-              <span className="text-[11px] font-semibold text-gray-600">{s.text}</span>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Service Hubs */}
       <div className="px-4 mt-5">
         <div className="flex items-center justify-between mb-3">
-          <h3 className="font-black text-[#241100] text-base">How can we help?</h3>
+          <h3 className="font-extrabold text-gray-900 text-base">How can we help?</h3>
           <span className="text-[10px] font-semibold text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">Ahmedabad Pilot</span>
         </div>
         <div className="grid grid-cols-2 gap-3">
@@ -179,7 +166,7 @@ export default function UserHome() {
                     {hub.icon}
                   </div>
                   <div className="flex-1">
-                    <h4 className="font-black text-sm text-[#241100]">{hub.name}</h4>
+                    <h4 className="font-extrabold text-sm text-gray-900">{hub.name}</h4>
                     <p className="text-[10px] text-gray-400 mt-0.5">{hub.desc}</p>
                   </div>
                 </div>
@@ -198,7 +185,7 @@ export default function UserHome() {
 
       {/* How it works */}
       <div className="px-4 mt-6">
-        <h3 className="font-black text-[#241100] text-base mb-3">How it works</h3>
+        <h3 className="font-extrabold text-gray-900 text-base mb-3">How it works</h3>
         <div className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm">
           <div className="flex items-start gap-0">
             {howItWorks.map((s, i) => (
@@ -206,10 +193,10 @@ export default function UserHome() {
                 {i < howItWorks.length - 1 && (
                   <div className="absolute top-4 left-[calc(50%+20px)] right-[-calc(50%-20px)] h-px bg-gray-200" />
                 )}
-                <div className="w-9 h-9 rounded-xl flex items-center justify-center mb-2 z-10" style={{ background: "linear-gradient(135deg, #EEF2FA, #D9E3F5)", color: NAVY }}>
+                <div className="w-9 h-9 rounded-xl flex items-center justify-center mb-2 z-10 bg-blue-50 text-blue-600">
                   <s.Icon size={17} />
                 </div>
-                <div className="text-[10px] font-bold text-[#241100]">{s.label}</div>
+                <div className="text-[10px] font-bold text-gray-900">{s.label}</div>
                 <div className="text-[9px] text-gray-400 mt-0.5">{s.sub}</div>
               </div>
             ))}
@@ -225,8 +212,8 @@ export default function UserHome() {
       ) : tasks && tasks.length > 0 ? (
         <div className="px-4 mt-6">
           <div className="flex justify-between items-center mb-3">
-            <h3 className="font-black text-[#241100] text-base">Recent Requests</h3>
-            <button onClick={() => navigate("/app/tasks")} className="text-xs font-bold px-2 py-1 rounded-lg" style={{ color: NAVY, background: "#EEF2FA" }}>See all</button>
+            <h3 className="font-extrabold text-gray-900 text-base">Recent Requests</h3>
+            <button onClick={() => navigate("/app/tasks")} className="text-xs font-bold px-2 py-1 rounded-lg text-blue-600 bg-blue-50">See all</button>
           </div>
           <div className="flex gap-3 overflow-x-auto pb-1">
             {tasks.slice(0, 3).map((task: Required<import("@workspace/api-client-react").Task>) => (
@@ -238,11 +225,11 @@ export default function UserHome() {
                 className="flex-shrink-0 w-52 bg-white rounded-2xl p-4 shadow-sm border border-gray-100 cursor-pointer hover:shadow-md transition-all"
               >
                 <div className="flex items-center gap-2 mb-2">
-                  <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: "#EEF2FA", color: NAVY }}>
+                  <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 bg-blue-50 text-blue-600">
                     <CategoryIcon category={task.category} size={18} />
                   </div>
                   <div>
-                    <div className="text-sm font-bold text-[#241100] leading-tight">            {CATEGORY_NAMES[task.category]}</div>
+                    <div className="text-sm font-bold text-gray-900 leading-tight">{CATEGORY_NAMES[task.category]}</div>
                     <div className="flex items-center gap-1.5 flex-wrap mt-1">
                       <StatusBadge status={task.status ?? ""} />
                       <PaymentBadge paymentStatus={task.paymentStatus} taskStatus={task.status} paymentMethod={task.paymentMethod} />
@@ -251,7 +238,7 @@ export default function UserHome() {
                 </div>
                 <p className="text-xs text-gray-500 line-clamp-2 leading-relaxed">{task.description}</p>
                 <div className="flex items-center justify-between mt-2">
-                  <p className="text-xs font-black" style={{ color: GOLD }}>{formatCurrency(task.price)}</p>
+                  <p className="text-xs font-black text-blue-600">{formatCurrency(task.price)}</p>
                   {task.paymentStatus !== "paid" && !["completed","cancelled"].includes(task.status) && (
                     <PayButton taskId={task.id} variant="gold" paymentMethod={task.paymentMethod} />
                   )}
@@ -269,24 +256,23 @@ export default function UserHome() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.3 }}
           className="rounded-2xl p-5 shadow-lg relative overflow-hidden"
-          style={{ background: GOLD_GRAD }}
+          style={{ background: BLUE_GRAD }}
         >
           <div className="absolute top-0 right-0 w-32 h-32 rounded-full opacity-20" style={{ background: "radial-gradient(circle, white, transparent)", transform: "translate(20%,-20%)" }} />
           <div className="flex justify-between items-start">
             <div>
               <div className="flex items-center gap-1.5 mb-1">
-                <Star size={12} fill="#241100" className="text-[#241100]" />
-                <span className="text-[10px] font-bold text-[#241100]/70 uppercase tracking-wider">For NRI Families</span>
+                <Star size={12} fill="white" className="text-white" />
+                <span className="text-[10px] font-bold text-white/70 uppercase tracking-wider">For NRI Families</span>
               </div>
-              <h3 className="font-black text-lg text-[#241100] leading-tight">Senior Care Plans</h3>
-              <p className="text-[#241100]/70 text-xs mt-1">Peace of mind for your parents<br/>back home.</p>
+              <h3 className="font-extrabold text-lg text-white leading-tight">Senior Care Plans</h3>
+              <p className="text-white/70 text-xs mt-1">Peace of mind for your parents<br/>back home.</p>
             </div>
-            <HeartHandshake size={40} className="text-[#241100]/40 flex-shrink-0" />
+            <HeartHandshake size={40} className="text-white/40 flex-shrink-0" />
           </div>
           <button
             onClick={() => navigate("/app/senior")}
-            className="mt-4 px-4 py-2.5 bg-white rounded-xl font-bold text-sm shadow-sm hover:shadow-md transition-all"
-            style={{ color: NAVY }}
+            className="mt-4 px-4 py-2.5 bg-white rounded-xl font-bold text-sm shadow-sm hover:shadow-md transition-all text-blue-600"
           >
             View Plans →
           </button>
@@ -297,8 +283,8 @@ export default function UserHome() {
       {tasks && tasks.length > 0 && (
         <div className="px-4 mt-6">
           <div className="flex items-center justify-between mb-3">
-            <h3 className="font-black text-[#241100] text-base">Payment History</h3>
-            <button onClick={() => navigate("/app/tasks")} className="text-xs font-bold px-2 py-1 rounded-lg" style={{ color: NAVY, background: "#EEF2FA" }}>See all</button>
+            <h3 className="font-extrabold text-gray-900 text-base">Payment History</h3>
+            <button onClick={() => navigate("/app/tasks")} className="text-xs font-bold px-2 py-1 rounded-lg text-blue-600 bg-blue-50">See all</button>
           </div>
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
             {tasks.filter((t: Required<import("@workspace/api-client-react").Task>) => t.paymentStatus === "paid" || t.status === "completed").slice(0, 3).map((task: Required<import("@workspace/api-client-react").Task>, i: number) => (
@@ -311,13 +297,13 @@ export default function UserHome() {
                   {task.paymentStatus === "paid" ? (
                     <CheckCircle2 size={18} className="text-green-600" />
                   ) : (
-                    <Wallet size={18} style={{ color: NAVY }} />
+                    <Wallet size={18} className="text-blue-600" />
                   )}
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between">
-                    <p className="text-sm font-bold text-[#241100] truncate">{CATEGORY_NAMES[task.category]}</p>
-                    <p className="text-sm font-black ml-2" style={{ color: task.paymentStatus === "paid" ? "#16A34A" : GOLD }}>
+                    <p className="text-sm font-bold text-gray-900 truncate">{CATEGORY_NAMES[task.category]}</p>
+                    <p className="text-sm font-black ml-2" style={{ color: task.paymentStatus === "paid" ? "#16A34A" : BLUE }}>
                       {formatCurrency(task.price)}
                     </p>
                   </div>

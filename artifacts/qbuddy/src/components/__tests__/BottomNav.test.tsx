@@ -27,7 +27,7 @@ describe("UserBottomNav", () => {
     mockLocation = "/app/home";
     render(<UserBottomNav />);
     const homeBtn = screen.getByText("Home").closest("button");
-    // Active item should have NAVY color style
+    // Active item should have DARK color style
     expect(homeBtn?.getAttribute("style")).toContain("rgb(15, 37, 87)");
   });
 
@@ -80,7 +80,7 @@ describe("RunnerBottomNav", () => {
     mockLocation = "/runner/feed";
     render(<RunnerBottomNav />);
     const tasksBtn = screen.getByText("Tasks").closest("button");
-    // Active item should have GOLD color style
+    // Active item should have BLUE color style
     expect(tasksBtn?.getAttribute("style")).toContain("rgb(201, 168, 76)");
   });
 

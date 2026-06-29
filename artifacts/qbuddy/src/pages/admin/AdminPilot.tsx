@@ -4,7 +4,7 @@ import AdminSidebar from "@/components/AdminSidebar";
 import { useGetPilotDashboard, useGetPilotMode, useGetKpiTracker, useUpdatePilotMode, type PilotModeUpdate } from "@workspace/api-client-react";
 import { Zap, Users, ClipboardList, Percent, CheckCircle2, Wallet, Star, Clock, ShieldAlert, Ticket, Activity, Target, ToggleLeft } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
-import { NAVY, NAVY_GRAD, GOLD } from "@/lib/theme";
+import { DARK, DARK_GRAD, BLUE } from "@/lib/theme";
 
 export default function AdminPilot() {
   const { data, isLoading, refetch: refetchDashboard } = useGetPilotDashboard({ query: { queryKey: ["pilotDashboard"], refetchInterval: 15000 } });
@@ -31,13 +31,13 @@ export default function AdminPilot() {
   );
 
   const metrics = [
-    { label: "Active Users", val: data?.activeUsers ?? 0, Icon: Users, color: NAVY, bg: "#EEF2FA" },
-    { label: "Active Comrades", val: data?.activeComrades ?? 0, Icon: Zap, color: GOLD, bg: "#FEF9EC" },
+    { label: "Active Users", val: data?.activeUsers ?? 0, Icon: Users, color: DARK, bg: "#EEF2FA" },
+    { label: "Active Comrades", val: data?.activeComrades ?? 0, Icon: Zap, color: BLUE, bg: "#EFF6FF" },
     { label: "Tasks Today", val: data?.tasksToday ?? 0, Icon: ClipboardList, color: "#3B82F6", bg: "#EFF6FF" },
     { label: "Acceptance Rate", val: `${data?.acceptanceRate ?? 0}%`, Icon: Percent, color: "#8B5CF6", bg: "#F5F3FF" },
     { label: "Completion Rate", val: `${data?.completedRate ?? 0}%`, Icon: CheckCircle2, color: "#059669", bg: "#ECFDF5" },
     { label: "Revenue Today", val: formatCurrency(data?.revenueToday ?? 0), Icon: Wallet, color: "#D97706", bg: "#FFFBEB" },
-    { label: "Avg Rating", val: data?.avgRating ?? "N/A", Icon: Star, color: "#ff7b00", bg: "#FEF9EC" },
+    { label: "Avg Rating", val: data?.avgRating ?? "N/A", Icon: Star, color: "#3B82F6", bg: "#EFF6FF" },
     { label: "Avg Wait Saved", val: `${data?.avgWaitSaved ?? 0}m`, Icon: Clock, color: "#0EA5E9", bg: "#F0F9FF" },
   ];
 
@@ -93,7 +93,7 @@ export default function AdminPilot() {
                   </div>
                 </div>
                 <p className="text-2xl font-bold" style={{ color: m.color }}>{m.val}</p>
-                <p className="text-[10px] font-medium text-[#9CA3AF] mt-0.5">{m.label}</p>
+                <p className="text-[10px] font-medium text-gray-400 mt-0.5">{m.label}</p>
               </motion.div>
             ))}
           </motion.div>
@@ -124,9 +124,9 @@ export default function AdminPilot() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.5 }}
             className="rounded-2xl p-6 text-white relative overflow-hidden"
-            style={{ background: NAVY_GRAD }}
+            style={{ background: DARK_GRAD }}
           >
-            <div className="absolute top-0 right-0 w-64 h-64 rounded-full opacity-10" style={{ background: `radial-gradient(circle, ${GOLD}, transparent)`, transform: "translate(30%,-30%)" }} />
+            <div className="absolute top-0 right-0 w-64 h-64 rounded-full opacity-10" style={{ background: `radial-gradient(circle, ${BLUE}, transparent)`, transform: "translate(30%,-30%)" }} />
             <h3 className="font-bold text-white/80 text-sm mb-4 flex items-center gap-2">
               <Activity size={14} /> Pilot Status
             </h3>
@@ -144,7 +144,7 @@ export default function AdminPilot() {
                 <p className="text-[10px] text-white/50 mt-0.5">Quality Reviews</p>
               </div>
               <div>
-                <p className="text-2xl font-black" style={{ color: GOLD }}>{data?.acceptanceRate ?? 0}%</p>
+                <p className="text-2xl font-black" style={{ color: BLUE }}>{data?.acceptanceRate ?? 0}%</p>
                 <p className="text-[10px] text-white/50 mt-0.5">Acceptance Rate</p>
               </div>
             </div>
@@ -176,7 +176,7 @@ export default function AdminPilot() {
                         className="h-full rounded-full transition-all"
                         style={{
                           background: goal.current >= goal.target ? "#16A34A" :
-                            goal.current >= goal.target * 0.5 ? GOLD : "#3B82F6",
+                            goal.current >= goal.target * 0.5 ? BLUE : "#3B82F6",
                         }}
                       />
                     </div>

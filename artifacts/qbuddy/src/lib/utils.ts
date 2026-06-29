@@ -157,7 +157,7 @@ export function applyWatermark(
       ctx.fillRect(0, canvas.height - bottomPad, canvas.width, bottomPad);
 
       // Text details
-      ctx.fillStyle = "#ff7b00";
+      ctx.fillStyle = "#3B82F6";
       const dateStr = meta.timestamp ? new Date(meta.timestamp).toLocaleString("en-IN", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "";
       const line1 = `Go LineLess  |  Task #${meta.taskId || "—"}  |  ${meta.proofType?.replace(/_/g, " ") || "Proof"}`;
       const line2 = `${dateStr}  ${meta.address || (meta.lat && meta.lng ? `${meta.lat.toFixed(4)}, ${meta.lng.toFixed(4)}` : "")}`;

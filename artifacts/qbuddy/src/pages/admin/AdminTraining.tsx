@@ -4,7 +4,7 @@ import { toast } from "sonner";
 import AdminSidebar from "@/components/AdminSidebar";
 import { useListTrainingModules, useGetRunnerTrainingProgress, useSeedDefaultTrainingModules, useCompleteTrainingModule } from "@workspace/api-client-react";
 import { BookOpen, CheckCircle2, RefreshCw, GraduationCap, Plus, Trash2, Edit2, Save, X, Search } from "lucide-react";
-import { NAVY, GOLD_GRAD } from "@/lib/theme";
+import { DARK, BLUE_GRAD } from "@/lib/theme";
 import { customFetch } from "@workspace/api-client-react";
 
 export default function AdminTraining() {
@@ -93,12 +93,12 @@ export default function AdminTraining() {
       <AdminSidebar />
       <main className="flex-1 overflow-y-auto p-6">
         <div className="flex items-center justify-between mb-5">
-          <h1 className="text-xl font-bold text-[#241100] dark:text-[#fff2e5]">Training Center</h1>
+          <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100">Training Center</h1>
           <div className="flex gap-2">
-            <button onClick={seedModules} className="flex items-center gap-2 px-3 py-2 rounded-xl border border-[#E5E0D8] dark:border-[#374151] text-xs font-semibold bg-white dark:bg-[#1F2937] hover:bg-[#FFF9F2] dark:hover:bg-[#111827] gl-transition">
+            <button onClick={seedModules} className="flex items-center gap-2 px-3 py-2 rounded-xl border border-gray-200 dark:border-[#374151] text-xs font-semibold bg-white dark:bg-[#1F2937] hover:bg-gray-50 dark:hover:bg-[#111827] gl-transition">
               <RefreshCw size={14} /> Seed Modules
             </button>
-            <button onClick={() => setShowCreateForm(true)} className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold text-[#241100] gl-transition" style={{ background: GOLD_GRAD }}>
+            <button onClick={() => setShowCreateForm(true)} className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold text-gray-900 gl-transition" style={{ background: BLUE_GRAD }}>
               <Plus size={14} /> Create Module
             </button>
           </div>
@@ -108,43 +108,43 @@ export default function AdminTraining() {
         {showCreateForm && (
           <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="bg-white dark:bg-[#111827] rounded-2xl p-5 gl-shadow-md border border-[#EEF2FF] dark:border-[#4338CA] mb-5">
             <div className="flex items-center justify-between mb-3">
-              <h3 className="font-bold text-[#241100] dark:text-[#fff2e5] text-sm">New Training Module</h3>
-              <button onClick={() => setShowCreateForm(false)} className="text-[#9CA3AF] hover:text-[#6B7280] gl-transition"><X size={16} /></button>
+              <h3 className="font-bold text-gray-900 dark:text-gray-100 text-sm">New Training Module</h3>
+              <button onClick={() => setShowCreateForm(false)} className="text-gray-400 hover:text-gray-500 gl-transition"><X size={16} /></button>
             </div>
             <div className="grid grid-cols-2 gap-3 mb-3">
               <div>
-                <label className="text-xs text-[#6B7280] mb-1 block">Topic *</label>
-                <input value={newModule.topic} onChange={e => setNewModule(p => ({ ...p, topic: e.target.value }))} className="w-full border border-[#E5E0D8] dark:border-[#374151] rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#241100] bg-white dark:bg-[#1F2937] dark:text-[#fff2e5] gl-transition" placeholder="e.g. Hospital Protocol" />
+                <label className="text-xs text-gray-500 mb-1 block">Topic *</label>
+                <input value={newModule.topic} onChange={e => setNewModule(p => ({ ...p, topic: e.target.value }))} className="w-full border border-gray-200 dark:border-[#374151] rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-[#1F2937] dark:text-gray-100 gl-transition" placeholder="e.g. Hospital Protocol" />
               </div>
               <div>
-                <label className="text-xs text-[#6B7280] mb-1 block">Order</label>
-                <input type="number" value={newModule.order} onChange={e => setNewModule(p => ({ ...p, order: Number(e.target.value) }))} className="w-full border border-[#E5E0D8] dark:border-[#374151] rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#241100] bg-white dark:bg-[#1F2937] dark:text-[#fff2e5] gl-transition" />
+                <label className="text-xs text-gray-500 mb-1 block">Order</label>
+                <input type="number" value={newModule.order} onChange={e => setNewModule(p => ({ ...p, order: Number(e.target.value) }))} className="w-full border border-gray-200 dark:border-[#374151] rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-[#1F2937] dark:text-gray-100 gl-transition" />
               </div>
             </div>
             <div className="mb-3">
-              <label className="text-xs text-[#6B7280] mb-1 block">Description</label>
-              <input value={newModule.description} onChange={e => setNewModule(p => ({ ...p, description: e.target.value }))} className="w-full border border-[#E5E0D8] dark:border-[#374151] rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#241100] bg-white dark:bg-[#1F2937] dark:text-[#fff2e5] gl-transition" placeholder="Brief description of the module" />
+              <label className="text-xs text-gray-500 mb-1 block">Description</label>
+              <input value={newModule.description} onChange={e => setNewModule(p => ({ ...p, description: e.target.value }))} className="w-full border border-gray-200 dark:border-[#374151] rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-[#1F2937] dark:text-gray-100 gl-transition" placeholder="Brief description of the module" />
             </div>
             <div className="flex items-center gap-2 mb-3">
               <input type="checkbox" checked={newModule.isRequired} onChange={e => setNewModule(p => ({ ...p, isRequired: e.target.checked }))} className="rounded" />
-              <label className="text-xs text-[#4B5563]">Required module</label>
+              <label className="text-xs text-gray-600">Required module</label>
             </div>
-            <button onClick={createModule} className="px-4 py-2 rounded-xl text-[#241100] text-sm font-semibold gl-transition" style={{ background: GOLD_GRAD }}>Create Module</button>
+            <button onClick={createModule} className="px-4 py-2 rounded-xl text-gray-900 text-sm font-semibold gl-transition" style={{ background: BLUE_GRAD }}>Create Module</button>
           </motion.div>
         )}
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
           {/* Training Modules */}
-          <div className="bg-white dark:bg-[#111827] rounded-2xl p-5 gl-shadow-md border border-[#E5E0D8] dark:border-[#1F2937]">
-            <h3 className="font-bold text-[#241100] dark:text-[#fff2e5] text-sm mb-3 flex items-center gap-2">
+          <div className="bg-white dark:bg-[#111827] rounded-2xl p-5 gl-shadow-md border border-gray-200 dark:border-[#1F2937]">
+            <h3 className="font-bold text-gray-900 dark:text-gray-100 text-sm mb-3 flex items-center gap-2">
               <BookOpen size={14} className="text-blue-500" /> Training Modules ({moduleList.length})
             </h3>
             {loading ? (
               <div className="space-y-2">
-                {[1,2,3].map(i => <div key={i} className="h-12 bg-[#E5E0D8] rounded-xl animate-pulse" />)}
+                {[1,2,3].map(i => <div key={i} className="h-12 bg-gray-200 rounded-xl animate-pulse" />)}
               </div>
             ) : moduleList.length === 0 ? (
-              <div className="text-center text-[#9CA3AF] py-8">
+              <div className="text-center text-gray-400 py-8">
                 <GraduationCap size={40} className="mx-auto mb-2 opacity-30" />
                 <p className="font-medium">No modules yet</p>
                 <p className="text-xs mt-1">Click "Seed Modules" to create defaults or "Create Module" to add custom ones</p>
@@ -152,22 +152,22 @@ export default function AdminTraining() {
             ) : (
               <div className="space-y-2 max-h-[400px] overflow-y-auto">
                 {moduleList.map((m, i) => (
-                  <div key={m.id} className="flex items-center gap-3 p-3 rounded-xl bg-[#FFF9F2] dark:bg-[#1F2937] group">
+                  <div key={m.id} className="flex items-center gap-3 p-3 rounded-xl bg-gray-50 dark:bg-[#1F2937] group">
                     {editingModule === m.id ? (
                       <div className="flex-1 space-y-2">
-                        <input defaultValue={m.topic ?? ""} id={`topic-${m.id}`} className="w-full border border-[#E5E0D8] dark:border-[#374151] rounded-lg px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-[#241100] bg-white dark:bg-[#1F2937] dark:text-[#fff2e5] gl-transition" />
-                        <input defaultValue={m.description ?? ""} id={`desc-${m.id}`} className="w-full border border-[#E5E0D8] dark:border-[#374151] rounded-lg px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-[#241100] bg-white dark:bg-[#1F2937] dark:text-[#fff2e5] gl-transition" placeholder="Description" />
+                        <input defaultValue={m.topic ?? ""} id={`topic-${m.id}`} className="w-full border border-gray-200 dark:border-[#374151] rounded-lg px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 bg-white dark:bg-[#1F2937] dark:text-gray-100 gl-transition" />
+                        <input defaultValue={m.description ?? ""} id={`desc-${m.id}`} className="w-full border border-gray-200 dark:border-[#374151] rounded-lg px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500 bg-white dark:bg-[#1F2937] dark:text-gray-100 gl-transition" placeholder="Description" />
                         <div className="flex gap-1">
                           <button onClick={() => m.id != null && updateModule(m.id)} className="px-2 py-1 rounded-lg bg-green-500 text-white text-xs font-semibold flex items-center gap-1"><Save size={10} /> Save</button>
-                          <button onClick={() => setEditingModule(null)} className="px-2 py-1 rounded-lg bg-[#E5E0D8] text-[#4B5563] text-xs font-semibold">Cancel</button>
+                          <button onClick={() => setEditingModule(null)} className="px-2 py-1 rounded-lg bg-gray-200 text-gray-600 text-xs font-semibold">Cancel</button>
                         </div>
                       </div>
                     ) : (
                       <>
-                        <div className="w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold text-white" style={{ background: NAVY }}>{m.order || i + 1}</div>
+                        <div className="w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold text-white" style={{ background: DARK }}>{m.order || i + 1}</div>
                         <div className="flex-1">
-                          <p className="text-sm font-semibold text-[#241100] dark:text-[#fff2e5]">{m.topic}</p>
-                          {m.description &&                          <p className="text-[10px] text-[#9CA3AF] mt-0.5">{m.description ?? ""}</p>}
+                          <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">{m.topic}</p>
+                          {m.description &&                          <p className="text-[10px] text-gray-400 mt-0.5">{m.description ?? ""}</p>}
                         </div>
                         {m.isRequired && <span className="text-[9px] px-1.5 py-0.5 rounded bg-blue-100 text-blue-600 font-bold">Required</span>}
                         {selectedRunner && progress && (
@@ -175,13 +175,13 @@ export default function AdminTraining() {
                             onClick={() => markComplete(m.id)}
                             disabled={progress.progress?.find((p: import("@workspace/api-client-react").TrainingProgressProgressItem) => p.id === m.id)?.completed}
                             className="px-3 py-1.5 rounded-lg text-xs font-bold"
-                            style={progress.progress?.find((p: import("@workspace/api-client-react").TrainingProgressProgressItem) => p.id === m.id)?.completed ? { background: "#D1FAE5", color: "#059669" } : { background: NAVY, color: "white" }}
+                            style={progress.progress?.find((p: import("@workspace/api-client-react").TrainingProgressProgressItem) => p.id === m.id)?.completed ? { background: "#D1FAE5", color: "#059669" } : { background: DARK, color: "white" }}
                           >
                             {progress.progress?.find((p: import("@workspace/api-client-react").TrainingProgressProgressItem) => p.id === m.id)?.completed ? "✓ Done" : "Complete"}
                           </button>
                         )}
                         <div className="flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <button onClick={() => { if (m.id != null) { setEditingModule(m.id); setNewModule({ topic: m.topic ?? "", description: m.description ?? "", order: m.order ?? 0, isRequired: m.isRequired ?? true }); } }} className="p-1 rounded hover:bg-[#E5E0D8]"><Edit2 size={12} className="text-[#9CA3AF]" /></button>
+                          <button onClick={() => { if (m.id != null) { setEditingModule(m.id); setNewModule({ topic: m.topic ?? "", description: m.description ?? "", order: m.order ?? 0, isRequired: m.isRequired ?? true }); } }} className="p-1 rounded hover:bg-gray-200"><Edit2 size={12} className="text-gray-400" /></button>
                           {m.id != null && <button onClick={() => deleteModule(m.id!)} className="p-1 rounded hover:bg-[#FEF2F2]"><Trash2 size={12} className="text-[#DC2626]" /></button>}
                         </div>
                       </>
@@ -193,13 +193,13 @@ export default function AdminTraining() {
           </div>
 
           {/* Runner Progress */}
-          <div className="bg-white dark:bg-[#111827] rounded-2xl p-5 gl-shadow-md border border-[#E5E0D8] dark:border-[#1F2937]">
-            <h3 className="font-bold text-[#241100] dark:text-[#fff2e5] text-sm mb-3 flex items-center gap-2">
+          <div className="bg-white dark:bg-[#111827] rounded-2xl p-5 gl-shadow-md border border-gray-200 dark:border-[#1F2937]">
+            <h3 className="font-bold text-gray-900 dark:text-gray-100 text-sm mb-3 flex items-center gap-2">
               <GraduationCap size={14} className="text-emerald-500" /> Runner Readiness
             </h3>
             <div className="mb-3">
               <div className="relative">
-                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#9CA3AF]" />
+                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
                 <input
                   type="number"
                   placeholder="Enter Runner ID"
@@ -210,29 +210,29 @@ export default function AdminTraining() {
                     const num = Number(v);
                     if (!isNaN(num) && num > 0) setSelectedRunner(num);
                   }}
-                  className="w-full pl-8 pr-4 py-2 rounded-xl border border-[#E5E0D8] dark:border-[#374151] text-sm focus:outline-none focus:ring-2 focus:ring-[#241100] bg-white dark:bg-[#1F2937] dark:text-[#fff2e5] gl-transition"
+                  className="w-full pl-8 pr-4 py-2 rounded-xl border border-gray-200 dark:border-[#374151] text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-[#1F2937] dark:text-gray-100 gl-transition"
                 />
               </div>
             </div>
             {!selectedRunner ? (
-              <div className="text-center text-[#9CA3AF] py-8">
+              <div className="text-center text-gray-400 py-8">
                 <p className="font-medium">Enter a Runner ID</p>
                 <p className="text-xs mt-1">to view their training progress and readiness score</p>
               </div>
             ) : !progress ? (
-              <div className="text-center text-[#9CA3AF] py-8">Loading...</div>
+              <div className="text-center text-gray-400 py-8">Loading...</div>
             ) : (
               <>
                 <div className="text-center mb-4">
                   <div className="text-4xl font-black" style={{ color: (progress.readiness ?? 0) >= 80 ? "#059669" : (progress.readiness ?? 0) >= 50 ? "#F59E0B" : "#EF4444" }}>
                     {progress.readiness ?? 0}%
                   </div>
-                  <p className="text-xs text-[#9CA3AF]">Readiness Score</p>
-                  <div className="mt-2 text-sm text-[#4B5563]">
+                  <p className="text-xs text-gray-400">Readiness Score</p>
+                  <div className="mt-2 text-sm text-gray-600">
                     {progress.completedCount} / {progress.totalModules} modules completed
                   </div>
                 </div>
-                <div className="w-full bg-[#F3F4F6] rounded-full h-2.5 overflow-hidden">
+                <div className="w-full bg-gray-100 rounded-full h-2.5 overflow-hidden">
                   <motion.div
                     initial={{ width: 0 }} animate={{ width: `${progress.readiness ?? 0}%` }}
                     className="h-full rounded-full"
@@ -242,11 +242,11 @@ export default function AdminTraining() {
                 <div className="mt-4 space-y-1.5">
                   {progress.progress?.map((p: import("@workspace/api-client-react").TrainingProgressProgressItem) => (
                     <div key={p.id} className="flex items-center gap-2 text-xs">
-                      <div className={`w-4 h-4 rounded-full flex items-center justify-center ${p.completed ? "bg-[#ECFDF5] text-[#059669]" : "bg-[#F3F4F6] text-[#9CA3AF]"}`}>
+                      <div className={`w-4 h-4 rounded-full flex items-center justify-center ${p.completed ? "bg-[#ECFDF5] text-[#059669]" : "bg-gray-100 text-gray-400"}`}>
                         {p.completed ? <CheckCircle2 size={12} /> : <div className="w-2 h-2 rounded-full bg-[#D1D5DB]" />}
                       </div>
-                      <span className="flex-1 text-[#4B5563]">{p.topic}</span>
-                      {p.score != null && <span className="text-[#9CA3AF]">{p.score}%</span>}
+                      <span className="flex-1 text-gray-600">{p.topic}</span>
+                      {p.score != null && <span className="text-gray-400">{p.score}%</span>}
                     </div>
                   ))}
                 </div>

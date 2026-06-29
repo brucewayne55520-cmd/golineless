@@ -1,7 +1,6 @@
 import { motion } from "framer-motion";
 import { TrendingUp } from "lucide-react";
-import { NAVY, NAVY_GRAD, GOLD, GOLD_GRAD } from "@/lib/theme";
-
+import { DARK_GRAD, BLUE, BLUE_GRAD } from "@/lib/theme";
 interface Props {
   activeNow?: number | null;
   totalRunnersOnTask?: number | null;
@@ -16,11 +15,11 @@ export default function DispatchBanner({ activeNow, totalRunnersOnTask, stuckTas
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 0.5 }}
       className="rounded-2xl p-5 mb-5 flex items-center gap-4 relative overflow-hidden"
-      style={{ background: NAVY_GRAD }}
+      style={{ background: DARK_GRAD }}
     >
       <div
         className="absolute top-0 right-0 w-48 h-48 rounded-full opacity-10"
-        style={{ background: `radial-gradient(circle, ${GOLD}, transparent)`, transform: "translate(30%,-30%)" }}
+        style={{ background: `radial-gradient(circle, ${BLUE}, transparent)`, transform: "translate(30%,-30%)" }}
       />
       <div className="flex-1 grid grid-cols-3 gap-4">
         <div className="text-center">
@@ -39,7 +38,7 @@ export default function DispatchBanner({ activeNow, totalRunnersOnTask, stuckTas
           <p className="text-white/50 text-[10px]">Over 3 hours</p>
         </div>
       </div>
-      <div className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: GOLD_GRAD }}>
+      <div className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: BLUE_GRAD }}>
         <TrendingUp size={22} className="text-white" />
       </div>
     </motion.div>

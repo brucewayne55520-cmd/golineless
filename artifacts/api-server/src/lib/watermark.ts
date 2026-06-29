@@ -90,10 +90,10 @@ export async function applyServerWatermark(params: WatermarkParams): Promise<Wat
       <rect x="0" y="${height - barHeight}" width="${width}" height="${barHeight}" fill="rgba(0,0,0,0.75)" />
 
       <!-- Gold accent line -->
-      <rect x="0" y="${height - barHeight}" width="${width}" height="3" fill="#ff7b00" />
+      <rect x="0" y="${height - barHeight}" width="${width}" height="3" fill="#3B82F6" />
 
       <!-- Line 1: Brand + Task + Type -->
-      <text x="${padding}" y="${height - barHeight + fontSize + padding}" font-family="monospace" font-size="${fontSize}" fill="#ff7b00" font-weight="bold">
+      <text x="${padding}" y="${height - barHeight + fontSize + padding}" font-family="monospace" font-size="${fontSize}" fill="#3B82F6" font-weight="bold">
         ${escapeXml(line1)}
       </text>
 
@@ -103,7 +103,7 @@ export async function applyServerWatermark(params: WatermarkParams): Promise<Wat
       </text>
 
       <!-- Line 3: Verification ID + Challenge Code -->
-      <text x="${padding}" y="${height - barHeight + (fontSize * 3) + padding + 4}" font-family="monospace" font-size="${Math.round(fontSize * 0.85)}" fill="#ff7b00">
+      <text x="${padding}" y="${height - barHeight + (fontSize * 3) + padding + 4}" font-family="monospace" font-size="${Math.round(fontSize * 0.85)}" fill="#3B82F6">
         ${escapeXml(line3)}
       </text>
 

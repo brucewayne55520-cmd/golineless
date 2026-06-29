@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Bell, Check, CheckCheck, Clock, Shield, Package, AlertTriangle, CreditCard, Star, ChevronLeft, CheckCircle2 } from "lucide-react";
-import { VIOLET } from "@/lib/theme";
+import { PURPLE } from "@/lib/theme";
 import { useLocation } from "wouter";
 import { useListNotifications } from "@workspace/api-client-react";
 import type { Notification } from "@workspace/api-client-react";
@@ -94,7 +94,7 @@ export default function NotificationsPage() {
   const getColor = (type: string) => TYPE_COLORS[type] ?? "bg-gray-100 text-gray-600";
 
   return (
-    <div className="min-h-screen bg-[#FFF9F2] pb-24">
+    <div className="min-h-screen bg-gray-50 pb-24">
       {/* Header */}
       <div className="bg-white border-b border-gray-100 px-4 py-4 flex items-center justify-between sticky top-0 z-10">
         <div className="flex items-center gap-3">
@@ -111,7 +111,7 @@ export default function NotificationsPage() {
               <button
                 onClick={markAllRead}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-colors"
-                style={{ background: violetBg(0.1), color: VIOLET }}
+                style={{ background: violetBg(0.1), color: PURPLE }}
               >
                 <CheckCheck size={12} /> Mark all read
               </button>
@@ -164,7 +164,7 @@ export default function NotificationsPage() {
                           {notif.title}
                         </h3>
                         {!notif.isRead && (
-                          <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: VIOLET }} />
+                          <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: PURPLE }} />
                         )}
                       </div>
                       <p className="text-xs text-gray-500 line-clamp-2 leading-relaxed">{notif.message}</p>
@@ -189,7 +189,7 @@ export default function NotificationsPage() {
                     )}
                     {markingId === notif.id && (
                       <div className="w-7 h-7 rounded-lg bg-gray-100 flex items-center justify-center flex-shrink-0">
-                        <div className="w-3 h-3 border-2 border-gray-300 rounded-full animate-spin" style={{ borderTopColor: VIOLET }} />
+                        <div className="w-3 h-3 border-2 border-gray-300 rounded-full animate-spin" style={{ borderTopColor: PURPLE }} />
                       </div>
                     )}
                   </div>

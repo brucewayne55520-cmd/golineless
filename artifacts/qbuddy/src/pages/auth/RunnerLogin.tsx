@@ -4,7 +4,7 @@ import { motion } from "framer-motion";
 import { toast } from "sonner";
 import { useSendOtp, useVerifyOtp } from "@workspace/api-client-react";
 import { useAuth } from "@/contexts/AuthContext";
-import { DARK_GRAD } from "@/lib/theme";
+import { DARK_GRAD, BLUE } from "@/lib/theme";
 import { requestMagicLink } from "@/lib/neon-auth";
 
 const API_BASE = import.meta.env.VITE_API_URL || "";
@@ -60,26 +60,25 @@ export default function RunnerLogin() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4 relative overflow-hidden" style={{ background: "linear-gradient(160deg, #241100 0%, #331900 30%, #663100 60%, #994a00 85%, #cc6300 100%)" }}>
+    <div className="min-h-screen flex items-center justify-center px-4 relative overflow-hidden" style={{ background: DARK_GRAD }}>
       {/* Decorative circles */}
-      <div className="absolute top-[-80px] right-[-60px] w-[300px] h-[300px] rounded-full opacity-[0.1]" style={{ background: "radial-gradient(circle, #ff7b00, transparent 70%)" }} />
-      <div className="absolute bottom-[-100px] left-[-60px] w-[250px] h-[250px] rounded-full opacity-[0.07]" style={{ background: "radial-gradient(circle, #ff9633, transparent 70%)" }} />
+      <div className="absolute top-[-80px] right-[-60px] w-[300px] h-[300px] rounded-full opacity-[0.06]" style={{ background: "radial-gradient(circle, #3B82F6, transparent 70%)" }} />
+      <div className="absolute bottom-[-100px] left-[-60px] w-[250px] h-[250px] rounded-full opacity-[0.04]" style={{ background: "radial-gradient(circle, #8B5CF6, transparent 70%)" }} />
 
       <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-sm relative z-10">
-        <div className="bg-white/10 backdrop-blur-md rounded-3xl p-8 border border-white/20">
+        <div className="bg-white/10 backdrop-blur-md rounded-2xl p-8 border border-white/20">
           <div className="text-center mb-8">
-            <div className="bg-white rounded-2xl p-3 inline-block mb-4 shadow-lg">
+            <div className="bg-white rounded-xl p-3 inline-block mb-4 shadow-lg">
               <img src="/logo.jpg" alt="Go LineLess" className="h-14 w-auto" />
             </div>
-            <h1 className="text-2xl font-black text-white">Runner Portal</h1>
+            <h1 className="text-2xl font-extrabold text-white">Runner Portal</h1>
             <p className="text-white/60 text-sm mt-1">Earn up to Rs 1,500 daily</p>
           </div>
 
           {magicLinkSent ? (
-            /* ---- Magic link sent confirmation ---- */
             <div className="text-center py-6">
-              <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-green-500/20 mb-4">
-                <svg className="w-8 h-8 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
+              <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-emerald-500/20 mb-4">
+                <svg className="w-8 h-8 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
               </div>
               <h2 className="text-lg font-bold text-white mb-2">Check your email</h2>
               <p className="text-white/60 text-sm mb-1">We sent a magic link to</p>
@@ -88,14 +87,12 @@ export default function RunnerLogin() {
               <button
                 type="button"
                 onClick={() => { setMagicLinkSent(false); setEmail(""); setStep("phone"); }}
-                className="mt-4 text-sm font-medium underline"
-                style={{ color: "#ff9633" }}
+                className="mt-4 text-sm font-medium text-blue-400 hover:text-blue-300 underline"
               >
                 Use a different method
               </button>
             </div>
           ) : step === "email" ? (
-            /* ---- Email magic link form ---- */
             <form
               onSubmit={async (e) => {
                 e.preventDefault();
@@ -119,20 +116,19 @@ export default function RunnerLogin() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="you@example.com"
-                  className="w-full px-4 py-3 rounded-xl bg-white/10 border border-white/20 text-white text-sm placeholder:text-white/30 focus:outline-none focus:ring-2 focus:ring-white/30"
+                  className="w-full px-4 py-3 rounded-xl bg-white/10 border border-white/20 text-white text-sm placeholder:text-white/30 focus:outline-none focus:ring-2 focus:ring-blue-400/40"
                   required
                 />
               </div>
               <button
                 type="submit"
                 disabled={sendingLink}
-                className="w-full py-4 rounded-2xl text-white font-bold text-lg disabled:opacity-60"
-                style={{ background: "linear-gradient(135deg, #ff7b00, #ff9633)", boxShadow: "0 6px 20px -4px rgba(255, 123, 0, 0.35)" }}
+                className="w-full py-4 rounded-xl bg-blue-600 text-white font-bold text-lg disabled:opacity-60 shadow-lg hover:bg-blue-700 transition-all"
               >
                 {sendingLink ? "Sending..." : "Send magic link"}
               </button>
               <p className="text-center text-sm text-white/60">
-                <button type="button" onClick={() => setStep("phone")} className="font-semibold" style={{ color: "#ff9633" }}>
+                <button type="button" onClick={() => setStep("phone")} className="font-semibold text-blue-400 hover:text-blue-300">
                   Use phone instead
                 </button>
               </p>
@@ -156,8 +152,7 @@ export default function RunnerLogin() {
               <button
                 type="submit"
                 disabled={sendOtp.isPending}
-                className="w-full py-4 rounded-2xl text-white font-bold text-lg"
-                style={{ background: "linear-gradient(135deg, #ff7b00, #ff9633)", boxShadow: "0 6px 20px -4px rgba(255, 123, 0, 0.35)" }}
+                className="w-full py-4 rounded-xl bg-blue-600 text-white font-bold text-lg shadow-lg hover:bg-blue-700 transition-all disabled:opacity-60"
               >
                 {sendOtp.isPending ? "Sending..." : "Get OTP"}
               </button>
@@ -169,26 +164,25 @@ export default function RunnerLogin() {
               <button
                 type="button"
                 onClick={() => setStep("email")}
-                className="w-full py-3 rounded-2xl border border-white/20 text-white font-semibold text-sm bg-white/5 hover:bg-white/10 transition"
+                className="w-full py-3 rounded-xl border border-white/20 text-white font-semibold text-sm bg-white/5 hover:bg-white/10 transition"
               >
                 Sign in with email instead
               </button>
               <button
                 type="button"
                 onClick={() => setStep("password")}
-                className="w-full py-3 rounded-2xl border border-white/20 text-white font-semibold text-sm bg-white/5 hover:bg-white/10 transition"
+                className="w-full py-3 rounded-xl border border-white/20 text-white font-semibold text-sm bg-white/5 hover:bg-white/10 transition"
               >
                 Sign in with email + password
               </button>
               <p className="text-center text-sm text-white/60">
                 Looking to hire?{" "}
-                <button type="button" onClick={() => navigate("/login")} className="font-semibold" style={{ color: "#ff9633" }}>
+                <button type="button" onClick={() => navigate("/login")} className="font-semibold text-blue-400 hover:text-blue-300">
                   Book a runner
                 </button>
               </p>
             </form>
           ) : step === "password" ? (
-            /* ---- Email + Password form ---- */
             <form
               onSubmit={async (e) => {
                 e.preventDefault();
@@ -216,18 +210,18 @@ export default function RunnerLogin() {
               {isSigningUp && (
                 <div>
                   <label className="text-sm font-medium text-white/80 mb-1 block">Name</label>
-                  <input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="Your name" className="w-full px-4 py-3 rounded-xl bg-white/10 border border-white/20 text-white text-sm placeholder:text-white/30 focus:outline-none focus:ring-2 focus:ring-white/30" />
+                  <input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="Your name" className="w-full px-4 py-3 rounded-xl bg-white/10 border border-white/20 text-white text-sm placeholder:text-white/30 focus:outline-none focus:ring-2 focus:ring-blue-400/40" />
                 </div>
               )}
               <div>
                 <label className="text-sm font-medium text-white/80 mb-1 block">Email address</label>
-                <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" className="w-full px-4 py-3 rounded-xl bg-white/10 border border-white/20 text-white text-sm placeholder:text-white/30 focus:outline-none focus:ring-2 focus:ring-white/30" required />
+                <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" className="w-full px-4 py-3 rounded-xl bg-white/10 border border-white/20 text-white text-sm placeholder:text-white/30 focus:outline-none focus:ring-2 focus:ring-blue-400/40" required />
               </div>
               <div>
                 <label className="text-sm font-medium text-white/80 mb-1 block">Password</label>
-                <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" className="w-full px-4 py-3 rounded-xl bg-white/10 border border-white/20 text-white text-sm placeholder:text-white/30 focus:outline-none focus:ring-2 focus:ring-white/30" required minLength={6} />
+                <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" className="w-full px-4 py-3 rounded-xl bg-white/10 border border-white/20 text-white text-sm placeholder:text-white/30 focus:outline-none focus:ring-2 focus:ring-blue-400/40" required minLength={6} />
               </div>
-              <button type="submit" disabled={loading} className="w-full py-4 rounded-2xl text-white font-bold text-lg disabled:opacity-60" style={{ background: "linear-gradient(135deg, #ff7b00, #ff9633)", boxShadow: "0 6px 20px -4px rgba(255, 123, 0, 0.35)" }}>
+              <button type="submit" disabled={loading} className="w-full py-4 rounded-xl bg-blue-600 text-white font-bold text-lg disabled:opacity-60 shadow-lg hover:bg-blue-700 transition-all">
                 {loading ? "Please wait..." : isSigningUp ? "Create Account" : "Sign In"}
               </button>
               {!isSigningUp && (
@@ -239,12 +233,12 @@ export default function RunnerLogin() {
               )}
               <p className="text-center text-sm text-white/60">
                 {isSigningUp ? "Already have an account?" : "Don't have an account?"}{" "}
-                <button type="button" onClick={() => setIsSigningUp(!isSigningUp)} className="font-semibold" style={{ color: "#ff9633" }}>
+                <button type="button" onClick={() => setIsSigningUp(!isSigningUp)} className="font-semibold text-blue-400 hover:text-blue-300">
                   {isSigningUp ? "Sign in" : "Create one"}
                 </button>
               </p>
               <p className="text-center text-sm text-white/60">
-                <button type="button" onClick={() => setStep("phone")} className="font-semibold" style={{ color: "#ff9633" }}>
+                <button type="button" onClick={() => setStep("phone")} className="font-semibold text-blue-400 hover:text-blue-300">
                   Use phone instead
                 </button>
               </p>
@@ -266,16 +260,15 @@ export default function RunnerLogin() {
                     value={digit}
                     onChange={(e) => handleOtpChange(e.target.value, idx)}
                     onKeyDown={(e) => { if (e.key === "Backspace" && !digit && idx > 0) document.getElementById(`otp-r-${idx - 1}`)?.focus(); }}
-                    className="w-11 h-14 bg-white/10 border-2 border-white/20 rounded-xl text-center text-2xl font-bold focus:outline-none transition-colors"
-                    style={{ color: "#ff9633", borderColor: digit ? "#ff7b00" : "" }}
+                    className="w-11 h-14 bg-white/10 border-2 rounded-xl text-center text-2xl font-bold focus:outline-none transition-colors"
+                    style={{ color: BLUE, borderColor: digit ? BLUE : "rgba(255,255,255,0.2)" }}
                   />
                 ))}
               </div>
               <button
                 type="submit"
                 disabled={verifyOtp.isPending}
-                className="w-full py-4 rounded-2xl text-white font-bold text-lg"
-                style={{ background: "linear-gradient(135deg, #ff7b00, #ff9633)", boxShadow: "0 6px 20px -4px rgba(255, 123, 0, 0.35)" }}
+                className="w-full py-4 rounded-xl bg-blue-600 text-white font-bold text-lg shadow-lg hover:bg-blue-700 transition-all disabled:opacity-60"
               >
                 {verifyOtp.isPending ? "Verifying..." : "Start Earning!"}
               </button>

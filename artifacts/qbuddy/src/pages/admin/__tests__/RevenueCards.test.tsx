@@ -2,6 +2,7 @@ import { describe, it, expect, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import RevenueCards from "../RevenueCards";
 import { Wallet } from "lucide-react";
+import { DARK, PURPLE_DIM } from "@/lib/theme";
 
 // Mock formatCurrency
 vi.mock("@/lib/utils", () => ({
@@ -9,8 +10,8 @@ vi.mock("@/lib/utils", () => ({
 }));
 
 const mockCards = [
-  { label: "GMV Today", val: 50000, Icon: Wallet, color: "#331900" },
-  { label: "Platform Revenue", val: 7500, Icon: Wallet, color: "#7C3AED" },
+  { label: "GMV Today", val: 50000, Icon: Wallet, color: DARK },
+  { label: "Platform Revenue", val: 7500, Icon: Wallet, color: PURPLE_DIM },
 ];
 
 describe("RevenueCards", () => {

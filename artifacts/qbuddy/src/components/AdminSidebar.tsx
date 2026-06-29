@@ -5,10 +5,9 @@ import { LayoutDashboard, Map, ClipboardList, PersonStanding, Users, Crown, Tren
 import { cn } from "@/lib/utils";
 import type { LucideIcon } from "lucide-react";
 import { useListSupportTickets } from "@workspace/api-client-react";
+import { DARK, BLUE } from "@/lib/theme";
 
-const NAVY = "#241100";
-const NAVY_DARK = "#060E1A";
-const GOLD = "#ff7b00";
+const DARK_DEEP = "#0B1120";
 
 // O12: Grouped nav items into logical sections for readability
 const navSections: { label: string; items: { path: string; icon: LucideIcon; label: string; exact?: boolean }[] }[] = [
@@ -121,7 +120,7 @@ export default function AdminSidebar() {
                     )}
                   >
                     {active && (
-                      <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-r-full" style={{ background: GOLD }} />
+                      <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-r-full" style={{ background: BLUE }} />
                     )}
                     <Icon size={16} className={cn("flex-shrink-0 transition-colors", active ? "text-white" : "text-white/30 group-hover:text-white/50")} aria-hidden="true" />
                     <span className="flex-1">{item.label}</span>
@@ -130,7 +129,7 @@ export default function AdminSidebar() {
                         {openTicketCount}
                       </span>
                     )}
-                    {active && <div className="w-1.5 h-1.5 rounded-full" style={{ background: GOLD }} />}
+                    {active && <div className="w-1.5 h-1.5 rounded-full" style={{ background: BLUE }} />}
                   </button>
                 );
               })}
@@ -158,7 +157,7 @@ export default function AdminSidebar() {
       <button
         onClick={() => setMobileOpen(true)}
         className="lg:hidden fixed top-4 left-4 z-50 w-11 h-11 rounded-xl flex items-center justify-center shadow-xl border border-white/10"
-        style={{ background: `linear-gradient(135deg, ${NAVY}, ${NAVY_DARK})` }}
+        style={{ background: `linear-gradient(135deg, ${DARK}, ${DARK_DEEP})` }}
         aria-label="Open navigation menu"
       >
         <Menu size={20} className="text-white" />
@@ -172,7 +171,7 @@ export default function AdminSidebar() {
       {/* Desktop sidebar */}
       <aside
         className="hidden lg:flex w-60 flex-shrink-0 flex-col min-h-screen border-r border-white/[0.06]"
-        style={{ background: `linear-gradient(180deg, ${NAVY} 0%, ${NAVY_DARK} 100%)` }}
+        style={{ background: `linear-gradient(180deg, ${DARK} 0%, ${DARK_DEEP} 100%)` }}
         role="navigation"
         aria-label="Admin sidebar"
       >
@@ -185,7 +184,7 @@ export default function AdminSidebar() {
           "lg:hidden fixed inset-y-0 left-0 z-50 w-60 flex flex-col border-r border-white/[0.06] transition-transform duration-200 ease-out",
           mobileOpen ? "translate-x-0" : "-translate-x-full"
         )}
-        style={{ background: `linear-gradient(180deg, ${NAVY} 0%, ${NAVY_DARK} 100%)` }}
+        style={{ background: `linear-gradient(180deg, ${DARK} 0%, ${DARK_DEEP} 100%)` }}
         role="navigation"
         aria-label="Admin sidebar (mobile)"
       >

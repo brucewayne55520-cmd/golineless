@@ -1,7 +1,7 @@
 import { motion } from "framer-motion";
 import { Activity } from "lucide-react";
 import type { ActivityItem } from "@workspace/api-client-react";
-import { GOLD } from "@/lib/theme";
+import { BLUE } from "@/lib/theme";
 
 interface Props {
   activities: ActivityItem[];
@@ -13,7 +13,7 @@ export default function ActivityFeed({ activities }: Props) {
       <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
         <div className="flex items-center gap-2.5">
           <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-          <h3 className="font-black text-[#241100]">Live Activity Feed</h3>
+          <h3 className="font-black text-gray-900">Live Activity Feed</h3>
         </div>
         <span className="text-xs text-gray-400 bg-gray-50 border border-gray-100 px-2 py-1 rounded-lg">
           Auto-refresh · 5s
@@ -35,7 +35,7 @@ export default function ActivityFeed({ activities }: Props) {
               transition={{ delay: i * 0.03 }}
               className="flex items-start gap-3 px-5 py-3 hover:bg-gray-50 transition-colors"
             >
-              <div className="w-2 h-2 rounded-full mt-1.5 flex-shrink-0" style={{ background: GOLD }} />
+              <div className="w-2 h-2 rounded-full mt-1.5 flex-shrink-0" style={{ background: BLUE }} />
               <div className="flex-1 min-w-0">
                 <p className="text-sm text-gray-700 leading-snug">{a.message}</p>
                 <p className="text-xs text-gray-400 mt-0.5">

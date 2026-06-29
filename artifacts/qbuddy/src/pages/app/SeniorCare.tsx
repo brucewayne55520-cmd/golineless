@@ -5,7 +5,7 @@ import { HeartHandshake, CheckCircle2, ShieldCheck, MapPin, Star, Globe, Phone, 
 import { useListSubscriptionPlans } from "@workspace/api-client-react";
 import { UserBottomNav } from "@/components/BottomNav";
 import { formatCurrency } from "@/lib/utils";
-import { NAVY, NAVY_GRAD, GOLD, GOLD_GRAD } from "@/lib/theme";
+import { DARK, DARK_GRAD, BLUE, BLUE_GRAD, SURFACE_DIM } from "@/lib/theme";
 import { EmptyState } from "@/components/EmptyState";
 
 
@@ -51,10 +51,10 @@ export default function SeniorCare() {
   };
 
   return (
-    <div className="min-h-screen pb-24" style={{ background: "#FFF9F2" }}>
+    <div className="min-h-screen pb-24 bg-gray-50">
       {/* Hero */}
-      <div className="relative overflow-hidden" style={{ background: NAVY_GRAD }}>
-        <div className="absolute top-0 right-0 w-64 h-64 rounded-full opacity-10" style={{ background: `radial-gradient(circle, ${GOLD}, transparent)`, transform: "translate(30%, -30%)" }} />
+      <div className="relative overflow-hidden" style={{ background: DARK_GRAD }}>
+        <div className="absolute top-0 right-0 w-64 h-64 rounded-full opacity-10" style={{ background: `radial-gradient(circle, ${BLUE}, transparent)`, transform: "translate(30%, -30%)" }} />
         <div className="absolute bottom-0 left-0 w-48 h-48 rounded-full opacity-5" style={{ background: `radial-gradient(circle, white, transparent)`, transform: "translate(-30%, 30%)" }} />
         <div className="relative z-10 px-5 pt-8 pb-6 text-center">
           <motion.div
@@ -62,7 +62,7 @@ export default function SeniorCare() {
             animate={{ scale: 1, opacity: 1 }}
             transition={{ type: "spring", stiffness: 200 }}
             className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg"
-            style={{ background: GOLD_GRAD }}
+            style={{ background: BLUE_GRAD }}
           >
             <HeartHandshake size={30} className="text-white" />
           </motion.div>
@@ -94,7 +94,7 @@ export default function SeniorCare() {
       {/* Emotional copy strip */}
       <div className="mx-4 mt-4 bg-white rounded-2xl p-4 border border-gray-100 shadow-sm">
         <div className="flex items-center gap-2 mb-2">
-          <Sparkles size={14} style={{ color: GOLD }} />
+          <Sparkles size={14} style={{ color: BLUE }} />
           <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">Why families choose us</span>
         </div>
         <p className="text-sm text-gray-700 leading-relaxed">
@@ -110,11 +110,11 @@ export default function SeniorCare() {
               key={b}
               onClick={() => setBilling(b)}
               className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition-all relative ${billing === b ? "text-white shadow-sm" : "text-gray-500"}`}
-              style={billing === b ? { background: NAVY_GRAD } : {}}
+              style={billing === b ? { background: DARK_GRAD } : {}}
             >
               {b === "monthly" ? "Monthly" : "Yearly"}
               {b === "yearly" && (
-                <span className="ml-1.5 text-[10px] font-semibold px-1.5 py-0.5 rounded-full" style={{ background: billing === "yearly" ? `${GOLD}40` : "#F3F4F6", color: billing === "yearly" ? GOLD : "#9CA3AF" }}>
+                <span className="ml-1.5 text-[10px] font-semibold px-1.5 py-0.5 rounded-full" style={{ background: billing === "yearly" ? `${BLUE}40` : SURFACE_DIM, color: billing === "yearly" ? BLUE : "#9CA3AF" }}>
                   Save 2 months
                 </span>
               )}
@@ -141,28 +141,28 @@ export default function SeniorCare() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: i * 0.1 }}
               className={`bg-white rounded-2xl overflow-hidden shadow-sm ${plan.isPopular ? "border-2 shadow-md" : "border border-gray-100"}`}
-              style={plan.isPopular ? { borderColor: GOLD } : {}}
+              style={plan.isPopular ? { borderColor: BLUE } : {}}
             >
               {plan.isPopular && (
-                <div className="py-2 text-center text-[#241100] text-xs font-black tracking-wider" style={{ background: GOLD_GRAD }}>
+                <div className="py-2 text-center text-gray-900 text-xs font-black tracking-wider" style={{ background: BLUE_GRAD }}>
                   ★ MOST CHOSEN BY NRI FAMILIES
                 </div>
               )}
               <div className="p-5">
                 <div className="flex justify-between items-start mb-4">
                   <div>
-                    <h3 className="font-black text-[#241100] text-lg">{plan.name}</h3>
+                    <h3 className="font-black text-gray-900 text-lg">{plan.name}</h3>
                     {plan.badge && (
-                      <span className="text-xs font-semibold px-2 py-0.5 rounded-full mt-1 inline-block" style={{ background: "#EEF2FA", color: NAVY }}>{plan.badge}</span>
+                      <span className="text-xs font-semibold px-2 py-0.5 rounded-full mt-1 inline-block" style={{ background: "#EEF2FA", color: DARK }}>{plan.badge}</span>
                     )}
                   </div>
                   <div className="text-right">
-                    <div className="text-3xl font-black" style={{ color: NAVY }}>
+                    <div className="text-3xl font-black" style={{ color: DARK }}>
                       {formatCurrency(billing === "monthly" ? plan.priceMonthly : plan.priceYearly)}
                     </div>
                     <div className="text-xs text-gray-400">/{billing === "monthly" ? "month" : "year"}</div>
                     {billing === "yearly" && plan.priceMonthly && (
-                      <div className="text-[10px] font-semibold mt-0.5" style={{ color: GOLD }}>
+                      <div className="text-[10px] font-semibold mt-0.5" style={{ color: BLUE }}>
                         Save {formatCurrency(plan.priceMonthly * 12 - plan.priceYearly)}
                       </div>
                     )}
@@ -170,15 +170,15 @@ export default function SeniorCare() {
                 </div>
                 {plan.tasksPerMonth && (
                   <div className="flex items-center gap-2 mb-3 p-2.5 rounded-xl" style={{ background: "#EEF2FA" }}>
-                    <CheckCircle2 size={14} style={{ color: NAVY }} />
-                    <p className="text-sm font-bold" style={{ color: NAVY }}>{plan.tasksPerMonth} assisted visits / month</p>
+                    <CheckCircle2 size={14} style={{ color: DARK }} />
+                    <p className="text-sm font-bold" style={{ color: DARK }}>{plan.tasksPerMonth} assisted visits / month</p>
                   </div>
                 )}
                 {plan.features?.length > 0 && (
                   <ul className="space-y-2 mb-4">
                     {plan.features.map((f: string) => (
                       <li key={f} className="text-xs text-gray-600 flex items-start gap-2">
-                        <span className="font-black flex-shrink-0 mt-0.5" style={{ color: GOLD }}>✓</span>
+                        <span className="font-black flex-shrink-0 mt-0.5" style={{ color: BLUE }}>✓</span>
                         <span>{f}</span>
                       </li>
                     ))}
@@ -188,8 +188,8 @@ export default function SeniorCare() {
                   onClick={() => handleSubscribe(plan.id)}
                   className="w-full py-3.5 rounded-xl font-black text-sm shadow-sm hover:shadow-md transition-all"
                   style={plan.isPopular
-                    ? { background: GOLD_GRAD, color: "#241100" }
-                    : { background: NAVY_GRAD, color: "white" }}
+                    ? { background: BLUE_GRAD, color: DARK }
+                    : { background: DARK_GRAD, color: "white" }}
                 >
                   {"Get Started →"}
                 </button>
@@ -201,15 +201,15 @@ export default function SeniorCare() {
 
       {/* Trust grid */}
       <div className="px-4 mt-8">
-        <h3 className="font-black text-[#241100] text-base mb-4">Built for your peace of mind</h3>
+        <h3 className="font-black text-gray-900 text-base mb-4">Built for your peace of mind</h3>
         <div className="grid grid-cols-2 gap-3">
           {trustBadges.map((b) => (
             <div key={b.title} className="bg-white rounded-xl p-3.5 flex items-start gap-2.5 shadow-sm border border-gray-100">
               <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: "#EEF2FA" }}>
-                <b.Icon size={16} style={{ color: NAVY }} />
+                <b.Icon size={16} style={{ color: DARK }} />
               </div>
               <div>
-                <p className="text-xs font-bold text-[#241100]">{b.title}</p>
+                <p className="text-xs font-bold text-gray-900">{b.title}</p>
                 <p className="text-[10px] text-gray-400 mt-0.5">{b.desc}</p>
               </div>
             </div>
@@ -219,7 +219,7 @@ export default function SeniorCare() {
 
       {/* Testimonials */}
       <div className="px-4 mt-8">
-        <h3 className="font-black text-[#241100] text-base mb-4">What NRI families say</h3>
+        <h3 className="font-black text-gray-900 text-base mb-4">What NRI families say</h3>
         <div className="space-y-3">
           {testimonials.map((t) => (
             <div key={t.name} className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
@@ -228,11 +228,11 @@ export default function SeniorCare() {
               </div>
               <p className="text-sm text-gray-700 leading-relaxed italic">"{t.text}"</p>
               <div className="flex items-center gap-2 mt-3 pt-3 border-t border-gray-50">
-                <div className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-black" style={{ background: NAVY_GRAD }}>
+                <div className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-black" style={{ background: DARK_GRAD }}>
                   {t.name[0]}
                 </div>
                 <div>
-                  <p className="text-xs font-bold text-[#241100]">{t.name}</p>
+                  <p className="text-xs font-bold text-gray-900">{t.name}</p>
                   <p className="text-[10px] text-gray-400">{t.location}</p>
                 </div>
               </div>

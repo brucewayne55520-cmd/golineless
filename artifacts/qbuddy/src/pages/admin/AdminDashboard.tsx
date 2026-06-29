@@ -26,7 +26,7 @@ import HubOperationsOverview from "./HubOperationsOverview";
 import CashReconciliationPanel from "./CashReconciliationPanel";
 import PayoutSettlementPanel from "./PayoutSettlementPanel";
 import ActivityFeed from "./ActivityFeed";
-import { NAVY } from "@/lib/theme";
+import { DARK } from "@/lib/theme";
 import { useEffect, useRef, useCallback } from "react";
 import { toast } from "sonner";
 
@@ -140,14 +140,14 @@ export default function AdminDashboard() {
   const flags: FraudFlagListFlagsItem[] = fraud?.flags ?? [];
 
   const metricCards: MetricCardConfig[] = s ? [
-    { label: "Tasks Today", val: s.totalTasksToday, Icon: ClipboardList, color: "#241100", bg: "#E8EDF5", trend: "All time" },
-    { label: "Active Now", val: s.activeNow, Icon: Zap, color: "#ff7b00", bg: "#FEF7E0", trend: "Live" },
+    { label: "Tasks Today", val: s.totalTasksToday, Icon: ClipboardList, color: DARK, bg: "#E8EDF5", trend: "All time" },
+    { label: "Active Now", val: s.activeNow, Icon: Zap, color: "#3B82F6", bg: "#FEF7E0", trend: "Live" },
     { label: "Completed", val: s.completedToday, Icon: CheckCircle2, color: "#16A34A", bg: "#ECFDF5", trend: "Today" },
     { label: "Cancelled", val: s.cancelledToday, Icon: XCircle, color: "#DC2626", bg: "#FEF2F2", trend: "Today" },
   ] : [];
 
   const revenueCards: RevenueCardConfig[] = s ? [
-    { label: "GMV Today", val: s.gmvToday, Icon: Wallet, color: NAVY },
+    { label: "GMV Today", val: s.gmvToday, Icon: Wallet, color: DARK },
     { label: "Platform Revenue", val: s.platformRevenue, Icon: Building2, color: "#7C3AED" },
     { label: "Comrade Payouts", val: s.runnerPayouts, Icon: PersonStanding, color: "#16A34A" },
     { label: "Pending Payouts", val: s.pendingPayouts, Icon: Clock, color: "#D97706" },
@@ -159,13 +159,13 @@ export default function AdminDashboard() {
     <div className="flex min-h-screen gl-surface dark:bg-[#0A0E1A]" role="main" aria-label="Admin Dashboard">
       <AdminSidebar />
       <main className="flex-1 overflow-y-auto">
-        {/* Top bar */}          <div className="bg-white dark:bg-[#111827] border-b border-[#E5E0D8] dark:border-[#1F2937] px-4 sm:px-6 py-4 flex items-center justify-between sticky top-0 z-10 gl-shadow-sm">
+        {/* Top bar */}          <div className="bg-white dark:bg-[#111827] border-b border-gray-200 dark:border-[#1F2937] px-4 sm:px-6 py-4 flex items-center justify-between sticky top-0 z-10 gl-shadow-sm">
           <div>
-            <h1 className="text-lg sm:text-xl font-bold text-[#241100] dark:text-[#fff2e5]">Command Center</h1>
-            <p className="text-[#6B7280] text-xs mt-0.5">
+            <h1 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-gray-100">Command Center</h1>
+            <p className="text-gray-500 text-xs mt-0.5">
               Go LineLess Operations · {now.toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "long" })}
             </p>
-            <p className="text-[#9CA3AF] text-[9px] mt-0.5">Alt+D Dashboard · Alt+T Tasks · Alt+R Runners · Alt+M Map · Alt+K KYC</p>
+            <p className="text-gray-400 text-[9px] mt-0.5">Alt+D Dashboard · Alt+T Tasks · Alt+R Runners · Alt+M Map · Alt+K KYC</p>
           </div>
           <div className="flex items-center gap-3">
             {s && (
@@ -178,9 +178,9 @@ export default function AdminDashboard() {
                   <Activity size={12} className="text-[#6366F1]" />
                   <span className="text-[#4F46E5] text-xs font-bold">{s.totalRunnersOnTask} On Task</span>
                 </div>
-                <div className="flex items-center gap-2 bg-[#F3F4F6] border border-[#D1D5DB] px-3 py-1.5 rounded-xl gl-transition">
+                <div className="flex items-center gap-2 bg-gray-100 border border-gray-300 px-3 py-1.5 rounded-xl gl-transition">
                   <div className="w-2 h-2 bg-[#9CA3AF] rounded-full" />
-                  <span className="text-[#6B7280] text-xs font-bold">{s.totalRunnersOffline} Offline</span>
+                  <span className="text-gray-500 text-xs font-bold">{s.totalRunnersOffline} Offline</span>
                 </div>
               </div>
             )}
@@ -257,9 +257,9 @@ export default function AdminDashboard() {
 
           {/* A4: KYC Metrics Widget */}
           {kycMetrics && kycMetrics.total > 0 && (
-            <div className="mt-5 bg-white dark:bg-[#111827] rounded-2xl p-5 border border-[#E5E0D8] dark:border-[#1F2937] gl-shadow-md">
+            <div className="mt-5 bg-white dark:bg-[#111827] rounded-2xl p-5 border border-gray-200 dark:border-[#1F2937] gl-shadow-md">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="font-bold text-[#241100] dark:text-[#fff2e5] flex items-center gap-2">
+                <h3 className="font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
                   <Shield size={18} /> KYC Overview
                 </h3>
                 <button
@@ -288,9 +288,9 @@ export default function AdminDashboard() {
                     <p className="text-xs text-[#B91C1C] font-semibold">Overdue (&gt;7d)</p>
                   </div>
                 )}
-                <div className="bg-[#F3F4F6] rounded-xl p-3 text-center gl-transition">
+                <div className="bg-gray-100 rounded-xl p-3 text-center gl-transition">
                   <p className="text-2xl font-bold text-[#374151]">{kycMetrics.total}</p>
-                  <p className="text-xs text-[#6B7280] font-semibold">Total</p>
+                  <p className="text-xs text-gray-500 font-semibold">Total</p>
                 </div>
               </div>
             </div>
@@ -317,7 +317,7 @@ export default function AdminDashboard() {
 
           {/* L1: Changelog widget */}
           <div className="mt-5 bg-gradient-to-r from-[#EEF2FF] to-[#F5F3FF] dark:from-[#1E1B4B] dark:to-[#2E1065] rounded-2xl p-5 border border-[#C7D2FE] dark:border-[#4338CA]">
-            <h3 className="font-bold text-[#241100] dark:text-[#fff2e5] text-sm mb-3">📋 What's New</h3>
+            <h3 className="font-bold text-gray-900 dark:text-gray-100 text-sm mb-3">📋 What's New</h3>
             <div className="space-y-2 text-xs">
               {[
                 { date: "Jun 2026", text: "Phase 5: Runner earnings chart, task timeline, quick actions, keyboard shortcuts" },
@@ -327,7 +327,7 @@ export default function AdminDashboard() {
               ].map((item, i) => (
                 <div key={i} className="flex gap-2">
                   <span className="font-bold text-[#6366F1] dark:text-[#A78BFA] whitespace-nowrap">{item.date}</span>
-                  <span className="text-[#6B7280] dark:text-[#9CA3AF]">{item.text}</span>
+                  <span className="text-gray-500 dark:text-gray-400">{item.text}</span>
                 </div>
               ))}
             </div>

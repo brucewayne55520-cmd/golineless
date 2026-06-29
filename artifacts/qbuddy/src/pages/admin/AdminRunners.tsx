@@ -6,7 +6,7 @@ import { useListAdminRunners, useReviewRunnerKyc } from "@workspace/api-client-r
 import type { Runner } from "@workspace/api-client-react";
 import AdminSidebar from "@/components/AdminSidebar";
 import { getInitials } from "@/lib/utils";
-import { GOLD_GRAD } from "@/lib/theme";
+import { BLUE_GRAD } from "@/lib/theme";
 
 const TABS = ["pending", "verified", "rejected"];
 const TAB_LABELS: Record<string, string> = { pending: "Pending KYC", verified: "Verified", rejected: "Rejected" };
@@ -73,30 +73,30 @@ export default function AdminRunners() {
       <main className="flex-1 overflow-y-auto p-6">
         <div className="flex items-center justify-between mb-5">
           <div>
-            <h1 className="text-2xl font-bold text-[#241100] dark:text-[#fff2e5]">Comrades</h1>
-            <p className="text-[#6B7280] text-sm">Page {page + 1} · {filtered.length} runners shown ({TAB_LABELS[tab]}){selectedIds.size > 0 ? ` · ${selectedIds.size} selected` : ""}</p>
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Comrades</h1>
+            <p className="text-gray-500 text-sm">Page {page + 1} · {filtered.length} runners shown ({TAB_LABELS[tab]}){selectedIds.size > 0 ? ` · ${selectedIds.size} selected` : ""}</p>
           </div>
-          <button onClick={exportCsv} disabled={filtered.length === 0} className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold bg-white dark:bg-[#1F2937] border border-[#E5E0D8] dark:border-[#374151] hover:bg-[#FFF9F2] dark:hover:bg-[#111827] disabled:opacity-40 gl-transition">
+          <button onClick={exportCsv} disabled={filtered.length === 0} className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold bg-white dark:bg-[#1F2937] border border-gray-200 dark:border-[#374151] hover:bg-gray-50 dark:hover:bg-[#111827] disabled:opacity-40 gl-transition">
             <Download size={14} /> Export CSV{selectedIds.size > 0 ? ` (${selectedIds.size})` : ""}
           </button>
         </div>
 
         <div className="flex flex-wrap gap-3 mb-5">
           <div className="relative flex-1 min-w-[200px] max-w-md">
-            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#9CA3AF]" />
+            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
             <input
               value={search}
               onChange={e => { setSearch(e.target.value); setPage(0); }}
               placeholder="Search by name, phone, city, or area..."
-              className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-[#E5E0D8] dark:border-[#374151] text-sm focus:outline-none focus:ring-2 focus:ring-[#241100] bg-white dark:bg-[#1F2937] dark:text-[#fff2e5] gl-transition"
+              className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-gray-200 dark:border-[#374151] text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-[#1F2937] dark:text-gray-100 gl-transition"
             />
           </div>
-          <div className="flex gap-1 bg-white dark:bg-[#1F2937] p-1 rounded-xl border border-[#E5E0D8] dark:border-[#374151]">
+          <div className="flex gap-1 bg-white dark:bg-[#1F2937] p-1 rounded-xl border border-gray-200 dark:border-[#374151]">
             {TABS.map(t => (
               <button
                 key={t}
                 onClick={() => { setTab(t); setPage(0); setSelectedIds(new Set()); }}
-                className={`px-4 py-2 rounded-xl text-sm font-semibold gl-transition ${tab === t ? "bg-[#241100] dark:bg-[#ff7b00] text-white dark:text-[#241100]" : "bg-white dark:bg-[#1F2937] text-[#6B7280] border border-[#E5E0D8] dark:border-[#374151]"}`}
+                className={`px-4 py-2 rounded-xl text-sm font-semibold gl-transition ${tab === t ? "bg-gray-900 dark:bg-blue-600 text-white dark:text-gray-900" : "bg-white dark:bg-[#1F2937] text-gray-500 border border-gray-200 dark:border-[#374151]"}`}
               >
                 {TAB_LABELS[t]}
               </button>
@@ -106,10 +106,10 @@ export default function AdminRunners() {
 
         {isLoading ? (
           <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-            {[1,2,3,4,5,6].map(i =>            <div key={i} className="h-48 bg-[#E5E0D8] rounded-2xl animate-pulse" />)}
+            {[1,2,3,4,5,6].map(i =>            <div key={i} className="h-48 bg-gray-200 rounded-2xl animate-pulse" />)}
           </div>
         ) : filtered.length === 0 ? (
-          <div className="text-center py-16 text-[#9CA3AF]">
+          <div className="text-center py-16 text-gray-400">
             <PersonStanding size={40} className="mx-auto mb-3 opacity-40" />
             <p>No {TAB_LABELS[tab]} runners{search ? ` matching "${search}"` : ""}</p>
           </div>
@@ -121,18 +121,18 @@ export default function AdminRunners() {
               <span className="text-xs text-gray-500 font-semibold">{allSelected ? "Deselect all" : "Select all"}</span>
             </div>
             {filtered.map((runner: Required<import("@workspace/api-client-react").Runner>) => (
-              <div key={runner.id} className={`bg-white dark:bg-[#111827] rounded-2xl p-5 gl-shadow-md border ${selectedIds.has(Number(runner.id)) ? "border-[#6366F1] ring-1 ring-[#C7D2FE]" : "border-[#E5E0D8] dark:border-[#1F2937]"} gl-transition`}>
+              <div key={runner.id} className={`bg-white dark:bg-[#111827] rounded-2xl p-5 gl-shadow-md border ${selectedIds.has(Number(runner.id)) ? "border-[#6366F1] ring-1 ring-[#C7D2FE]" : "border-gray-200 dark:border-[#1F2937]"} gl-transition`}>
                 <div className="flex items-center gap-3 mb-3">
                   <input type="checkbox" checked={selectedIds.has(Number(runner.id))} onChange={() => toggleSelect(Number(runner.id))} className="rounded" />
-                  <div className="w-12 h-12 gl-navy rounded-full flex items-center justify-center text-[#ff7b00] font-bold text-lg">
+                  <div className="w-12 h-12 gl-navy rounded-full flex items-center justify-center text-blue-600 font-bold text-lg">
                     {getInitials(runner.name)}
                   </div>
                   <div>
-                    <h3 className="font-bold text-[#241100] dark:text-[#fff2e5]">{runner.name ?? runner.phone}</h3>
-                    <p className="text-xs text-[#6B7280]">{runner.phone}</p>
+                    <h3 className="font-bold text-gray-900 dark:text-gray-100">{runner.name ?? runner.phone}</h3>
+                    <p className="text-xs text-gray-500">{runner.phone}</p>
                   </div>
                 </div>
-                <div className="space-y-1 text-xs text-[#6B7280] mb-4">
+                <div className="space-y-1 text-xs text-gray-500 mb-4">
                   {runner.city && (
                     <p className="flex items-center gap-1">
                       <MapPin size={11} /> {runner.city}, {runner.area}
@@ -178,8 +178,8 @@ export default function AdminRunners() {
                 </div>
                 <button
                   onClick={() => { setSelected(runner); setRejReason(""); }}
-                  className="w-full py-2 rounded-xl text-[#241100] text-sm font-bold gl-transition hover:gl-shadow-lg active:scale-[0.98]"
-                  style={{ background: GOLD_GRAD }}
+                  className="w-full py-2 rounded-xl text-gray-900 text-sm font-bold gl-transition hover:gl-shadow-lg active:scale-[0.98]"
+                  style={{ background: BLUE_GRAD }}
                 >
                   Review KYC
                 </button>
@@ -194,17 +194,17 @@ export default function AdminRunners() {
             <button
               onClick={() => setPage(p => Math.max(0, p - 1))}
               disabled={page === 0}
-              className="px-4 py-2 rounded-xl text-sm font-semibold border border-[#E5E0D8] dark:border-[#374151] disabled:opacity-40 hover:bg-[#FFF9F2] dark:hover:bg-[#1F2937] gl-transition"
+              className="px-4 py-2 rounded-xl text-sm font-semibold border border-gray-200 dark:border-[#374151] disabled:opacity-40 hover:bg-gray-50 dark:hover:bg-[#1F2937] gl-transition"
             >
               ← Previous
             </button>
-            <span className="text-sm text-[#6B7280] font-semibold px-3">
+            <span className="text-sm text-gray-500 font-semibold px-3">
               Page {page + 1}
             </span>
             <button
               onClick={() => setPage(p => p + 1)}
               disabled={list.length < LIMIT}
-              className="px-4 py-2 rounded-xl text-sm font-semibold border border-[#E5E0D8] dark:border-[#374151] disabled:opacity-40 hover:bg-[#FFF9F2] dark:hover:bg-[#1F2937] gl-transition"
+              className="px-4 py-2 rounded-xl text-sm font-semibold border border-gray-200 dark:border-[#374151] disabled:opacity-40 hover:bg-gray-50 dark:hover:bg-[#1F2937] gl-transition"
             >
               Next →
             </button>
@@ -220,9 +220,9 @@ export default function AdminRunners() {
                 exit={{ scale: 0.9, opacity: 0 }}
                 className="fixed inset-4 md:inset-20 bg-white dark:bg-[#111827] rounded-3xl z-50 overflow-y-auto gl-shadow-xl"
               >
-                <div className="p-6 border-b border-[#E5E0D8] dark:border-[#1F2937] flex items-center justify-between">
-                  <h2 className="text-xl font-bold text-[#241100] dark:text-[#fff2e5]">KYC Review — {selected.name ?? selected.phone}</h2>
-                  <button onClick={() => setSelected(null)} className="text-[#9CA3AF] hover:text-[#6B7280] gl-transition">
+                <div className="p-6 border-b border-gray-200 dark:border-[#1F2937] flex items-center justify-between">
+                  <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">KYC Review — {selected.name ?? selected.phone}</h2>
+                  <button onClick={() => setSelected(null)} className="text-gray-400 hover:text-gray-500 gl-transition">
                     <X size={22} />
                   </button>
                 </div>
@@ -238,8 +238,8 @@ export default function AdminRunners() {
                         ["Area", selected.area ?? "—"],
                       ].map(([k, v]) => (
                         <div key={k} className="flex gap-2">
-                          <dt className="text-[#9CA3AF] w-24 flex-shrink-0">{k}:</dt>
-                          <dd className="font-medium text-[#241100] dark:text-[#fff2e5]">{v}</dd>
+                          <dt className="text-gray-400 w-24 flex-shrink-0">{k}:</dt>
+                          <dd className="font-medium text-gray-900 dark:text-gray-100">{v}</dd>
                         </div>
                       ))}
                     </dl>
@@ -251,8 +251,8 @@ export default function AdminRunners() {
                         ["Holder", selected.bankAccountHolder ?? "—"],
                       ].map(([k, v]) => (
                         <div key={k} className="flex gap-2">
-                          <dt className="text-[#9CA3AF] w-24 flex-shrink-0">{k}:</dt>
-                          <dd className="font-medium text-[#241100] dark:text-[#fff2e5]">{v}</dd>
+                          <dt className="text-gray-400 w-24 flex-shrink-0">{k}:</dt>
+                          <dd className="font-medium text-gray-900 dark:text-gray-100">{v}</dd>
                         </div>
                       ))}
                     </dl>
@@ -268,16 +268,16 @@ export default function AdminRunners() {
                         <div key={doc.label}>
                           <p className="text-xs text-gray-500 mb-1">{doc.label}</p>
                           {doc.src ? (
-                            <img src={doc.src} alt={doc.label} className="w-full max-h-36 object-cover rounded-xl border border-[#E5E0D8]" />
+                            <img src={doc.src} alt={doc.label} className="w-full max-h-36 object-cover rounded-xl border border-gray-200" />
                           ) : (
-                            <div className="h-24 bg-[#F3F4F6] rounded-xl flex items-center justify-center text-[#9CA3AF] text-sm">Not uploaded</div>
+                            <div className="h-24 bg-gray-100 rounded-xl flex items-center justify-center text-gray-400 text-sm">Not uploaded</div>
                           )}
                         </div>
                       ))}
                     </div>
                   </div>
                 </div>
-                <div className="p-6 border-t border-[#E5E0D8] dark:border-[#1F2937] space-y-4">
+                <div className="p-6 border-t border-gray-200 dark:border-[#1F2937] space-y-4">
                   {tab === "pending" && (
                     <>
                       {selected.kycStatus === "pending" && !selected.dispatchAllowed && (
@@ -290,7 +290,7 @@ export default function AdminRunners() {
                           }}
                           disabled={reviewKyc.isPending}
                           className="w-full py-3 rounded-xl text-white font-bold flex items-center justify-center gap-2"
-                          style={{ background: GOLD_GRAD }}
+                          style={{ background: BLUE_GRAD }}
                         >
                           <Wifi size={16} /> Quick Approve — Allow Dispatch (KYC Pending)
                         </button>
@@ -306,7 +306,7 @@ export default function AdminRunners() {
                         value={rejReason}
                         onChange={e => setRejReason(e.target.value)}
                         placeholder="Rejection reason (if rejecting)"
-                        className="w-full border border-[#E5E0D8] dark:border-[#374151] rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#241100] gl-transition"
+                        className="w-full border border-gray-200 dark:border-[#374151] rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 gl-transition"
                       />
                       <div className="flex gap-3">
                         <button

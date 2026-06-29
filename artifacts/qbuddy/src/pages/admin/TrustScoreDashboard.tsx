@@ -1,6 +1,6 @@
 import { motion } from "framer-motion";
 import { AlertTriangle } from "lucide-react";
-import { NAVY } from "@/lib/theme";
+import { DARK } from "@/lib/theme";
 
 export interface TrustMetricsItem {
   id?: number | null;
@@ -30,9 +30,9 @@ export default function TrustScoreDashboard({ trustMetrics }: Props) {
       className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 mb-5"
     >
       <div className="flex items-center justify-between mb-3">
-        <h3 className="font-black text-[#241100] text-sm">Comrade Trust Scores</h3>
+        <h3 className="font-black text-gray-900 text-sm">Comrade Trust Scores</h3>
         <span className="text-gray-400 text-xs">
-          Avg: <strong className="font-black" style={{ color: NAVY }}>{trustMetrics.avgTrustScore}</strong>
+          Avg: <strong className="font-black" style={{ color: DARK }}>{trustMetrics.avgTrustScore}</strong>
         </span>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-3">

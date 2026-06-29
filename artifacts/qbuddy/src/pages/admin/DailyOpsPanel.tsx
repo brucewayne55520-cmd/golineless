@@ -1,7 +1,7 @@
 import { motion } from "framer-motion";
 import { BarChart3 } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
-import { NAVY } from "@/lib/theme";
+import { DARK } from "@/lib/theme";
 
 export interface DailyOpsData {
   tasksToday?: number | null;
@@ -26,13 +26,13 @@ export default function DailyOpsPanel({ dailyOps }: Props) {
       className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 mb-5"
       style={{ borderLeft: "4px solid #0EA5E9" }}
     >
-      <h3 className="font-black text-[#241100] text-sm mb-3 flex items-center gap-2">
+      <h3 className="font-black text-gray-900 text-sm mb-3 flex items-center gap-2">
         <BarChart3 size={14} className="text-sky-500" /> Daily Operations
       </h3>
       <div className="grid grid-cols-2 md:grid-cols-7 gap-3 mb-3">
         <div className="bg-gray-50 rounded-xl p-3 text-center">
           <p className="text-[9px] text-gray-400 uppercase">Tasks Today</p>
-          <p className="text-lg font-black" style={{ color: NAVY }}>{dailyOps.tasksToday}</p>
+          <p className="text-lg font-black" style={{ color: DARK }}>{dailyOps.tasksToday}</p>
         </div>
         <div className="bg-green-50 rounded-xl p-3 text-center">
           <p className="text-[9px] text-green-400 uppercase">Completed</p>

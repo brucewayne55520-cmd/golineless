@@ -837,7 +837,7 @@ router.post("/tasks/:id/accept", requireRunner, async (req, res): Promise<void> 
         to: userData.email,
         subject: `Comrade Assigned — Task #${id}`,
         htmlContent: `<div style="font-family:Arial,sans-serif;max-width:600px;margin:auto">
-          <h2 style="color:#241100">Go LineLess — Comrade Assigned</h2>
+          <h2 style="color:#0F172A">Go LineLess — Comrade Assigned</h2>
           <p>Hi ${escapeHtml(userData.name) || "there"},</p>
           <p>A Comrade has accepted your task. They'll be there shortly!</p>
           <table style="width:100%;border-collapse:collapse;margin:16px 0">
@@ -957,7 +957,7 @@ router.post("/tasks/:id/confirm-cash", requireRunner, async (req, res): Promise<
         to: userData.email,
         subject: `Payment Receipt — Task #${id}`,
         htmlContent: `<div style="font-family:Arial,sans-serif;max-width:600px;margin:auto">
-          <h2 style="color:#241100">Go LineLess — Payment Receipt</h2>
+          <h2 style="color:#0F172A">Go LineLess — Payment Receipt</h2>
           <p>Hi ${escapeHtml(userData.name) || "there"},</p>
           <p>${escapeHtml(runner.name) || "Your Comrade"} has confirmed receiving cash payment for your task.</p>
           <table style="width:100%;border-collapse:collapse;margin:16px 0">

@@ -4,8 +4,8 @@ import { toast } from "sonner";
 import AdminSidebar from "@/components/AdminSidebar";
 import { useListSupportTickets, useGetSupportStats, useUpdateSupportTicket } from "@workspace/api-client-react";
 import { Ticket, Clock, CheckCircle2, AlertCircle, X } from "lucide-react";
-import { NAVY } from "@/lib/theme";
-const STATUS_COLORS: Record<string, string> = { open: "#3B82F6", in_progress: "#F59E0B", resolved: "#10B981", closed: "#6B7280" };
+import { DARK, DARK_MUTED } from "@/lib/theme";
+const STATUS_COLORS: Record<string, string> = { open: "#3B82F6", in_progress: "#F59E0B", resolved: "#10B981", closed: DARK_MUTED };
 const PRIORITY_COLORS: Record<string, string> = { low: "#9CA3AF", normal: "#3B82F6", high: "#F59E0B", urgent: "#EF4444" };
 
 export default function AdminSupport() {
@@ -28,53 +28,53 @@ export default function AdminSupport() {
     <div className="flex min-h-screen gl-surface dark:bg-[#0A0E1A]">
       <AdminSidebar />
       <main className="flex-1 overflow-y-auto p-6">
-        <h1 className="text-xl font-bold text-[#241100] dark:text-[#fff2e5] mb-5">Customer Support Center</h1>
+        <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-5">Customer Support Center</h1>
 
         {stats && (
           <div className="grid grid-cols-4 gap-4 mb-5">
-            <div className="bg-white dark:bg-[#111827] rounded-2xl p-4 gl-shadow-md border border-[#E5E0D8] dark:border-[#1F2937] text-center gl-transition">
-              <Ticket size={18} className="mx-auto mb-1" style={{ color: NAVY }} />
-              <p className="text-2xl font-black" style={{ color: NAVY }}>{stats.total}</p>
-              <p className="text-[10px] text-[#9CA3AF]">Total Tickets</p>
+            <div className="bg-white dark:bg-[#111827] rounded-2xl p-4 gl-shadow-md border border-gray-200 dark:border-[#1F2937] text-center gl-transition">
+              <Ticket size={18} className="mx-auto mb-1" style={{ color: DARK }} />
+              <p className="text-2xl font-black" style={{ color: DARK }}>{stats.total}</p>
+              <p className="text-[10px] text-gray-400">Total Tickets</p>
             </div>
             <div className="bg-white rounded-2xl p-4 shadow-sm border border-blue-100 text-center">
               <AlertCircle size={18} className="mx-auto mb-1 text-blue-500" />
               <p className="text-2xl font-black text-blue-600">{stats.open}</p>
-              <p className="text-[10px] text-[#9CA3AF]">Open</p>
+              <p className="text-[10px] text-gray-400">Open</p>
             </div>
             <div className="bg-white rounded-2xl p-4 shadow-sm border border-green-100 text-center">
               <CheckCircle2 size={18} className="mx-auto mb-1 text-green-500" />
               <p className="text-2xl font-black text-green-600">{stats.resolved}</p>
-              <p className="text-[10px] text-[#9CA3AF]">Resolved</p>
+              <p className="text-[10px] text-gray-400">Resolved</p>
             </div>
             <div className="bg-white rounded-2xl p-4 shadow-sm border border-amber-100 text-center">
               <Clock size={18} className="mx-auto mb-1 text-amber-500" />
               <p className="text-2xl font-black text-amber-600">{stats.avgResolutionTime}<span className="text-sm font-medium">m</span></p>
-              <p className="text-[10px] text-[#9CA3AF]">Avg Resolution</p>
+              <p className="text-[10px] text-gray-400">Avg Resolution</p>
             </div>
           </div>
         )}
 
-        <div className="bg-white dark:bg-[#111827] rounded-2xl gl-shadow-md border border-[#E5E0D8] dark:border-[#1F2937] overflow-hidden">
-          <div className="px-5 py-4 border-b border-[#E5E0D8] dark:border-[#1F2937] flex items-center justify-between">
-            <h3 className="font-bold text-[#241100] dark:text-[#fff2e5]">Support Tickets</h3>
-            <select value={filter} onChange={e => setFilter(e.target.value)} className="text-xs border border-[#E5E0D8] dark:border-[#374151] rounded-lg px-2 py-1.5 bg-white dark:bg-[#1F2937] dark:text-[#fff2e5] gl-transition">
+        <div className="bg-white dark:bg-[#111827] rounded-2xl gl-shadow-md border border-gray-200 dark:border-[#1F2937] overflow-hidden">
+          <div className="px-5 py-4 border-b border-gray-200 dark:border-[#1F2937] flex items-center justify-between">
+            <h3 className="font-bold text-gray-900 dark:text-gray-100">Support Tickets</h3>
+            <select value={filter} onChange={e => setFilter(e.target.value)} className="text-xs border border-gray-200 dark:border-[#374151] rounded-lg px-2 py-1.5 bg-white dark:bg-[#1F2937] dark:text-gray-100 gl-transition">
               <option value="">All</option><option value="open">Open</option><option value="in_progress">In Progress</option><option value="resolved">Resolved</option><option value="closed">Closed</option>
             </select>
           </div>
-          {loading ? <div className="p-8 text-center text-[#9CA3AF]">Loading...</div> : !tickets || tickets.length === 0 ? (
-            <div className="p-8 text-center text-[#9CA3AF]"><Ticket size={32} className="mx-auto mb-2 opacity-30" /><p className="font-medium">No tickets yet</p></div>
+          {loading ? <div className="p-8 text-center text-gray-400">Loading...</div> : !tickets || tickets.length === 0 ? (
+            <div className="p-8 text-center text-gray-400"><Ticket size={32} className="mx-auto mb-2 opacity-30" /><p className="font-medium">No tickets yet</p></div>
           ) : (
-            <div className="divide-y divide-[#F3F4F6] dark:divide-[#1F2937]">
+            <div className="divide-y divide-gray-100 dark:divide-[#1F2937]">
               {(Array.isArray(tickets) ? tickets : []).filter(t => !filter || t.status === filter).map((t: Required<import("@workspace/api-client-react").SupportTicket>) => (
-                <motion.div key={t.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="px-5 py-4 hover:bg-[#FFF9F2] dark:hover:bg-[#1F2937] gl-transition">
+                <motion.div key={t.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="px-5 py-4 hover:bg-gray-50 dark:hover:bg-[#1F2937] gl-transition">
                   <div className="flex items-start justify-between">
                     <div>
                       <div className="flex items-center gap-2">
-                        <span className="text-xs font-mono font-bold text-[#9CA3AF]">{t.ticketId}</span>
-                        <span className="text-sm font-semibold text-[#241100] dark:text-[#fff2e5]">{t.subject}</span>
+                        <span className="text-xs font-mono font-bold text-gray-400">{t.ticketId}</span>
+                        <span className="text-sm font-semibold text-gray-900 dark:text-gray-100">{t.subject}</span>
                       </div>
-                      <p className="text-xs text-[#9CA3AF] mt-1 line-clamp-2">{t.description}</p>
+                      <p className="text-xs text-gray-400 mt-1 line-clamp-2">{t.description}</p>
                     </div>
                     <div className="flex items-center gap-2 flex-shrink-0">
                       <span className="text-[10px] font-bold px-2 py-1 rounded-full" style={{ background: `${PRIORITY_COLORS[t.priority] || "#9CA3AF"}20`, color: PRIORITY_COLORS[t.priority] || "#9CA3AF" }}>{t.priority}</span>
@@ -140,7 +140,7 @@ function ResolutionForm({ ticketId, onResolve, onInProgress }: {
         value={resolution}
         onChange={e => setResolution(e.target.value)}
         placeholder="Describe the resolution..."
-        className="w-full border border-[#E5E0D8] dark:border-[#374151] rounded-lg px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-[#059669] resize-none bg-white dark:bg-[#1F2937] dark:text-[#fff2e5] gl-transition"
+        className="w-full border border-gray-200 dark:border-[#374151] rounded-lg px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-[#059669] resize-none bg-white dark:bg-[#1F2937] dark:text-gray-100 gl-transition"
         rows={3}
       />
       <div className="flex gap-2">

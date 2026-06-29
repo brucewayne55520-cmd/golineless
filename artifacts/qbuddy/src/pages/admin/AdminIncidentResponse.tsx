@@ -2,10 +2,10 @@ import { motion } from "framer-motion";
 import AdminSidebar from "@/components/AdminSidebar";
 import { useGetIncidentResponseCenter } from "@workspace/api-client-react";
 import { ShieldAlert, Clock, CheckCircle2, AlertTriangle, Activity } from "lucide-react";
-import { NAVY } from "@/lib/theme";
+import { DARK_MUTED } from "@/lib/theme";
 
 const SEVERITY_COLORS: Record<string, string> = {
-  critical: "#DC2626", high: "#EF4444", medium: "#F59E0B", low: "#6B7280",
+  critical: "#DC2626", high: "#EF4444", medium: "#F59E0B", low: DARK_MUTED,
 };
 
 export default function AdminIncidentResponse() {
@@ -18,7 +18,7 @@ export default function AdminIncidentResponse() {
       <main className="flex-1 overflow-y-auto p-6">
         <div className="flex items-center justify-between mb-5">
           <div>
-            <h1 className="text-xl font-black text-[#241100]">Incident Response Center</h1>
+            <h1 className="text-xl font-black text-gray-900">Incident Response Center</h1>
             <p className="text-gray-400 text-xs mt-0.5">Real-time incident management · Auto-refresh 15s</p>
           </div>
         </div>
@@ -55,7 +55,7 @@ export default function AdminIncidentResponse() {
 
             {/* Type distribution */}
             <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 mb-5">
-              <h3 className="font-black text-[#241100] text-sm mb-3">Incident Types</h3>
+              <h3 className="font-black text-gray-900 text-sm mb-3">Incident Types</h3>
               <div className="space-y-2">
                 {Object.entries(responseCenter?.typeDist ?? {}).map(([type, count]: [string, number]) => (
                   <div key={type} className="flex items-center gap-3">
@@ -77,7 +77,7 @@ export default function AdminIncidentResponse() {
             {/* Recent incidents */}
             <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
               <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
-                <h3 className="font-black text-[#241100] text-sm flex items-center gap-2">
+                <h3 className="font-black text-gray-900 text-sm flex items-center gap-2">
                   <Activity size={14} /> Recent Incidents
                 </h3>
                 <span className="text-xs text-gray-400">{responseCenter?.total ?? 0} total</span>

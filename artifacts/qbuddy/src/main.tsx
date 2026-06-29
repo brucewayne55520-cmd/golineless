@@ -19,19 +19,15 @@ setAuthTokenGetter(() => {
   );
 });
 
+import { isGoogleAuthConfigured } from "./lib/google-auth";
+
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || "";
 
-// Warn if the Google Client ID looks like a placeholder or is empty
-if (!GOOGLE_CLIENT_ID || !GOOGLE_CLIENT_ID.includes(".apps.googleusercontent.com")) {
-  console.error(
-    "[Google Auth] VITE_GOOGLE_CLIENT_ID is missing or invalid.\n" +
-    "Current value:", GOOGLE_CLIENT_ID || "(empty)",
-    "\nSet it in your Render environment variables."
-  );
-}
+const root = createRoot(document.getElementById("root")!);
+const content = <App />;
 
-createRoot(document.getElementById("root")!).render(
-  <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
-    <App />
-  </GoogleOAuthProvider>
+root.render(
+  isGoogleAuthConfigured
+    ? <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>{content}</GoogleOAuthProvider>
+    : content
 );

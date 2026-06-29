@@ -8,8 +8,7 @@ import {
   Smartphone, Loader2,
 } from "lucide-react";
 import { useGetRunnerMe, useSaveOnboardingStep, useToggleOnlineStatus, useGpsHealthCheck } from "@workspace/api-client-react";
-import { NAVY_GRAD, GOLD, GOLD_GRAD } from "@/lib/theme";
-
+import { BLUE, BLUE_GRAD } from "@/lib/theme";
 const BG = "#080E1E";
 
 const STEPS = [
@@ -162,7 +161,7 @@ export default function RunnerOnboarding() {
 
   const stepProgress = ((step) / (STEPS.length - 1)) * 100;
 
-  const inputClass = "w-full bg-white/10 border border-white/20 rounded-xl px-3.5 py-3 text-white text-sm focus:outline-none focus:border-[#ff7b00]/50 transition-colors placeholder-white/30";
+  const inputClass = "w-full bg-white/10 border border-white/20 rounded-xl px-3.5 py-3 text-white text-sm focus:outline-none focus:border-blue-600/50 transition-colors placeholder-white/30";
 
   if (completed) {
     return (
@@ -172,12 +171,12 @@ export default function RunnerOnboarding() {
           animate={{ scale: 1, opacity: 1 }}
           className="text-center max-w-sm"
         >
-          <div className="w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-5 shadow-lg" style={{ background: GOLD_GRAD }}>
-            <CheckCircle2 size={40} className="text-[#241100]" />
+          <div className="w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-5 shadow-lg" style={{ background: BLUE_GRAD }}>
+            <CheckCircle2 size={40} className="text-gray-900" />
           </div>
           <h1 className="text-2xl font-black text-white mb-2">You're Live!</h1>
           <p className="text-white/60 text-sm mb-6">Your Comrade profile is active. Dispatching tasks near you...</p>
-          <div className="w-10 h-10 border-4 rounded-full animate-spin mx-auto" style={{ borderColor: GOLD, borderTopColor: "transparent" }} />
+          <div className="w-10 h-10 border-4 rounded-full animate-spin mx-auto" style={{ borderColor: BLUE, borderTopColor: "transparent" }} />
         </motion.div>
       </div>
     );
@@ -201,7 +200,7 @@ export default function RunnerOnboarding() {
         <div className="h-1.5 bg-white/10 rounded-full overflow-hidden">
           <motion.div
             className="h-full rounded-full"
-            style={{ background: GOLD_GRAD }}
+            style={{ background: BLUE_GRAD }}
             initial={{ width: 0 }}
             animate={{ width: `${stepProgress}%` }}
             transition={{ duration: 0.5 }}
@@ -217,8 +216,8 @@ export default function RunnerOnboarding() {
             return (
               <div key={s.label} className="flex flex-col items-center gap-1" style={{ opacity: current || done ? 1 : 0.3 }}>
                 <div className={`w-6 h-6 rounded-full flex items-center justify-center transition-all ${done ? "" : current ? "" : "bg-white/10"}`}
-                  style={done ? { background: GOLD } : current ? { borderColor: GOLD, borderWidth: 2 } : {}}>
-                  {done ? <CheckCircle2 size={12} className="text-[#241100]" /> : <Icon size={11} className="text-white/50" />}
+                  style={done ? { background: BLUE } : current ? { borderColor: BLUE, borderWidth: 2 } : {}}>
+                  {done ? <CheckCircle2 size={12} className="text-gray-900" /> : <Icon size={11} className="text-white/50" />}
                 </div>
                 <span className="text-[8px] font-semibold text-white/40">{s.label}</span>
               </div>
@@ -240,7 +239,7 @@ export default function RunnerOnboarding() {
             {step === 0 && (
               <div className="text-center py-12">
                 <div className="w-20 h-20 rounded-2xl bg-white/10 flex items-center justify-center mx-auto mb-5">
-                  <Smartphone size={36} className="text-[#ff7b00]" />
+                  <Smartphone size={36} className="text-blue-600" />
                 </div>
                 <h2 className="text-white font-black text-xl mb-2">Phone Verified ✓</h2>
                 <p className="text-white/50 text-sm mb-6">{runner?.phone || "Your number is verified"}</p>
@@ -255,8 +254,8 @@ export default function RunnerOnboarding() {
             {step === 1 && (
               <div className="py-6">
                 <div className="bg-white/8 border border-white/15 rounded-2xl p-5 mb-5">
-                  <div className="w-12 h-12 rounded-xl bg-[#ff7b00]/20 flex items-center justify-center mb-3">
-                    <User size={22} className="text-[#ff7b00]" />
+                  <div className="w-12 h-12 rounded-xl bg-blue-600/20 flex items-center justify-center mb-3">
+                    <User size={22} className="text-blue-600" />
                   </div>
                   <h2 className="text-white font-black text-lg mb-1">What's your name?</h2>
                   <p className="text-white/40 text-xs mb-4">This is how clients will see you</p>
@@ -289,7 +288,7 @@ export default function RunnerOnboarding() {
 
                   {gpsStatus === "checking" && (
                     <div className="flex items-center gap-3 bg-white/10 rounded-xl p-4">
-                      <Loader2 size={20} className="animate-spin text-[#ff7b00]" />
+                      <Loader2 size={20} className="animate-spin text-blue-600" />
                       <div>
                         <p className="text-white font-semibold text-sm">Checking location...</p>
                         <p className="text-white/40 text-xs">Please allow location access</p>
@@ -410,7 +409,7 @@ export default function RunnerOnboarding() {
                     <div className={`border-2 border-dashed rounded-2xl p-8 text-center transition-all ${selfie ? "border-green-500/50 bg-green-500/10" : "border-white/20 hover:border-white/30"}`}>
                       {selfie ? (
                         <div>
-                          <img src={selfie} alt="" className="w-28 h-28 object-cover rounded-full mx-auto mb-3 shadow-xl border-4" style={{ borderColor: GOLD }} />
+                          <img src={selfie} alt="" className="w-28 h-28 object-cover rounded-full mx-auto mb-3 shadow-xl border-4" style={{ borderColor: BLUE }} />
                           <p className="text-green-400 text-sm font-bold">Selfie uploaded ✓</p>
                           <p className="text-green-400/60 text-xs mt-0.5">Tap to retake</p>
                         </div>
@@ -438,8 +437,8 @@ export default function RunnerOnboarding() {
             {step === 5 && (
               <div className="text-center py-6">
                 <div className="bg-white/8 border border-white/15 rounded-2xl p-6 mb-5">
-                  <div className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg" style={{ background: GOLD_GRAD }}>
-                    <Wifi size={28} className="text-[#241100]" />
+                  <div className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg" style={{ background: BLUE_GRAD }}>
+                    <Wifi size={28} className="text-gray-900" />
                   </div>
                   <h2 className="text-white font-black text-xl mb-2">Ready to Earn!</h2>
                   <p className="text-white/50 text-sm mb-6">
@@ -453,7 +452,7 @@ export default function RunnerOnboarding() {
                       <span className="text-white font-black">{name ? "100%" : "83%"}</span>
                     </div>
                     <div className="h-2 bg-white/10 rounded-full overflow-hidden mb-3">
-                      <div className="h-full rounded-full" style={{ width: name ? "100%" : "83%", background: GOLD_GRAD }} />
+                      <div className="h-full rounded-full" style={{ width: name ? "100%" : "83%", background: BLUE_GRAD }} />
                     </div>
                     <div className="grid grid-cols-3 gap-2">
                       {[
@@ -476,8 +475,8 @@ export default function RunnerOnboarding() {
                   <button
                     onClick={handleNext}
                     disabled={onlineLoading}
-                    className="w-full py-4 rounded-2xl text-[#241100] font-black text-lg flex items-center justify-center gap-2 shadow-xl hover:shadow-2xl transition-all disabled:opacity-60"
-                    style={{ background: GOLD_GRAD }}
+                    className="w-full py-4 rounded-2xl text-gray-900 font-black text-lg flex items-center justify-center gap-2 shadow-xl hover:shadow-2xl transition-all disabled:opacity-60"
+                    style={{ background: BLUE_GRAD }}
                   >
                     {onlineLoading ? (
                       <><Loader2 size={18} className="animate-spin" /> Going Live...</>
@@ -516,8 +515,8 @@ export default function RunnerOnboarding() {
           <button
             onClick={handleNext}
             disabled={saving || (step === 2 && gpsStatus === "checking") || (step === 2 && gpsStatus === "denied")}
-            className="flex-[2] py-3.5 rounded-2xl text-[#241100] font-black text-sm flex items-center justify-center gap-1.5 transition-all disabled:opacity-50"
-            style={{ background: GOLD_GRAD }}
+            className="flex-[2] py-3.5 rounded-2xl text-gray-900 font-black text-sm flex items-center justify-center gap-1.5 transition-all disabled:opacity-50"
+            style={{ background: BLUE_GRAD }}
           >
             {saving ? (
               <><Loader2 size={14} className="animate-spin" /> Saving...</>

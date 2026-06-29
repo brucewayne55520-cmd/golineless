@@ -3,13 +3,12 @@ import AdminSidebar from "@/components/AdminSidebar";
 import { useGetFounderDashboard } from "@workspace/api-client-react";
 import { Users, PersonStanding, ClipboardList, Wallet, Star, ShieldAlert, Ticket, TrendingUp, Target } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
-import { NAVY, NAVY_GRAD, GOLD, GOLD_GRAD } from "@/lib/theme";
-
+import { DARK_GRAD, BLUE, BLUE_GRAD, DARK } from "@/lib/theme";
 export default function AdminFounder() {
   const { data, isLoading } = useGetFounderDashboard({ query: { queryKey: ["founderDashboard"], refetchInterval: 15000 } });
 
   if (isLoading) return (
-    <div className="flex min-h-screen" style={{ background: "#241100" }}>
+    <div className="flex min-h-screen" style={{ background: DARK }}>
       <AdminSidebar />
       <main className="flex-1 p-6">
         <div className="grid grid-cols-3 gap-4 mb-5">{[1,2,3].map(i => <div key={i} className="h-28 bg-white/5 rounded-2xl animate-pulse" />)}</div>
@@ -50,7 +49,7 @@ export default function AdminFounder() {
       ],
     },
     {
-      title: "Quality", icon: Star, color: GOLD,
+      title: "Quality", icon: Star, color: BLUE,
       metrics: [
         { label: "Avg Rating", val: data?.quality?.avgRating ?? "0.0" },
         { label: "Avg Trust", val: data?.quality?.avgTrustScore ?? 0 },
@@ -82,7 +81,7 @@ export default function AdminFounder() {
   ];
 
   return (
-    <div className="flex min-h-screen" style={{ background: "#241100" }}>
+    <div className="flex min-h-screen" style={{ background: DARK }}>
       <AdminSidebar />
       <main className="flex-1 overflow-y-auto">
         {/* Header */}
@@ -102,11 +101,11 @@ export default function AdminFounder() {
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
             className="rounded-2xl p-6 mb-6 text-white relative overflow-hidden"
-            style={{ background: NAVY_GRAD }}
+            style={{ background: DARK_GRAD }}
           >
-            <div className="absolute top-0 right-0 w-48 h-48 rounded-full opacity-10" style={{ background: `radial-gradient(circle, ${GOLD}, transparent)`, transform: "translate(30%,-30%)" }} />
+            <div className="absolute top-0 right-0 w-48 h-48 rounded-full opacity-10" style={{ background: `radial-gradient(circle, ${BLUE}, transparent)`, transform: "translate(30%,-30%)" }} />
             <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: GOLD_GRAD }}>
+              <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: BLUE_GRAD }}>
                 <Target size={18} className="text-white" />
               </div>
               <div>
@@ -122,7 +121,7 @@ export default function AdminFounder() {
                 initial={{ width: 0 }}
                 animate={{ width: `${Math.min(data?.pilotProgress ?? 0, 100)}%` }}
                 className="h-full rounded-full"
-                style={{ background: GOLD_GRAD }}
+                style={{ background: BLUE_GRAD }}
               />
             </div>
             <div className="grid grid-cols-3 gap-4 mt-4">

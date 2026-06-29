@@ -8,7 +8,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { UserBottomNav } from "@/components/BottomNav";
 import { getInitials, formatCurrency } from "@/lib/utils";
 import type { LucideIcon } from "lucide-react";
-import { NAVY_GRAD, GOLD } from "@/lib/theme";
+import { DARK_GRAD, BLUE, DARK } from "@/lib/theme";
 import { LoadingSkeleton } from "@/components/LoadingSkeleton";
 
 /** Extended user fields not in the generated User type */
@@ -97,8 +97,8 @@ export default function UserProfile() {
 
   const statCards: { Icon: LucideIcon; label: string; val: string | number; color: string }[] = statsData ? [
     { Icon: CheckCircle2, label: "Tasks", val: statsData.totalTasks, color: "#22C55E" },
-    { Icon: Clock, label: "Hrs Saved", val: `${Math.round(statsData.hoursSaved)}h`, color: "#331900" },
-    { Icon: Wallet, label: "Value", val: formatCurrency(statsData.valueSaved), color: GOLD },
+    { Icon: Clock, label: "Hrs Saved", val: `${Math.round(statsData.hoursSaved)}h`, color: DARK },
+    { Icon: Wallet, label: "Value", val: formatCurrency(statsData.valueSaved), color: BLUE },
   ] : [];
 
   const menuItems: { Icon: LucideIcon; label: string; action?: () => void; badge?: number }[] = [
@@ -112,12 +112,12 @@ export default function UserProfile() {
     { Icon: Info, label: "About Go LineLess" },
   ];
 
-  const inputClass = "w-full border border-gray-200 rounded-xl px-3.5 py-3 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#331900]/20 transition-all bg-white";
+  const inputClass = "w-full border border-gray-200 rounded-xl px-3.5 py-3 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-all bg-white";
 
   return (
-    <div className="min-h-screen bg-[#FFF9F2] pb-24">
+    <div className="min-h-screen bg-gray-50 pb-24">
       {/* Header */}
-      <div className="rounded-b-3xl p-6 text-white" style={{ background: NAVY_GRAD }}>
+      <div className="rounded-b-3xl p-6 text-white" style={{ background: DARK_GRAD }}>
         <div className="flex items-center gap-4">
           <div className="w-16 h-16 bg-white/20 border-2 border-white/40 rounded-full flex items-center justify-center text-2xl font-black">
             {getInitials(user?.name)}
@@ -149,7 +149,7 @@ export default function UserProfile() {
             {statCards.map((s) => (
               <div key={s.label} className="bg-white rounded-2xl p-3 text-center shadow-sm">
                 <s.Icon size={18} className="mx-auto mb-1" style={{ color: s.color }} />
-                <div className="font-black text-[#331900] text-lg">{s.val}</div>
+                <div className="font-black text-gray-900 text-lg">{s.val}</div>
                 <div className="text-xs text-gray-400">{s.label}</div>
               </div>
             ))}
@@ -160,18 +160,18 @@ export default function UserProfile() {
         {sub ? (
           <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
             <div className="flex items-center gap-2 mb-2">
-              <Crown size={16} className="text-[#ff7b00]" />
-              <h3 className="font-bold text-[#241100]">{subData.planName} Plan</h3>
+              <Crown size={16} className="text-blue-600" />
+              <h3 className="font-bold text-gray-900">{subData.planName} Plan</h3>
               <span className="ml-auto text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-semibold">Active</span>
             </div>
             <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
-              <div className="h-full rounded-full" style={{ background: NAVY_GRAD, width: `${Math.min(100, ((subData.tasksUsed ?? 0) / (subData.tasksPerMonth || 10)) * 100)}%` }} />
+              <div className="h-full rounded-full" style={{ background: DARK_GRAD, width: `${Math.min(100, ((subData.tasksUsed ?? 0) / (subData.tasksPerMonth || 10)) * 100)}%` }} />
             </div>
             <p className="text-xs text-gray-500 mt-1">{subData.tasksUsed ?? 0} / {subData.tasksPerMonth ?? "∞"} tasks used</p>
           </div>
         ) : (
           <div className="bg-gray-50 rounded-2xl p-4 border border-gray-200">
-            <p className="text-sm font-semibold text-[#331900]">No active subscription</p>
+            <p className="text-sm font-semibold text-gray-900">No active subscription</p>
             <p className="text-xs text-gray-500 mt-1">Subscribe to Senior Care for unlimited tasks</p>
           </div>
         )}
@@ -207,7 +207,7 @@ export default function UserProfile() {
         <div className="fixed inset-0 bg-black/60 z-50 flex items-end backdrop-blur-sm">
           <div className="bg-white w-full rounded-t-3xl p-5 max-h-[85vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-5">
-              <h2 className="font-black text-[#241100] text-xl">Edit Profile</h2>
+              <h2 className="font-black text-gray-900 text-xl">Edit Profile</h2>
               <button onClick={() => setEditingProfile(false)} className="w-8 h-8 rounded-xl bg-gray-100 flex items-center justify-center"><X size={18} /></button>
             </div>
             <div className="space-y-3">
@@ -234,7 +234,7 @@ export default function UserProfile() {
                 </div>
               ))}
             </div>
-            <button onClick={saveProfile} className="w-full py-3.5 rounded-2xl text-white font-bold mt-4" style={{ background: NAVY_GRAD }}>Save Changes</button>
+            <button onClick={saveProfile} className="w-full py-3.5 rounded-2xl text-white font-bold mt-4" style={{ background: DARK_GRAD }}>Save Changes</button>
           </div>
         </div>
       )}
@@ -245,7 +245,7 @@ export default function UserProfile() {
           <div className="bg-white w-full rounded-t-3xl p-5 max-h-[85vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-5">
               <div>
-                <h2 className="font-black text-[#241100] text-xl">Verify Identity</h2>
+                <h2 className="font-black text-gray-900 text-xl">Verify Identity</h2>
                 <p className="text-gray-400 text-xs mt-0.5">KYC · Step {kycStep + 1} of {KYC_STEPS.length}</p>
               </div>
               <button onClick={() => setShowKyc(false)} className="w-8 h-8 rounded-xl bg-gray-100 flex items-center justify-center"><X size={18} /></button>
@@ -253,11 +253,11 @@ export default function UserProfile() {
             {/* Progress */}
             <div className="flex gap-1 mb-4">
               {KYC_STEPS.map((_, i) => (
-                <div key={i} className="flex-1 h-1.5 rounded-full transition-all" style={{ background: i <= kycStep ? GOLD : "#E5E7EB" }} />
+                <div key={i} className="flex-1 h-1.5 rounded-full transition-all" style={{ background: i <= kycStep ? BLUE : "#E5E7EB" }} />
               ))}
             </div>
             <div className="mb-4 p-3 bg-gray-50 rounded-xl">
-              <p className="font-bold text-sm text-[#241100]">{KYC_STEPS[kycStep].label}</p>
+              <p className="font-bold text-sm text-gray-900">{KYC_STEPS[kycStep].label}</p>
               <p className="text-gray-400 text-xs mt-0.5">{KYC_STEPS[kycStep].desc}</p>
             </div>
             {kycStep === 0 && (
@@ -301,9 +301,9 @@ export default function UserProfile() {
                 <button onClick={() => setKycStep(s => s - 1)} className="flex-1 py-3.5 rounded-2xl text-gray-500 font-bold border border-gray-200">← Back</button>
               )}
               {kycStep < KYC_STEPS.length - 1 ? (
-                <button onClick={() => setKycStep(s => s + 1)} className="flex-1 py-3.5 rounded-2xl text-white font-bold" style={{ background: NAVY_GRAD }}>Continue →</button>
+                <button onClick={() => setKycStep(s => s + 1)} className="flex-1 py-3.5 rounded-2xl text-white font-bold" style={{ background: DARK_GRAD }}>Continue →</button>
               ) : (
-                <button onClick={submitKyc} className="flex-1 py-3.5 rounded-2xl text-white font-bold" style={{ background: GOLD }}>Submit KYC</button>
+                <button onClick={submitKyc} className="flex-1 py-3.5 rounded-2xl text-white font-bold" style={{ background: BLUE }}>Submit KYC</button>
               )}
             </div>
           </div>

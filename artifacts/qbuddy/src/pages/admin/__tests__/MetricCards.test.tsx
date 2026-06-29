@@ -2,10 +2,11 @@ import { describe, it, expect } from "vitest";
 import { render, screen } from "@testing-library/react";
 import MetricCards from "../MetricCards";
 import { ClipboardList, Zap } from "lucide-react";
+import { DARK, BLUE, BLUE_50, SURFACE } from "@/lib/theme";
 
 const mockCards = [
-  { label: "Tasks Today", val: 150, Icon: ClipboardList, color: "#331900", bg: "#EEF2FA", trend: "All time" },
-  { label: "Active Now", val: 12, Icon: Zap, color: "#ff7b00", bg: "#FEF9EC", trend: "Live" },
+  { label: "Tasks Today", val: 150, Icon: ClipboardList, color: DARK, bg: BLUE_50, trend: "All time" },
+  { label: "Active Now", val: 12, Icon: Zap, color: BLUE, bg: BLUE_50, trend: "Live" },
 ];
 
 describe("MetricCards", () => {
@@ -39,8 +40,8 @@ describe("MetricCards", () => {
 
   it("handles cards with and without trend badges", () => {
     const mixed = [
-      { label: "With Trend", val: 10, Icon: ClipboardList, color: "#000", bg: "#fff", trend: "Up" },
-      { label: "No Trend", val: 20, Icon: Zap, color: "#000", bg: "#fff" },
+      { label: "With Trend", val: 10, Icon: ClipboardList, color: DARK, bg: SURFACE, trend: "Up" },
+      { label: "No Trend", val: 20, Icon: Zap, color: DARK, bg: SURFACE },
     ];
     render(<MetricCards cards={mixed} />);
     expect(screen.getByText("With Trend")).toBeInTheDocument();

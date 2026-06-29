@@ -9,8 +9,7 @@ import {
 import { useAuth } from "@/contexts/AuthContext";
 import { CategoryIcon, CATEGORY_KEYS } from "@/components/CategoryIcon";
 import { CATEGORY_NAMES, CATEGORY_PRICES, CATEGORY_HINDI } from "@/lib/utils";
-import { DARK, DARK_GRAD, ORANGE } from "@/lib/theme";
-
+import { DARK_GRAD } from "@/lib/theme";
 function Splash({ onDone }: { onDone: () => void }) {
   useEffect(() => {
     const t = setTimeout(onDone, 2400);
@@ -20,7 +19,7 @@ function Splash({ onDone }: { onDone: () => void }) {
   return (
     <motion.div
       className="fixed inset-0 flex flex-col items-center justify-center z-50"
-      style={{ background: "linear-gradient(135deg, #241100, #663100, #994a00)" }}
+      style={{ background: DARK_GRAD }}
       exit={{ opacity: 0, scale: 1.05 }}
       transition={{ duration: 0.4 }}
     >
@@ -51,7 +50,7 @@ function Splash({ onDone }: { onDone: () => void }) {
           animate={{ scaleX: 1 }}
           transition={{ delay: 1.0, duration: 0.8 }}
           className="h-0.5 w-32 mt-3 rounded-full"
-          style={{ background: "linear-gradient(90deg, #ff7b00, #ff9633, #ffb066)" }}
+          style={{ background: "linear-gradient(90deg, #3B82F6, #60A5FA, #93C5FD)" }}
         />
         <motion.p
           initial={{ opacity: 0 }}
@@ -116,22 +115,21 @@ export default function Landing() {
       </AnimatePresence>
 
       {!showSplash && (
-        <div className="min-h-screen" style={{ background: "#fff2e5" }}>
+        <div className="min-h-screen bg-white">
           {/* ═══ NAVBAR ═══ */}
-          <nav className="sticky top-0 z-40 border-b border-[#241100]/[0.06]" style={{ background: "rgba(255, 242, 229, 0.88)", backdropFilter: "blur(16px)", WebkitBackdropFilter: "blur(16px)" }}>
+          <nav className="sticky top-0 z-40 border-b border-gray-100 bg-white/80 backdrop-blur-xl">
             <div className="max-w-6xl mx-auto flex items-center justify-between px-6 py-4">
               <img src="/logo.jpg" alt="Go LineLess" className="h-9 w-auto" />
-              <div className="hidden md:flex gap-6 text-[13px] font-medium text-[#241100]/50">
-                <a href="#how" className="hover:text-[#241100] transition-colors duration-150">How it Works</a>
-                <a href="#services" className="hover:text-[#241100] transition-colors duration-150">Services</a>
-                <a href="#trust" className="hover:text-[#241100] transition-colors duration-150">Trust & Safety</a>
-                <a href="#senior" className="hover:text-[#241100] transition-colors duration-150">Senior Care</a>
-                <a href="#pricing" className="hover:text-[#241100] transition-colors duration-150">Pricing</a>
+              <div className="hidden md:flex gap-6 text-sm font-medium text-gray-500">
+                <a href="#how" className="hover:text-gray-900 transition-colors duration-150">How it Works</a>
+                <a href="#services" className="hover:text-gray-900 transition-colors duration-150">Services</a>
+                <a href="#trust" className="hover:text-gray-900 transition-colors duration-150">Trust & Safety</a>
+                <a href="#senior" className="hover:text-gray-900 transition-colors duration-150">Senior Care</a>
+                <a href="#pricing" className="hover:text-gray-900 transition-colors duration-150">Pricing</a>
               </div>
               <button
                 onClick={() => navigate("/login")}
-                className="px-5 py-2.5 rounded-xl text-white text-sm font-bold shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]"
-                style={{ background: "linear-gradient(135deg, #ff7b00, #ff9633)" }}
+                className="px-5 py-2.5 rounded-lg bg-blue-600 text-white text-sm font-semibold shadow-md hover:bg-blue-700 hover:shadow-lg transition-all duration-200 active:scale-[0.98]"
               >
                 Book a Runner
               </button>
@@ -139,22 +137,22 @@ export default function Landing() {
           </nav>
 
           {/* ═══ HERO ═══ */}
-          <section className="relative overflow-hidden pt-20 pb-24 px-6" style={{ background: "linear-gradient(160deg, #241100 0%, #331900 30%, #663100 60%, #994a00 85%, #cc6300 100%)" }}>
+          <section className="relative overflow-hidden pt-20 pb-24 px-6" style={{ background: DARK_GRAD }}>
             {/* Decorative circles */}
-            <div className="absolute top-[-100px] right-[-80px] w-[500px] h-[500px] rounded-full opacity-[0.08]" style={{ background: "radial-gradient(circle, #ff7b00, transparent 70%)" }} />
-            <div className="absolute bottom-[-150px] left-[-100px] w-[400px] h-[400px] rounded-full opacity-[0.06]" style={{ background: "radial-gradient(circle, #ff9633, transparent 70%)" }} />
-            <div className="absolute top-[40%] left-[60%] w-[200px] h-[200px] rounded-full opacity-[0.04]" style={{ background: "radial-gradient(circle, #ffb066, transparent 70%)" }} />
+            <div className="absolute top-[-100px] right-[-80px] w-[500px] h-[500px] rounded-full opacity-[0.06]" style={{ background: "radial-gradient(circle, #3B82F6, transparent 70%)" }} />
+            <div className="absolute bottom-[-150px] left-[-100px] w-[400px] h-[400px] rounded-full opacity-[0.04]" style={{ background: "radial-gradient(circle, #8B5CF6, transparent 70%)" }} />
+            <div className="absolute top-[40%] left-[60%] w-[200px] h-[200px] rounded-full opacity-[0.03]" style={{ background: "radial-gradient(circle, #60A5FA, transparent 70%)" }} />
 
             <div className="max-w-6xl mx-auto grid md:grid-cols-2 gap-14 items-center relative z-10">
               <motion.div initial={{ opacity: 0, x: -40 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}>
-                <span className="inline-flex items-center gap-2 px-3 py-1.5 bg-white/[0.12] border border-white/[0.15] rounded-full text-xs font-semibold text-[#ff9633] mb-5 backdrop-blur-sm">
+                <span className="inline-flex items-center gap-2 px-3 py-1.5 bg-white/[0.12] border border-white/[0.15] rounded-full text-xs font-semibold text-blue-400 mb-5 backdrop-blur-sm">
                   <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
                   Pilot Launching in Ahmedabad
                 </span>
                 <h1 className="text-5xl md:text-6xl font-extrabold text-white leading-[1.05] mb-3 tracking-tight">
                   Life without
                   <br />
-                  <span style={{ background: "linear-gradient(135deg, #ff7b00, #ff9633, #ffb066)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text" }}>waiting.</span>
+                  <span className="bg-gradient-to-r from-blue-400 via-blue-300 to-purple-400 bg-clip-text text-transparent">waiting.</span>
                 </h1>
                 <p className="text-white/55 text-lg mb-8 leading-relaxed max-w-md">
                   Book verified human assistants for hospital queues, reports, medicine pickup, bank visits, documentation, senior care and real-world errands — with live tracking, photo proof and OTP completion.
@@ -162,20 +160,20 @@ export default function Landing() {
                 <div className="flex gap-4 flex-wrap">
                   <button
                     onClick={() => navigate("/signup")}
-                    className="px-8 py-4 rounded-2xl text-white font-bold text-lg shadow-xl hover:shadow-2xl transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]"
-                    style={{ background: "linear-gradient(135deg, #ff7b00, #ff9633)", boxShadow: "0 8px 30px -4px rgba(255, 123, 0, 0.4)" }}
+                    className="px-8 py-4 rounded-xl bg-blue-600 text-white font-bold text-lg shadow-xl hover:bg-blue-700 hover:shadow-2xl transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]"
+                    style={{ boxShadow: "0 8px 30px -4px rgba(59, 130, 246, 0.4)" }}
                   >
                     Get Started — Free
                   </button>
                   <button
                     onClick={() => navigate("/login")}
-                    className="px-6 py-4 rounded-2xl font-semibold text-sm border border-white/20 text-white/80 hover:bg-white/[0.08] transition-all duration-200"
+                    className="px-6 py-4 rounded-xl font-semibold text-sm border border-white/20 text-white/80 hover:bg-white/[0.08] transition-all duration-200"
                   >
                     Already have an account? Sign in
                   </button>
                   <button
                     onClick={() => navigate("/runner/login")}
-                    className="px-8 py-4 rounded-2xl font-bold text-lg border-2 border-white/20 text-white hover:bg-white/[0.06] transition-all duration-200"
+                    className="px-8 py-4 rounded-xl font-bold text-lg border-2 border-white/20 text-white hover:bg-white/[0.06] transition-all duration-200"
                   >
                     Become a Comrade
                   </button>
@@ -192,15 +190,15 @@ export default function Landing() {
                 className="hidden md:flex items-center justify-center"
               >
                 <div className="relative">
-                  <div className="absolute inset-[-20px] rounded-full opacity-[0.15]" style={{ background: "radial-gradient(circle, #ff7b00, transparent 70%)" }} />
-                  <div className="relative bg-white/[0.1] backdrop-blur-md rounded-3xl p-8 border border-white/[0.15] w-72" style={{ boxShadow: "0 25px 60px -15px rgba(0,0,0,0.4)" }}>
-                    <div className="bg-white rounded-2xl p-4 mb-4 shadow-lg">
+                  <div className="absolute inset-[-20px] rounded-full opacity-[0.15]" style={{ background: "radial-gradient(circle, #3B82F6, transparent 70%)" }} />
+                  <div className="relative bg-white/[0.1] backdrop-blur-md rounded-2xl p-8 border border-white/[0.15] w-72" style={{ boxShadow: "0 25px 60px -15px rgba(0,0,0,0.4)" }}>
+                    <div className="bg-white rounded-xl p-4 mb-4 shadow-lg">
                       <img src="/logo.jpg" alt="Go LineLess" className="w-full h-auto" />
                     </div>
                     <div className="space-y-2">
                       {[
                         { label: "Runner assigned", color: "#22C55E", dot: true },
-                        { label: "On the way · 8 min", color: "#ff7b00", dot: true },
+                        { label: "On the way · 8 min", color: "#3B82F6", dot: true },
                         { label: "OTP: 4 8 2 9 1 7", color: "#ffffff", dot: false },
                       ].map((item) => (
                         <div key={item.label} className="flex items-center gap-2 bg-white/[0.08] rounded-xl px-3 py-2 border border-white/[0.06]">
@@ -217,12 +215,12 @@ export default function Landing() {
           </section>
 
           {/* ═══ HOW IT WORKS ═══ */}
-          <section id="how" className="py-20 px-6" style={{ background: "linear-gradient(180deg, #fff2e5 0%, #FFF9F2 100%)" }}>
+          <section id="how" className="py-20 px-6 bg-white">
             <div className="max-w-4xl mx-auto">
               <motion.div initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="text-center mb-14">
-                <p className="text-xs font-bold tracking-[0.2em] uppercase mb-3" style={{ color: ORANGE }}>Simple Process</p>
-                <h2 className="text-3xl font-extrabold text-[#241100] mb-3 tracking-tight">How it works</h2>
-                <p className="text-[#241100]/40">Three steps. No fuss. Task done.</p>
+                <p className="text-xs font-bold tracking-[0.2em] uppercase mb-3 text-blue-600">Simple Process</p>
+                <h2 className="text-3xl font-extrabold text-gray-900 mb-3 tracking-tight">How it works</h2>
+                <p className="text-gray-400">Three steps. No fuss. Task done.</p>
               </motion.div>
               <div className="grid md:grid-cols-3 gap-8">
                 {steps.map((step, i) => (
@@ -232,17 +230,17 @@ export default function Landing() {
                     whileInView={{ opacity: 1, y: 0 }}
                     viewport={{ once: true }}
                     transition={{ delay: i * 0.15, ease: [0.22, 1, 0.36, 1] }}
-                    className="text-center bg-white rounded-2xl p-8 border border-[#241100]/[0.05] hover:shadow-xl transition-shadow duration-300"
-                    style={{ boxShadow: "0 1px 3px rgba(36, 17, 0, 0.04)" }}
+                    className="text-center bg-white rounded-2xl p-8 border border-gray-100 hover:shadow-xl transition-shadow duration-300"
+                    style={{ boxShadow: "0 1px 3px rgba(15, 23, 42, 0.04)" }}
                   >
-                    <div className="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-4" style={{ background: "linear-gradient(135deg, #fff2e5, #ffe5cc)" }}>
-                      <step.Icon size={28} style={{ color: ORANGE }} />
+                    <div className="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-4 bg-blue-50">
+                      <step.Icon size={28} className="text-blue-600" />
                     </div>
-                    <div className="w-7 h-7 rounded-full flex items-center justify-center text-sm font-bold mx-auto mb-3 text-white" style={{ background: "linear-gradient(135deg, #ff7b00, #ff9633)" }}>
+                    <div className="w-7 h-7 rounded-full flex items-center justify-center text-sm font-bold mx-auto mb-3 text-white bg-blue-600">
                       {i + 1}
                     </div>
-                    <h3 className="font-bold text-[#241100] mb-2">{step.title}</h3>
-                    <p className="text-[#241100]/45 text-sm">{step.desc}</p>
+                    <h3 className="font-bold text-gray-900 mb-2">{step.title}</h3>
+                    <p className="text-gray-400 text-sm">{step.desc}</p>
                   </motion.div>
                 ))}
               </div>
@@ -250,12 +248,12 @@ export default function Landing() {
           </section>
 
           {/* ═══ SERVICES ═══ */}
-          <section id="services" className="py-20 px-6 bg-white">
+          <section id="services" className="py-20 px-6 bg-gray-50">
             <div className="max-w-4xl mx-auto">
               <motion.div initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="text-center mb-14">
-                <p className="text-xs font-bold tracking-[0.2em] uppercase mb-3" style={{ color: ORANGE }}>What We Do</p>
-                <h2 className="text-3xl font-extrabold text-[#241100] mb-3 tracking-tight">Our Services</h2>
-                <p className="text-[#241100]/40">Whatever the real-world task, we have a verified runner for it</p>
+                <p className="text-xs font-bold tracking-[0.2em] uppercase mb-3 text-blue-600">What We Do</p>
+                <h2 className="text-3xl font-extrabold text-gray-900 mb-3 tracking-tight">Our Services</h2>
+                <p className="text-gray-400">Whatever the real-world task, we have a verified runner for it</p>
               </motion.div>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 {CATEGORY_KEYS.map((cat, i) => (
@@ -270,15 +268,15 @@ export default function Landing() {
                     tabIndex={0}
                     onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') navigate(`/login?category=${cat}`); }}
                     aria-label={`Book a ${CATEGORY_NAMES[cat]} task — from Rs ${CATEGORY_PRICES[cat]}`}
-                    className="cursor-pointer bg-white hover:shadow-xl rounded-2xl p-5 text-center transition-all duration-200 hover:-translate-y-1 border border-[#241100]/[0.05]"
-                    style={{ boxShadow: "0 1px 3px rgba(36, 17, 0, 0.04)" }}
+                    className="cursor-pointer bg-white hover:shadow-xl rounded-2xl p-5 text-center transition-all duration-200 hover:-translate-y-1 border border-gray-100"
+                    style={{ boxShadow: "0 1px 3px rgba(15, 23, 42, 0.04)" }}
                   >
-                    <div className="flex justify-center mb-3" style={{ color: ORANGE }}>
+                    <div className="flex justify-center mb-3 text-blue-600">
                       <CategoryIcon category={cat} size={36} />
                     </div>
-                    <div className="font-semibold text-[#241100] text-sm">{CATEGORY_NAMES[cat]}</div>
-                    <div className="text-[#241100]/35 mt-0.5">{CATEGORY_HINDI[cat]}</div>
-                    <div className="text-xs font-bold mt-2" style={{ color: ORANGE }}>from Rs {CATEGORY_PRICES[cat]}</div>
+                    <div className="font-semibold text-gray-900 text-sm">{CATEGORY_NAMES[cat]}</div>
+                    <div className="text-gray-400 mt-0.5 text-xs">{CATEGORY_HINDI[cat]}</div>
+                    <div className="text-xs font-bold mt-2 text-blue-600">from Rs {CATEGORY_PRICES[cat]}</div>
                   </motion.div>
                 ))}
               </div>
@@ -286,12 +284,12 @@ export default function Landing() {
           </section>
 
           {/* ═══ TRUST & SAFETY ═══ */}
-          <section id="trust" className="py-20 px-6" style={{ background: "linear-gradient(180deg, #FFF9F2 0%, #fff2e5 100%)" }}>
+          <section id="trust" className="py-20 px-6 bg-white">
             <div className="max-w-5xl mx-auto">
               <motion.div initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="text-center mb-14">
-                <p className="text-xs font-bold tracking-[0.2em] uppercase mb-3" style={{ color: ORANGE }}>Built for Trust</p>
-                <h2 className="text-3xl font-extrabold text-[#241100] mb-3 tracking-tight">Trust & Safety</h2>
-                <p className="text-[#241100]/40">Built for families, elders, and people who deserve real-world reliability</p>
+                <p className="text-xs font-bold tracking-[0.2em] uppercase mb-3 text-blue-600">Built for Trust</p>
+                <h2 className="text-3xl font-extrabold text-gray-900 mb-3 tracking-tight">Trust & Safety</h2>
+                <p className="text-gray-400">Built for families, elders, and people who deserve real-world reliability</p>
               </motion.div>
               <div className="grid md:grid-cols-3 gap-6">
                 {trustFeatures.map((item, i) => (
@@ -301,14 +299,14 @@ export default function Landing() {
                     whileInView={{ opacity: 1, y: 0 }}
                     viewport={{ once: true }}
                     transition={{ delay: i * 0.1, ease: [0.22, 1, 0.36, 1] }}
-                    className="bg-white rounded-2xl p-6 border border-[#241100]/[0.05] hover:shadow-lg transition-all duration-200"
-                    style={{ boxShadow: "0 1px 3px rgba(36, 17, 0, 0.03)" }}
+                    className="bg-white rounded-2xl p-6 border border-gray-100 hover:shadow-lg transition-all duration-200"
+                    style={{ boxShadow: "0 1px 3px rgba(15, 23, 42, 0.03)" }}
                   >
-                    <div className="w-12 h-12 rounded-xl flex items-center justify-center mb-4" style={{ background: "linear-gradient(135deg, #fff2e5, #ffe5cc)" }}>
-                      <item.Icon size={22} style={{ color: ORANGE }} />
+                    <div className="w-12 h-12 rounded-xl flex items-center justify-center mb-4 bg-blue-50">
+                      <item.Icon size={22} className="text-blue-600" />
                     </div>
-                    <h3 className="font-bold text-[#241100] mb-1">{item.title}</h3>
-                    <p className="text-[#241100]/45 text-sm">{item.desc}</p>
+                    <h3 className="font-bold text-gray-900 mb-1">{item.title}</h3>
+                    <p className="text-gray-400 text-sm">{item.desc}</p>
                   </motion.div>
                 ))}
               </div>
@@ -316,19 +314,19 @@ export default function Landing() {
           </section>
 
           {/* ═══ SENIOR CARE ═══ */}
-          <section id="senior" className="py-20 px-6 bg-white">
+          <section id="senior" className="py-20 px-6 bg-gray-50">
             <div className="max-w-4xl mx-auto">
               <motion.div
                 initial={{ opacity: 0, y: 30 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 className="rounded-3xl p-10 md:p-14 text-white relative overflow-hidden"
-                style={{ background: "linear-gradient(135deg, #241100 0%, #331900 40%, #663100 100%)", boxShadow: "0 25px 50px -12px rgba(36, 17, 0, 0.4)" }}
+                style={{ background: DARK_GRAD, boxShadow: "0 25px 50px -12px rgba(15, 23, 42, 0.4)" }}
               >
-                <div className="absolute top-0 right-0 w-64 h-64 rounded-full opacity-[0.12]" style={{ background: "radial-gradient(circle, #ff7b00, transparent)", transform: "translate(30%, -30%)" }} />
-                <div className="absolute bottom-0 left-0 w-48 h-48 rounded-full opacity-[0.08]" style={{ background: "radial-gradient(circle, #ff9633, transparent)", transform: "translate(-30%, 30%)" }} />
+                <div className="absolute top-0 right-0 w-64 h-64 rounded-full opacity-[0.08]" style={{ background: "radial-gradient(circle, #3B82F6, transparent)", transform: "translate(30%, -30%)" }} />
+                <div className="absolute bottom-0 left-0 w-48 h-48 rounded-full opacity-[0.05]" style={{ background: "radial-gradient(circle, #8B5CF6, transparent)", transform: "translate(-30%, 30%)" }} />
                 <div className="relative z-10 text-center">
-                  <HeartHandshake size={48} className="mx-auto mb-5" style={{ color: "#ff9633" }} />
+                  <HeartHandshake size={48} className="mx-auto mb-5 text-blue-400" />
                   <h2 className="text-3xl font-extrabold mb-3 tracking-tight">Senior Care Plans</h2>
                   <p className="text-white/60 mb-1">Premium subscription plans for elderly assistance.</p>
                   <p className="text-white/35 text-sm mb-8">Preferred by NRI families in USA, UK, UAE & beyond</p>
@@ -343,7 +341,7 @@ export default function Landing() {
                         <ul className="space-y-1.5">
                           {p.features.map(f => (
                             <li key={f} className="text-white/50 text-xs flex items-center gap-2">
-                              <span style={{ color: "#ff9633" }}>✓</span> {f}
+                              <span className="text-blue-400">✓</span> {f}
                             </li>
                           ))}
                         </ul>
@@ -352,8 +350,7 @@ export default function Landing() {
                   </div>
                   <button
                     onClick={() => navigate("/login")}
-                    className="px-8 py-3.5 rounded-2xl font-bold text-white transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] shadow-lg"
-                    style={{ background: "linear-gradient(135deg, #ff7b00, #ff9633)", boxShadow: "0 8px 25px -4px rgba(255, 123, 0, 0.35)" }}
+                    className="px-8 py-3.5 rounded-xl bg-blue-600 font-bold text-white transition-all duration-200 hover:bg-blue-700 hover:scale-[1.02] active:scale-[0.98] shadow-lg"
                   >
                     View Senior Plans
                   </button>
@@ -363,28 +360,28 @@ export default function Landing() {
           </section>
 
           {/* ═══ PRICING ═══ */}
-          <section id="pricing" className="py-20 px-6" style={{ background: "linear-gradient(180deg, #fff2e5 0%, #FFF9F2 100%)" }}>
+          <section id="pricing" className="py-20 px-6 bg-white">
             <div className="max-w-3xl mx-auto">
               <motion.div initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="text-center mb-14">
-                <p className="text-xs font-bold tracking-[0.2em] uppercase mb-3" style={{ color: ORANGE }}>No Surprises</p>
-                <h2 className="text-3xl font-extrabold text-[#241100] mb-3 tracking-tight">Transparent Pricing</h2>
-                <p className="text-[#241100]/40">No hidden fees. Full price breakdown before you confirm.</p>
+                <p className="text-xs font-bold tracking-[0.2em] uppercase mb-3 text-blue-600">No Surprises</p>
+                <h2 className="text-3xl font-extrabold text-gray-900 mb-3 tracking-tight">Transparent Pricing</h2>
+                <p className="text-gray-400">No hidden fees. Full price breakdown before you confirm.</p>
               </motion.div>
-              <div className="bg-white rounded-2xl border border-[#241100]/[0.06] overflow-hidden" style={{ boxShadow: "0 4px 6px -1px rgba(36, 17, 0, 0.06)" }}>
-                <div className="px-6 py-4 border-b border-[#241100]/[0.06] text-[13px] font-semibold text-[#241100]/40 grid grid-cols-3">
+              <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden" style={{ boxShadow: "0 4px 6px -1px rgba(15, 23, 42, 0.06)" }}>
+                <div className="px-6 py-4 border-b border-gray-100 text-sm font-semibold text-gray-400 grid grid-cols-3">
                   <span>Service</span><span className="text-center">Base Price</span><span className="text-right">Starting from</span>
                 </div>
                 {CATEGORY_KEYS.map((cat) => (
-                  <div key={cat} className="px-6 py-3.5 grid grid-cols-3 border-b border-[#241100]/[0.03] last:border-0 hover:bg-[#fff2e5] transition-colors duration-150">
-                    <div className="flex items-center gap-2 text-sm font-medium text-[#241100]">
-                      <span style={{ color: ORANGE }}><CategoryIcon category={cat} size={16} /></span>
+                  <div key={cat} className="px-6 py-3.5 grid grid-cols-3 border-b border-gray-50 last:border-0 hover:bg-blue-50/50 transition-colors duration-150">
+                    <div className="flex items-center gap-2 text-sm font-medium text-gray-900">
+                      <span className="text-blue-600"><CategoryIcon category={cat} size={16} /></span>
                       {CATEGORY_NAMES[cat]}
                     </div>
-                    <div className="text-center text-sm text-[#241100]/40">+ distance + urgency</div>
-                    <div className="text-right text-sm font-bold" style={{ color: ORANGE }}>Rs {CATEGORY_PRICES[cat]}</div>
+                    <div className="text-center text-sm text-gray-400">+ distance + urgency</div>
+                    <div className="text-right text-sm font-bold text-blue-600">Rs {CATEGORY_PRICES[cat]}</div>
                   </div>
                 ))}
-                <div className="px-6 py-4 bg-[#fff2e5] text-xs text-[#241100]/35">
+                <div className="px-6 py-4 bg-gray-50 text-xs text-gray-400">
                   Distance surcharge: +Rs 0 (0–2 km) · +Rs 20 (2–5 km) · +Rs 50 (5+ km) · Urgent +Rs 50
                 </div>
               </div>
@@ -392,29 +389,28 @@ export default function Landing() {
           </section>
 
           {/* ═══ BECOME A RUNNER ═══ */}
-          <section className="py-20 px-6 bg-white">
+          <section className="py-20 px-6 bg-gray-50">
             <div className="max-w-4xl mx-auto">
               <motion.div initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="text-center">
-                <p className="text-xs font-bold tracking-[0.2em] uppercase mb-3" style={{ color: ORANGE }}>Join Our Team</p>
-                <h2 className="text-3xl font-extrabold text-[#241100] mb-3 tracking-tight">Earn competitive earnings</h2>
-                <p className="text-[#241100]/40 mb-8 max-w-md mx-auto">Be your own boss. Set your hours. Go LineLess Comrades earn competitive earnings — with meaningful work that helps real people.</p>
+                <p className="text-xs font-bold tracking-[0.2em] uppercase mb-3 text-blue-600">Join Our Team</p>
+                <h2 className="text-3xl font-extrabold text-gray-900 mb-3 tracking-tight">Earn competitive earnings</h2>
+                <p className="text-gray-400 mb-8 max-w-md mx-auto">Be your own boss. Set your hours. Go LineLess Comrades earn competitive earnings — with meaningful work that helps real people.</p>
                 <div className="grid md:grid-cols-3 gap-4 mb-10 max-w-2xl mx-auto">
                   {[
                     { Icon: Clock, title: "Flexible Hours", desc: "Go online when you want" },
                     { Icon: Zap, title: "Instant Tasks", desc: "Tasks appear in real time" },
                     { Icon: PhoneCall, title: "Runner Support", desc: "We're always here for you" },
                   ].map((item) => (
-                    <div key={item.title} className="bg-white rounded-2xl p-5 border border-[#241100]/[0.05]" style={{ boxShadow: "0 1px 3px rgba(36, 17, 0, 0.04)" }}>
-                      <item.Icon size={22} className="mb-2" style={{ color: ORANGE }} />
-                      <h4 className="font-bold text-[#241100] text-sm">{item.title}</h4>
-                      <p className="text-[#241100]/40 text-xs mt-1">{item.desc}</p>
+                    <div key={item.title} className="bg-white rounded-2xl p-5 border border-gray-100" style={{ boxShadow: "0 1px 3px rgba(15, 23, 42, 0.04)" }}>
+                      <item.Icon size={22} className="mb-2 text-blue-600" />
+                      <h4 className="font-bold text-gray-900 text-sm">{item.title}</h4>
+                      <p className="text-gray-400 text-xs mt-1">{item.desc}</p>
                     </div>
                   ))}
                 </div>
                 <button
                   onClick={() => navigate("/runner/login")}
-                  className="px-8 py-4 rounded-2xl text-white font-bold text-lg shadow-xl hover:shadow-2xl transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]"
-                  style={{ background: DARK_GRAD, boxShadow: "0 8px 30px -6px rgba(36, 17, 0, 0.3)" }}
+                  className="px-8 py-4 rounded-xl bg-gray-900 text-white font-bold text-lg shadow-xl hover:bg-gray-800 hover:shadow-2xl transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]"
                 >
                   Join as a Comrade
                 </button>
@@ -423,11 +419,11 @@ export default function Landing() {
           </section>
 
           {/* ═══ TESTIMONIALS ═══ */}
-          <section className="py-20 px-6" style={{ background: "linear-gradient(180deg, #FFF9F2 0%, #fff2e5 100%)" }}>
+          <section className="py-20 px-6 bg-white">
             <div className="max-w-4xl mx-auto">
               <motion.div initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="text-center mb-12">
-                <p className="text-xs font-bold tracking-[0.2em] uppercase mb-3" style={{ color: ORANGE }}>Real Feedback</p>
-                <h2 className="text-3xl font-extrabold text-[#241100] tracking-tight">What pilot users say</h2>
+                <p className="text-xs font-bold tracking-[0.2em] uppercase mb-3 text-blue-600">Real Feedback</p>
+                <h2 className="text-3xl font-extrabold text-gray-900 tracking-tight">What pilot users say</h2>
               </motion.div>
               <div className="grid md:grid-cols-3 gap-6">
                 {testimonials.map((t, i) => (
@@ -437,22 +433,22 @@ export default function Landing() {
                     whileInView={{ opacity: 1, y: 0 }}
                     viewport={{ once: true }}
                     transition={{ delay: i * 0.1, ease: [0.22, 1, 0.36, 1] }}
-                    className="bg-white rounded-2xl p-6 border border-[#241100]/[0.05]"
-                    style={{ boxShadow: "0 1px 3px rgba(36, 17, 0, 0.04)" }}
+                    className="bg-white rounded-2xl p-6 border border-gray-100"
+                    style={{ boxShadow: "0 1px 3px rgba(15, 23, 42, 0.04)" }}
                   >
                     <div className="flex gap-1 mb-3">
                       {Array.from({ length: t.rating }).map((_, j) => (
-                        <Star key={j} size={16} className="fill-[#ff9633]" style={{ color: "#ff9633" }} />
+                        <Star key={j} size={16} className="fill-amber-400 text-amber-400" />
                       ))}
                     </div>
-                    <p className="text-[#241100]/60 text-sm mb-4 leading-relaxed">"{t.text}"</p>
+                    <p className="text-gray-500 text-sm mb-4 leading-relaxed">"{t.text}"</p>
                     <div className="flex items-center gap-2">
-                      <div className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold" style={{ background: DARK_GRAD }}>
+                      <div className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold bg-blue-600">
                         {t.name[0]}
                       </div>
                       <div>
-                        <div className="text-sm font-semibold text-[#241100]">{t.name}</div>
-                        <div className="text-xs text-[#241100]/35">{t.city}</div>
+                        <div className="text-sm font-semibold text-gray-900">{t.name}</div>
+                        <div className="text-xs text-gray-400">{t.city}</div>
                       </div>
                     </div>
                   </motion.div>
@@ -462,11 +458,11 @@ export default function Landing() {
           </section>
 
           {/* ═══ FAQ ═══ */}
-          <section className="py-20 px-6 bg-white">
+          <section className="py-20 px-6 bg-gray-50">
             <div className="max-w-3xl mx-auto">
               <motion.div initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="text-center mb-12">
-                <p className="text-xs font-bold tracking-[0.2em] uppercase mb-3" style={{ color: ORANGE }}>Got Questions?</p>
-                <h2 className="text-3xl font-extrabold text-[#241100] mb-3 tracking-tight">Frequently Asked Questions</h2>
+                <p className="text-xs font-bold tracking-[0.2em] uppercase mb-3 text-blue-600">Got Questions?</p>
+                <h2 className="text-3xl font-extrabold text-gray-900 mb-3 tracking-tight">Frequently Asked Questions</h2>
               </motion.div>
               <div className="space-y-3">
                 {faqs.map((faq, i) => (
@@ -476,16 +472,16 @@ export default function Landing() {
                     whileInView={{ opacity: 1, y: 0 }}
                     viewport={{ once: true }}
                     transition={{ delay: i * 0.07 }}
-                    className="bg-white rounded-2xl border border-[#241100]/[0.05] overflow-hidden"
-                    style={{ boxShadow: "0 1px 2px rgba(36, 17, 0, 0.03)" }}
+                    className="bg-white rounded-2xl border border-gray-100 overflow-hidden"
+                    style={{ boxShadow: "0 1px 2px rgba(15, 23, 42, 0.03)" }}
                   >
                     <button
                       onClick={() => setOpenFaq(openFaq === i ? null : i)}
                       aria-expanded={openFaq === i}
                       className="w-full flex items-center justify-between px-6 py-4 text-left"
                     >
-                      <span className="font-semibold text-[#241100] text-sm">{faq.q}</span>
-                      {openFaq === i ? <ChevronUp size={16} className="text-[#241100]/30 flex-shrink-0" /> : <ChevronDown size={16} className="text-[#241100]/30 flex-shrink-0" />}
+                      <span className="font-semibold text-gray-900 text-sm">{faq.q}</span>
+                      {openFaq === i ? <ChevronUp size={16} className="text-gray-300 flex-shrink-0" /> : <ChevronDown size={16} className="text-gray-300 flex-shrink-0" />}
                     </button>
                     <AnimatePresence>
                       {openFaq === i && (
@@ -496,7 +492,7 @@ export default function Landing() {
                           transition={{ duration: 0.2 }}
                           className="overflow-hidden"
                         >
-                          <div className="px-6 pb-4 text-sm text-[#241100]/50 border-t border-[#241100]/[0.04]">{faq.a}</div>
+                          <div className="px-6 pb-4 text-sm text-gray-500 border-t border-gray-50">{faq.a}</div>
                         </motion.div>
                       )}
                     </AnimatePresence>
@@ -507,7 +503,7 @@ export default function Landing() {
           </section>
 
           {/* ═══ FOOTER ═══ */}
-          <footer className="py-16 px-6" style={{ background: "linear-gradient(135deg, #241100, #331900, #663100)" }}>
+          <footer className="py-16 px-6" style={{ background: DARK_GRAD }}>
             <div className="max-w-6xl mx-auto">
               <div className="flex flex-col md:flex-row gap-10 justify-between mb-10">
                 <div>

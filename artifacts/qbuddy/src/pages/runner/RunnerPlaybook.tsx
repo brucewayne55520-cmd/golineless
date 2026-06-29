@@ -5,8 +5,7 @@ import { toast } from "sonner";
 import { BookOpen, ChevronDown, ArrowLeft, CheckCircle2, Camera, MapPin, Clock, XCircle, ShieldAlert, Search, Share2, type LucideIcon } from "lucide-react";
 import type { PlaybookResponse, PlaybookResponseSectionsItem } from "@workspace/api-client-react";
 import { useGetRunnerPlaybook } from "@workspace/api-client-react";
-import { NAVY, NAVY_GRAD, GOLD } from "@/lib/theme";
-
+import { DARK_GRAD, BLUE } from "@/lib/theme";
 const SECTION_ICONS: Record<string, LucideIcon> = {
   "Task Acceptance Rules": CheckCircle2,
   "Photo Proof Rules": Camera,
@@ -75,8 +74,8 @@ export default function RunnerPlaybook() {
 
       <div className="px-4 py-5 space-y-3">
         {/* Hero card */}
-        <div className="rounded-2xl p-6 text-white relative overflow-hidden" style={{ background: NAVY_GRAD }}>
-          <div className="absolute top-0 right-0 w-40 h-40 rounded-full opacity-10" style={{ background: `radial-gradient(circle, ${GOLD}, transparent)`, transform: "translate(30%,-30%)" }} />
+        <div className="rounded-2xl p-6 text-white relative overflow-hidden" style={{ background: DARK_GRAD }}>
+          <div className="absolute top-0 right-0 w-40 h-40 rounded-full opacity-10" style={{ background: `radial-gradient(circle, ${BLUE}, transparent)`, transform: "translate(30%,-30%)" }} />
           <BookOpen size={24} className="mb-2" />
           <h2 className="font-black text-lg">Your Operations Guide</h2>
           <p className="text-white/70 text-sm mt-1">Follow these rules for every task. This guide helps you deliver quality service and maintain high trust scores.</p>
@@ -110,7 +109,7 @@ export default function RunnerPlaybook() {
                 onClick={() => setExpandedSection(isExpanded ? "" : title)}
                 className="w-full flex items-center gap-3 p-4 text-left"
               >
-                <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: "rgba(201,168,76,0.15)", color: "#ff7b00" }}>
+                <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: "rgba(201,168,76,0.15)", color: "#3B82F6" }}>
                   <Icon size={18} />
                 </div>                  <span className="flex-1 font-bold text-white text-sm">{title}</span>
                 <ChevronDown size={16} className={`text-white/40 transition-transform ${isExpanded ? "rotate-180" : ""}`} />
@@ -126,7 +125,7 @@ export default function RunnerPlaybook() {
                     <div className="px-4 pb-4 space-y-2 border-t border-white/10 pt-3">
                       {section.rules?.map((rule: string, i: number) => (
                         <div key={i} className="flex items-start gap-2.5 text-sm text-white/60">
-                          <span className="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5" style={{ background: "rgba(201,168,76,0.15)", color: "#ff7b00" }}>
+                          <span className="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5" style={{ background: "rgba(201,168,76,0.15)", color: "#3B82F6" }}>
                             <span className="text-[10px] font-bold">{i + 1}</span>
                           </span>
                           <span className="leading-relaxed">{rule}</span>

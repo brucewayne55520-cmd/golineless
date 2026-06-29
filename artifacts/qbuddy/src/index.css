@@ -66,6 +66,29 @@
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
 
+  /* Premium Blue palette */
+  --color-blue-50: #EFF6FF;
+  --color-blue-100: #DBEAFE;
+  --color-blue-200: #BFDBFE;
+  --color-blue-300: #93C5FD;
+  --color-blue-400: #60A5FA;
+  --color-blue-500: #3B82F6;
+  --color-blue-600: #2563EB;
+  --color-blue-700: #1D4ED8;
+  --color-blue-800: #1E40AF;
+  --color-blue-900: #1E3A8A;
+  --color-blue-950: #172554;
+
+  /* Purple accent */
+  --color-purple-50: #F5F3FF;
+  --color-purple-100: #EDE9FE;
+  --color-purple-200: #DDD6FE;
+  --color-purple-300: #C4B5FD;
+  --color-purple-400: #A78BFA;
+  --color-purple-500: #8B5CF6;
+  --color-purple-600: #7C3AED;
+
+  /* Harvest Orange — kept for backward compat */
   --color-harvest-orange-50: #fff2e5;
   --color-harvest-orange-100: #ffe5cc;
   --color-harvest-orange-200: #ffca99;
@@ -81,139 +104,139 @@
 
 :root {
   /* ═══════════════════════════════════════════════════════════
-     GO LINELESS — HARVEST ORANGE DESIGN SYSTEM
-     Deep Brown + Vibrant Orange + Warm Cream
+     GO LINELESS — PREMIUM DESIGN SYSTEM
+     Apple-inspired: Clean Blue + Purple + White
      ═══════════════════════════════════════════════════════════ */
 
-  /* Brand Core — Harvest Orange */
-  --harvest-50: #fff2e5;
-  --harvest-100: #ffe5cc;
-  --harvest-200: #ffca99;
-  --harvest-300: #ffb066;
-  --harvest-400: #ff9633;
-  --harvest-500: #ff7b00;
-  --harvest-600: #cc6300;
-  --harvest-700: #994a00;
-  --harvest-800: #663100;
-  --harvest-900: #331900;
-  --harvest-950: #241100;
+  /* Brand Core — Premium Blue */
+  --premium-50: #EFF6FF;
+  --premium-100: #DBEAFE;
+  --premium-200: #BFDBFE;
+  --premium-300: #93C5FD;
+  --premium-400: #60A5FA;
+  --premium-500: #3B82F6;
+  --premium-600: #2563EB;
+  --premium-700: #1D4ED8;
+  --premium-800: #1E40AF;
+  --premium-900: #1E3A8A;
+  --premium-950: #172554;
 
-  /* Backgrounds — warm cream from harvest-50 */
-  --background: 30 100% 94.9%;
-  --foreground: 22 80% 9%;
+  /* Backgrounds — clean cool white */
+  --background: 210 40% 98%;
+  --foreground: 222 47% 11%;
 
-  /* Primary — harvest-500 exact */
-  --primary: 28.9 100% 50%;
+  /* Primary — blue-500 exact */
+  --primary: 217 91% 60%;
   --primary-foreground: 0 0% 100%;
-  --primary-border: 29.1 100% 40%;
+  --primary-border: 217 91% 50%;
 
-  /* Accent — harvest-400 */
-  --accent: 29.1 100% 60%;
-  --accent-foreground: 22 80% 9%;
-  --accent-border: 29.1 100% 50%;
+  /* Accent — purple-500 */
+  --accent: 263 70% 50%;
+  --accent-foreground: 0 0% 100%;
+  --accent-border: 263 70% 45%;
 
-  /* Cards — warm cream white */
-  --card: 30 100% 97%;
-  --card-foreground: 22 80% 9%;
-  --card-border: 30 40% 90%;
+  /* Cards — pure white */
+  --card: 0 0% 100%;
+  --card-foreground: 222 47% 11%;
+  --card-border: 214 32% 91%;
 
-  /* Muted — warm beige */
-  --muted: 30 30% 94%;
-  --muted-foreground: 22 15% 42%;
+  /* Muted — cool gray */
+  --muted: 210 40% 96%;
+  --muted-foreground: 215 16% 47%;
 
-  /* Borders — subtle warm */
-  --border: 30 30% 88%;
-  --input: 30 30% 88%;
-  --ring: 28.9 100% 50%;
+  /* Borders — subtle cool */
+  --border: 214 32% 91%;
+  --input: 214 32% 91%;
+  --ring: 217 91% 60%;
 
   /* Secondary */
-  --secondary: 30 30% 94%;
-  --secondary-foreground: 22 80% 10%;
+  --secondary: 210 40% 96%;
+  --secondary-foreground: 222 47% 11%;
 
   /* Semantic */
-  --destructive: 4 78% 52%;
+  --destructive: 0 84% 60%;
   --destructive-foreground: 0 0% 100%;
-  --destructive-border: 4 78% 42%;
+  --destructive-border: 0 84% 50%;
 
-  --popover: 30 100% 99%;
-  --popover-foreground: 22 80% 9%;
-  --popover-border: 30 30% 88%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 222 47% 11%;
+  --popover-border: 214 32% 91%;
 
-  /* Sidebar — harvest-950 exact */
-  --sidebar: 28.3 100% 7.1%;
-  --sidebar-foreground: 30 100% 95%;
-  --sidebar-border: 29 60% 16%;
-  --sidebar-primary: 28.9 100% 50%;
+  /* Sidebar — dark slate */
+  --sidebar: 222 47% 11%;
+  --sidebar-foreground: 210 40% 98%;
+  --sidebar-border: 217 33% 17%;
+  --sidebar-primary: 217 91% 60%;
   --sidebar-primary-foreground: 0 0% 100%;
-  --sidebar-primary-border: 29.1 100% 40%;
-  --sidebar-accent: 29 50% 18%;
-  --sidebar-accent-foreground: 30 100% 95%;
-  --sidebar-accent-border: 29 40% 22%;
-  --sidebar-ring: 28.9 100% 50%;
+  --sidebar-primary-border: 217 91% 50%;
+  --sidebar-accent: 217 33% 17%;
+  --sidebar-accent-foreground: 210 40% 98%;
+  --sidebar-accent-border: 217 28% 22%;
+  --sidebar-ring: 217 91% 60%;
 
   /* Charts */
-  --chart-1: 28.9 100% 50%;
-  --chart-2: 29 60% 30%;
-  --chart-3: 175 65% 42%;
-  --chart-4: 4 78% 52%;
-  --chart-5: 270 65% 58%;
+  --chart-1: 217 91% 60%;
+  --chart-2: 263 70% 50%;
+  --chart-3: 160 60% 45%;
+  --chart-4: 0 84% 60%;
+  --chart-5: 38 92% 50%;
 
-  --radius: 0.875rem;
+  --radius: 0.75rem;
   --app-font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   --app-font-serif: Georgia, serif;
   --app-font-mono: 'SF Mono', 'Fira Code', Menlo, monospace;
 }
 
 .dark {
-  --background: 28.3 100% 7.1%;
-  --foreground: 30 20% 92%;
+  --background: 222 47% 6%;
+  --foreground: 210 40% 96%;
 
-  --primary: 28.9 100% 55%;
+  --primary: 217 91% 60%;
   --primary-foreground: 0 0% 100%;
-  --primary-border: 29.1 100% 45%;
+  --primary-border: 217 91% 50%;
 
-  --accent: 29.1 100% 60%;
-  --accent-foreground: 22 80% 9%;
-  --accent-border: 29.1 100% 50%;
+  --accent: 263 70% 50%;
+  --accent-foreground: 0 0% 100%;
+  --accent-border: 263 70% 45%;
 
-  --card: 29 60% 9%;
-  --card-foreground: 30 20% 92%;
-  --card-border: 29 40% 16%;
+  --card: 222 47% 9%;
+  --card-foreground: 210 40% 96%;
+  --card-border: 217 33% 17%;
 
-  --muted: 29 40% 12%;
-  --muted-foreground: 29 15% 60%;
+  --muted: 217 33% 14%;
+  --muted-foreground: 215 20% 55%;
 
-  --border: 29 40% 18%;
-  --input: 29 40% 18%;
-  --ring: 28.9 100% 55%;
+  --border: 217 33% 17%;
+  --input: 217 33% 17%;
+  --ring: 217 91% 60%;
 
-  --secondary: 29 40% 12%;
-  --secondary-foreground: 30 20% 92%;
+  --secondary: 217 33% 14%;
+  --secondary-foreground: 210 40% 96%;
 
-  --destructive: 4 78% 55%;
+  --destructive: 0 62% 55%;
   --destructive-foreground: 0 0% 100%;
-  --destructive-border: 4 78% 45%;
+  --destructive-border: 0 62% 45%;
 
-  --popover: 29 60% 9%;
-  --popover-foreground: 30 20% 92%;
-  --popover-border: 29 40% 18%;
+  --popover: 222 47% 9%;
+  --popover-foreground: 210 40% 96%;
+  --popover-border: 217 33% 17%;
 
-  --sidebar: 28.3 100% 7.1%;
-  --sidebar-foreground: 30 100% 95%;
-  --sidebar-border: 29 50% 14%;
-  --sidebar-primary: 28.9 100% 55%;
+  --sidebar: 222 47% 6%;
+  --sidebar-foreground: 210 40% 96%;
+  --sidebar-border: 217 33% 15%;
+  --sidebar-primary: 217 91% 60%;
   --sidebar-primary-foreground: 0 0% 100%;
-  --sidebar-primary-border: 29.1 100% 45%;
-  --sidebar-accent: 29 40% 14%;
-  --sidebar-accent-foreground: 30 100% 95%;
-  --sidebar-accent-border: 29 35% 20%;
-  --sidebar-ring: 28.9 100% 55%;
+  --sidebar-primary-border: 217 91% 50%;
+  --sidebar-accent: 217 33% 14%;
+  --sidebar-accent-foreground: 210 40% 96%;
+  --sidebar-accent-border: 217 28% 20%;
+  --sidebar-ring: 217 91% 60%;
 
-  --chart-1: 28.9 100% 55%;
-  --chart-2: 29 60% 40%;
-  --chart-3: 175 65% 42%;
-  --chart-4: 4 78% 55%;
-  --chart-5: 270 65% 58%;
+  --chart-1: 217 91% 60%;
+  --chart-2: 263 70% 50%;
+  --chart-3: 160 60% 45%;
+  --chart-4: 0 62% 55%;
+  --chart-5: 38 92% 50%;
 }
 
 @layer base {
@@ -226,36 +249,36 @@
 }
 
 /* ═══════════════════════════════════════════════════════════
-   BRAND HELPERS — Harvest Orange
+   BRAND HELPERS — Premium (backward-compatible class names)
    ═══════════════════════════════════════════════════════════ */
-.gl-navy { background: linear-gradient(135deg, #241100, #663100); }
-.gl-navy-deep { background: linear-gradient(135deg, #241100, #331900); }
-.gl-gold { background: linear-gradient(135deg, #ff7b00, #ff9633); }
-.gl-gold-rich { background: linear-gradient(135deg, #cc6300, #ff7b00, #ff9633); }
-.gl-teal { background: linear-gradient(135deg, #0EA5A0, #14D4CE); }
-.gl-coral { background: linear-gradient(135deg, #E85D4A, #F08C7E); }
-.gl-violet { background: linear-gradient(135deg, #7C3AED, #A78BFA); }
-.gl-surface { background: linear-gradient(180deg, #fff2e5 0%, #FFF9F2 100%); }
-.gl-text-navy { color: #241100; }
-.gl-text-gold { color: #ff7b00; }
-.gl-text-teal { color: #0EA5A0; }
-.gl-dark { background: linear-gradient(135deg, #241100, #663100); }
-.gl-dark-deep { background: linear-gradient(135deg, #241100, #331900); }
-.gl-orange { background: linear-gradient(135deg, #ff7b00, #ff9633); }
-.gl-orange-rich { background: linear-gradient(135deg, #cc6300, #ff7b00, #ff9633); }
-.gl-text-dark { color: #241100; }
-.gl-text-orange { color: #ff7b00; }
+.gl-navy { background: linear-gradient(135deg, #0F172A, #1E293B); }
+.gl-navy-deep { background: linear-gradient(135deg, #0F172A, #0F172A); }
+.gl-gold { background: linear-gradient(135deg, #3B82F6, #60A5FA); }
+.gl-gold-rich { background: linear-gradient(135deg, #2563EB, #3B82F6, #60A5FA); }
+.gl-teal { background: linear-gradient(135deg, #0EA5E9, #38BDF8); }
+.gl-coral { background: linear-gradient(135deg, #F43F5E, #FB7185); }
+.gl-violet { background: linear-gradient(135deg, #8B5CF6, #A78BFA); }
+.gl-surface { background: linear-gradient(180deg, #F8FAFC 0%, #FFFFFF 100%); }
+.gl-text-navy { color: #0F172A; }
+.gl-text-gold { color: #3B82F6; }
+.gl-text-teal { color: #0EA5E9; }
+.gl-dark { background: linear-gradient(135deg, #0F172A, #1E293B); }
+.gl-dark-deep { background: linear-gradient(135deg, #0F172A, #0F172A); }
+.gl-orange { background: linear-gradient(135deg, #3B82F6, #60A5FA); }
+.gl-orange-rich { background: linear-gradient(135deg, #2563EB, #3B82F6, #60A5FA); }
+.gl-text-dark { color: #0F172A; }
+.gl-text-orange { color: #3B82F6; }
 
 /* ═══════════════════════════════════════════════════════════
-   ELEVATION SYSTEM — Consistent shadows
+   ELEVATION SYSTEM — Cool-toned shadows
    ═══════════════════════════════════════════════════════════ */
-.gl-shadow-sm { box-shadow: 0 1px 3px rgba(36, 17, 0, 0.04), 0 1px 2px rgba(36, 17, 0, 0.03); }
-.gl-shadow-md { box-shadow: 0 4px 6px -1px rgba(36, 17, 0, 0.06), 0 2px 4px -1px rgba(36, 17, 0, 0.04); }
-.gl-shadow-lg { box-shadow: 0 10px 15px -3px rgba(36, 17, 0, 0.08), 0 4px 6px -2px rgba(36, 17, 0, 0.04); }
-.gl-shadow-xl { box-shadow: 0 20px 25px -5px rgba(36, 17, 0, 0.1), 0 10px 10px -5px rgba(36, 17, 0, 0.03); }
-.gl-shadow-gold { box-shadow: 0 4px 14px -2px rgba(255, 123, 0, 0.25); }
-.gl-shadow-orange { box-shadow: 0 4px 14px -2px rgba(255, 123, 0, 0.25); }
-.gl-shadow-teal { box-shadow: 0 4px 14px -2px rgba(14, 165, 160, 0.2); }
+.gl-shadow-sm { box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04), 0 1px 2px rgba(15, 23, 42, 0.03); }
+.gl-shadow-md { box-shadow: 0 4px 6px -1px rgba(15, 23, 42, 0.06), 0 2px 4px -1px rgba(15, 23, 42, 0.04); }
+.gl-shadow-lg { box-shadow: 0 10px 15px -3px rgba(15, 23, 42, 0.08), 0 4px 6px -2px rgba(15, 23, 42, 0.04); }
+.gl-shadow-xl { box-shadow: 0 20px 25px -5px rgba(15, 23, 42, 0.1), 0 10px 10px -5px rgba(15, 23, 42, 0.03); }
+.gl-shadow-gold { box-shadow: 0 4px 14px -2px rgba(59, 130, 246, 0.25); }
+.gl-shadow-orange { box-shadow: 0 4px 14px -2px rgba(59, 130, 246, 0.25); }
+.gl-shadow-teal { box-shadow: 0 4px 14px -2px rgba(14, 165, 233, 0.2); }
 
 .dark .gl-shadow-sm { box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3), 0 1px 2px rgba(0, 0, 0, 0.2); }
 .dark .gl-shadow-md { box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.4), 0 2px 4px -1px rgba(0, 0, 0, 0.3); }
@@ -270,37 +293,37 @@
 .gl-transition-slow { transition: all 300ms cubic-bezier(0.0, 0.0, 0.2, 1); }
 
 /* ═══════════════════════════════════════════════════════════
-   GLASS MORPHISM — For premium surfaces
+   GLASS MORPHISM — Premium frosted surfaces
    ═══════════════════════════════════════════════════════════ */
-.gl-glass { background: rgba(255, 242, 229, 0.7); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border: 1px solid rgba(255, 242, 229, 0.3); }
-.dark .gl-glass { background: rgba(36, 17, 0, 0.7); border: 1px solid rgba(255, 242, 229, 0.08); }
+.gl-glass { background: rgba(248, 250, 252, 0.7); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border: 1px solid rgba(248, 250, 252, 0.3); }
+.dark .gl-glass { background: rgba(15, 23, 42, 0.7); border: 1px solid rgba(248, 250, 252, 0.08); }
 
 /* ═══════════════════════════════════════════════════════════
    GRADIENT TEXT
    ═══════════════════════════════════════════════════════════ */
 .gl-text-gradient-gold {
-  background: linear-gradient(135deg, #ff7b00, #ff9633);
+  background: linear-gradient(135deg, #3B82F6, #60A5FA);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
 }
 
 .gl-text-gradient-navy {
-  background: linear-gradient(135deg, #241100, #663100);
+  background: linear-gradient(135deg, #0F172A, #1E293B);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
 }
 
 .gl-text-gradient-orange {
-  background: linear-gradient(135deg, #ff7b00, #ff9633);
+  background: linear-gradient(135deg, #3B82F6, #8B5CF6);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
 }
 
 .gl-text-gradient-dark {
-  background: linear-gradient(135deg, #241100, #663100);
+  background: linear-gradient(135deg, #0F172A, #1E293B);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -311,13 +334,13 @@
    ═══════════════════════════════════════════════════════════ */
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: rgba(36, 17, 0, 0.15); border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: rgba(36, 17, 0, 0.25); }
-.dark ::-webkit-scrollbar-thumb { background: rgba(255, 242, 229, 0.12); }
-.dark ::-webkit-scrollbar-thumb:hover { background: rgba(255, 242, 229, 0.2); }
+::-webkit-scrollbar-thumb { background: rgba(15, 23, 42, 0.12); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(15, 23, 42, 0.2); }
+.dark ::-webkit-scrollbar-thumb { background: rgba(248, 250, 252, 0.12); }
+.dark ::-webkit-scrollbar-thumb:hover { background: rgba(248, 250, 252, 0.2); }
 
 /* ═══════════════════════════════════════════════════════════
-   FOCUS RING — Accessible & visible
+   FOCUS RING — Accessible & visible (blue)
    ═══════════════════════════════════════════════════════════ */
-:focus-visible { outline: 2px solid #ff7b00; outline-offset: 2px; border-radius: 4px; }
-.dark :focus-visible { outline-color: #ff9633; }
+:focus-visible { outline: 2px solid #3B82F6; outline-offset: 2px; border-radius: 4px; }
+.dark :focus-visible { outline-color: #60A5FA; }

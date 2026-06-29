@@ -1,6 +1,6 @@
 import { motion } from "framer-motion";
 import { Activity, Percent, UserCheck, CheckCircle2, XCircle, Hourglass } from "lucide-react";
-import { GOLD } from "@/lib/theme";
+import { BLUE } from "@/lib/theme";
 
 export interface MonitoringData {
   successRate?: number | null;
@@ -28,9 +28,9 @@ export default function PilotMonitoringPanel({ monitoring }: Props) {
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 0.63 }}
       className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 mb-5"
-      style={{ borderLeft: `4px solid ${GOLD}` }}
+      style={{ borderLeft: `4px solid ${BLUE}` }}
     >
-      <h3 className="font-black text-[#241100] text-sm mb-3 flex items-center gap-2">
+      <h3 className="font-black text-gray-900 text-sm mb-3 flex items-center gap-2">
         <Activity size={14} className="text-blue-500" /> Pilot Monitoring
       </h3>
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-4">

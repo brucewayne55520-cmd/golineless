@@ -89,10 +89,10 @@ export default function AdminTasks() {
       <main className="flex-1 overflow-y-auto p-6">
         <div className="flex items-center justify-between mb-5">
           <div>
-            <h1 className="text-2xl font-bold text-[#241100] dark:text-[#fff2e5]">Tasks</h1>
-            <p className="text-[#6B7280] text-sm">{totalCount} tasks · Page {page + 1}{selectedIds.size > 0 ? ` · ${selectedIds.size} selected` : ""}</p>
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Tasks</h1>
+            <p className="text-gray-500 text-sm">{totalCount} tasks · Page {page + 1}{selectedIds.size > 0 ? ` · ${selectedIds.size} selected` : ""}</p>
           </div>
-          <button onClick={exportCsv} disabled={pageTasks.length === 0} className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold bg-white dark:bg-[#1F2937] border border-[#E5E0D8] dark:border-[#374151] hover:bg-[#FFF9F2] dark:hover:bg-[#111827] disabled:opacity-40 gl-transition">
+          <button onClick={exportCsv} disabled={pageTasks.length === 0} className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold bg-white dark:bg-[#1F2937] border border-gray-200 dark:border-[#374151] hover:bg-gray-50 dark:hover:bg-[#111827] disabled:opacity-40 gl-transition">
             <Download size={14} /> Export CSV{selectedIds.size > 0 ? ` (${selectedIds.size})` : ""}
           </button>
         </div>

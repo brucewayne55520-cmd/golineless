@@ -1,7 +1,7 @@
 import { motion } from "framer-motion";
 import { Zap } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
-import { NAVY, GOLD } from "@/lib/theme";
+import { DARK, BLUE } from "@/lib/theme";
 
 export interface PilotMetricsDisplay {
   activeUsers?: number | null;
@@ -25,18 +25,18 @@ export default function PilotMetricsPanel({ pilotMetrics }: Props) {
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 0.61 }}
       className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 mb-5"
-      style={{ borderLeft: `4px solid ${NAVY}` }}
+      style={{ borderLeft: `4px solid ${DARK}` }}
     >
-      <h3 className="font-black text-[#241100] text-sm mb-3 flex items-center gap-2">
+      <h3 className="font-black text-gray-900 text-sm mb-3 flex items-center gap-2">
         <Zap size={14} className="text-yellow-500" /> Pilot Launch Metrics
       </h3>
       <div className="grid grid-cols-4 md:grid-cols-8 gap-3">
         <div className="text-center">
-          <p className="text-lg font-black" style={{ color: NAVY }}>{pilotMetrics.activeUsers}</p>
+          <p className="text-lg font-black" style={{ color: DARK }}>{pilotMetrics.activeUsers}</p>
           <p className="text-[9px] text-gray-400">Active Users</p>
         </div>
         <div className="text-center">
-          <p className="text-lg font-black" style={{ color: GOLD }}>{pilotMetrics.activeComrades}</p>
+          <p className="text-lg font-black" style={{ color: BLUE }}>{pilotMetrics.activeComrades}</p>
           <p className="text-[9px] text-gray-400">Active Comrades</p>
         </div>
         <div className="text-center">
@@ -63,7 +63,7 @@ export default function PilotMetricsPanel({ pilotMetrics }: Props) {
           <p className="text-[9px] text-gray-400">Rev Today</p>
         </div>
         <div className="text-center">
-          <p className="text-lg font-black" style={{ color: NAVY }}>{pilotMetrics.totalUsers}</p>
+          <p className="text-lg font-black" style={{ color: DARK }}>{pilotMetrics.totalUsers}</p>
           <p className="text-[9px] text-gray-400">Total Users</p>
         </div>
       </div>

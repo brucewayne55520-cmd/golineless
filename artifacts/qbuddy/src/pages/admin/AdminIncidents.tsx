@@ -4,7 +4,7 @@ import { toast } from "sonner";
 import AdminSidebar from "@/components/AdminSidebar";
 import { useListIncidents, useGetIncidentStats, useUpdateIncident } from "@workspace/api-client-react";
 import { ShieldAlert, AlertTriangle, Plus, X } from "lucide-react";
-import { NAVY } from "@/lib/theme";
+import { DARK, DARK_MUTED } from "@/lib/theme";
 import { customFetch } from "@workspace/api-client-react";
 const SEVERITY_COLORS: Record<string, string> = { low: "#9CA3AF", medium: "#F59E0B", high: "#EF4444", critical: "#DC2626" };
 const TYPE_COLORS: Record<string, string> = { customer_complaint: "#3B82F6", runner_misconduct: "#EF4444", gps_failure: "#F59E0B", proof_failure: "#8B5CF6", payment_issue: "#10B981", fraud_alert: "#DC2626" };
@@ -55,7 +55,7 @@ export default function AdminIncidents() {
       <AdminSidebar />
       <main className="flex-1 overflow-y-auto p-6">
         <div className="flex items-center justify-between mb-5">
-          <h1 className="text-xl font-bold text-[#241100] dark:text-[#fff2e5]">Incident Management</h1>
+          <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100">Incident Management</h1>
           <button
             onClick={() => setShowCreate(!showCreate)}
             className="flex items-center gap-2 px-4 py-2 rounded-xl text-white text-sm font-semibold gl-transition"
@@ -72,33 +72,33 @@ export default function AdminIncidents() {
               initial={{ opacity: 0, height: 0 }}
               animate={{ opacity: 1, height: "auto" }}
               exit={{ opacity: 0, height: 0 }}
-              className="mb-5 bg-white dark:bg-[#111827] rounded-2xl p-5 gl-shadow-md border border-[#E5E0D8] dark:border-[#1F2937]"
+              className="mb-5 bg-white dark:bg-[#111827] rounded-2xl p-5 gl-shadow-md border border-gray-200 dark:border-[#1F2937]"
             >
               <div className="flex items-center justify-between mb-4">
-                <h3 className="font-bold text-[#241100] dark:text-[#fff2e5]">New Incident</h3>
-                <button onClick={() => setShowCreate(false)} className="text-[#9CA3AF] hover:text-[#6B7280] gl-transition"><X size={18} /></button>
+                <h3 className="font-bold text-gray-900 dark:text-gray-100">New Incident</h3>
+                <button onClick={() => setShowCreate(false)} className="text-gray-400 hover:text-gray-500 gl-transition"><X size={18} /></button>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                 <div>
-                  <label className="text-xs font-medium text-[#6B7280] mb-1 block">Type</label>
-                  <select value={createForm.type} onChange={e => setCreateForm(prev => ({ ...prev, type: e.target.value }))} className="w-full border border-[#E5E0D8] dark:border-[#374151] rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#241100] bg-white dark:bg-[#1F2937] dark:text-[#fff2e5] gl-transition">
+                  <label className="text-xs font-medium text-gray-500 mb-1 block">Type</label>
+                  <select value={createForm.type} onChange={e => setCreateForm(prev => ({ ...prev, type: e.target.value }))} className="w-full border border-gray-200 dark:border-[#374151] rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-[#1F2937] dark:text-gray-100 gl-transition">
                     {INCIDENT_TYPES.map(t => <option key={t} value={t}>{t.replace(/_/g, " ")}</option>)}
                   </select>
                 </div>
                 <div>
-                  <label className="text-xs font-medium text-[#6B7280] mb-1 block">Severity</label>
-                  <select value={createForm.severity} onChange={e => setCreateForm(prev => ({ ...prev, severity: e.target.value }))} className="w-full border border-[#E5E0D8] dark:border-[#374151] rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#241100] bg-white dark:bg-[#1F2937] dark:text-[#fff2e5] gl-transition">
+                  <label className="text-xs font-medium text-gray-500 mb-1 block">Severity</label>
+                  <select value={createForm.severity} onChange={e => setCreateForm(prev => ({ ...prev, severity: e.target.value }))} className="w-full border border-gray-200 dark:border-[#374151] rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-[#1F2937] dark:text-gray-100 gl-transition">
                     {SEVERITY_LEVELS.map(s => <option key={s} value={s}>{s}</option>)}
                   </select>
                 </div>
               </div>
               <div className="mb-4">
-                <label className="text-xs font-medium text-[#6B7280] mb-1 block">Title</label>
-                <input value={createForm.title} onChange={e => setCreateForm(prev => ({ ...prev, title: e.target.value }))} placeholder="Brief incident title" className="w-full border border-[#E5E0D8] dark:border-[#374151] rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#241100] bg-white dark:bg-[#1F2937] dark:text-[#fff2e5] gl-transition" />
+                <label className="text-xs font-medium text-gray-500 mb-1 block">Title</label>
+                <input value={createForm.title} onChange={e => setCreateForm(prev => ({ ...prev, title: e.target.value }))} placeholder="Brief incident title" className="w-full border border-gray-200 dark:border-[#374151] rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-[#1F2937] dark:text-gray-100 gl-transition" />
               </div>
               <div className="mb-4">
-                <label className="text-xs font-medium text-[#6B7280] mb-1 block">Description</label>
-                <textarea value={createForm.description} onChange={e => setCreateForm(prev => ({ ...prev, description: e.target.value }))} placeholder="Detailed description of the incident..." rows={3} className="w-full border border-[#E5E0D8] dark:border-[#374151] rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#241100] resize-none bg-white dark:bg-[#1F2937] dark:text-[#fff2e5] gl-transition" />
+                <label className="text-xs font-medium text-gray-500 mb-1 block">Description</label>
+                <textarea value={createForm.description} onChange={e => setCreateForm(prev => ({ ...prev, description: e.target.value }))} placeholder="Detailed description of the incident..." rows={3} className="w-full border border-gray-200 dark:border-[#374151] rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none bg-white dark:bg-[#1F2937] dark:text-gray-100 gl-transition" />
               </div>
               <button onClick={handleCreate} className="px-6 py-2 rounded-xl text-white text-sm font-semibold" style={{ background: "linear-gradient(135deg, #EF4444, #DC2626)" }}>
                 Create Incident
@@ -109,44 +109,44 @@ export default function AdminIncidents() {
 
         {stats && (
           <div className="grid grid-cols-4 gap-4 mb-5">
-            <div className="bg-white dark:bg-[#111827] rounded-2xl p-4 gl-shadow-md border border-[#E5E0D8] dark:border-[#1F2937] text-center gl-transition">
-              <ShieldAlert size={18} className="mx-auto mb-1" style={{ color: NAVY }} />
-              <p className="text-2xl font-black" style={{ color: NAVY }}>{stats.total}</p>
-              <p className="text-[10px] text-[#9CA3AF]">Total Incidents</p>
+            <div className="bg-white dark:bg-[#111827] rounded-2xl p-4 gl-shadow-md border border-gray-200 dark:border-[#1F2937] text-center gl-transition">
+              <ShieldAlert size={18} className="mx-auto mb-1" style={{ color: DARK }} />
+              <p className="text-2xl font-black" style={{ color: DARK }}>{stats.total}</p>
+              <p className="text-[10px] text-gray-400">Total Incidents</p>
             </div>
             <div className="bg-white rounded-2xl p-4 shadow-sm border border-red-100 text-center">
               <AlertTriangle size={18} className="mx-auto mb-1 text-red-500" />
               <p className="text-2xl font-black text-red-600">{stats.open}</p>
-              <p className="text-[10px] text-[#9CA3AF]">Open</p>
+              <p className="text-[10px] text-gray-400">Open</p>
             </div>
             {stats.typeDist && Object.entries(stats.typeDist).slice(0, 4).map(([type, count]: [string, number]) => (
               <div key={type} className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 text-center">
-                <p className="text-lg font-black" style={{ color: TYPE_COLORS[type] || "#6B7280" }}>{count}</p>
+                <p className="text-lg font-black" style={{ color: TYPE_COLORS[type] || DARK_MUTED }}>{count}</p>
                 <p className="text-[9px] text-gray-400 capitalize">{type.replace(/_/g, " ")}</p>
               </div>
             ))}
           </div>
         )}
 
-        <div className="bg-white dark:bg-[#111827] rounded-2xl gl-shadow-md border border-[#E5E0D8] dark:border-[#1F2937] overflow-hidden">
-          <div className="px-5 py-4 border-b border-[#E5E0D8] dark:border-[#1F2937]">
-            <h3 className="font-bold text-[#241100] dark:text-[#fff2e5]">All Incidents</h3>
+        <div className="bg-white dark:bg-[#111827] rounded-2xl gl-shadow-md border border-gray-200 dark:border-[#1F2937] overflow-hidden">
+          <div className="px-5 py-4 border-b border-gray-200 dark:border-[#1F2937]">
+            <h3 className="font-bold text-gray-900 dark:text-gray-100">All Incidents</h3>
           </div>
-          {loading ? <div className="p-8 text-center text-[#9CA3AF]">Loading...</div> : !incidents || incidents.length === 0 ? (
-            <div className="p-8 text-center text-[#9CA3AF]"><ShieldAlert size={32} className="mx-auto mb-2 opacity-30" /><p className="font-medium">No incidents</p></div>
+          {loading ? <div className="p-8 text-center text-gray-400">Loading...</div> : !incidents || incidents.length === 0 ? (
+            <div className="p-8 text-center text-gray-400"><ShieldAlert size={32} className="mx-auto mb-2 opacity-30" /><p className="font-medium">No incidents</p></div>
           ) : (
-            <div className="divide-y divide-[#F3F4F6] dark:divide-[#1F2937]">
+            <div className="divide-y divide-gray-100 dark:divide-[#1F2937]">
               {(Array.isArray(incidents) ? incidents : []).map((inc: Required<import("@workspace/api-client-react").Incident>) => (
-                <motion.div key={inc.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="px-5 py-4 hover:bg-[#FFF9F2] dark:hover:bg-[#1F2937] gl-transition">
+                <motion.div key={inc.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="px-5 py-4 hover:bg-gray-50 dark:hover:bg-[#1F2937] gl-transition">
                   <div className="flex items-start justify-between">
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
                         <span className="text-xs font-bold px-2 py-0.5 rounded-full" style={{ background: `${SEVERITY_COLORS[inc.severity] || "#9CA3AF"}20`, color: SEVERITY_COLORS[inc.severity] || "#9CA3AF" }}>
                           {inc.severity}
                         </span>
-                        <span className="text-sm font-semibold text-[#241100] dark:text-[#fff2e5] capitalize">{inc.title || inc.type?.replace(/_/g, " ")}</span>
+                        <span className="text-sm font-semibold text-gray-900 dark:text-gray-100 capitalize">{inc.title || inc.type?.replace(/_/g, " ")}</span>
                       </div>
-                      <p className="text-xs text-[#9CA3AF] mt-1 line-clamp-2">{inc.description}</p>
+                      <p className="text-xs text-gray-400 mt-1 line-clamp-2">{inc.description}</p>
                     </div>
                     <div className="flex items-center gap-2 flex-shrink-0 ml-3">
                       <select value={inc.status} onChange={e => updateIncident(inc.id, { status: e.target.value })}
@@ -155,7 +155,7 @@ export default function AdminIncidents() {
                       </select>
                     </div>
                   </div>
-                  {inc.assignedAdmin && <p className="text-[10px] text-[#9CA3AF] mt-1">Assigned: {inc.assignedAdmin}</p>}
+                  {inc.assignedAdmin && <p className="text-[10px] text-gray-400 mt-1">Assigned: {inc.assignedAdmin}</p>}
                 </motion.div>
               ))}
             </div>

@@ -8,7 +8,7 @@ import { useGetActiveTask, useGetRunnerMe, useUpdateTaskStatus, useVerifyTaskOtp
 import { RunnerBottomNav } from "@/components/BottomNav";
 import { CategoryIcon } from "@/components/CategoryIcon";
 import { CATEGORY_NAMES, formatCurrency } from "@/lib/utils";
-import { NAVY, NAVY_GRAD, GOLD, GOLD_GRAD } from "@/lib/theme";
+import { DARK, DARK_GRAD, BLUE, BLUE_GRAD, DARK_MID } from "@/lib/theme";
 import { useGpsTracking } from "@/hooks/useGpsTracking";
 
 const BG = "#080E1E";
@@ -36,7 +36,7 @@ function StepBadge({ label, done, current, icon: Icon, index }: StepBadgeProps) 
   return (
     <div className={`flex items-center gap-3 p-3 rounded-xl transition-all ${current ? "bg-white/10 border border-white/20" : done ? "bg-green-500/10" : "bg-white/5"}`}>
       <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 ${done ? "bg-green-500 text-white" : current ? "" : "bg-white/10 text-white/40"}`}
-        style={current && !done ? { background: GOLD_GRAD, color: "#241100" } : {}}>
+        style={current && !done ? { background: BLUE_GRAD, color: DARK } : {}}>
         {done ? <CheckCircle size={16} /> : index + 1}
       </div>
       <span className={`text-sm font-semibold ${done ? "text-green-400" : current ? "text-white" : "text-white/40"}`}>
@@ -315,7 +315,7 @@ export default function ActiveTask() {
         haptic([100, 50, 100]);
         setCompleted(true);
         setTimerActive(false);
-        confetti({ particleCount: 150, spread: 100, origin: { y: 0.5 }, colors: [NAVY, GOLD, "#663100", "#22C55E"] });
+        confetti({ particleCount: 150, spread: 100, origin: { y: 0.5 }, colors: [DARK, BLUE, DARK_MID, "#22C55E"] });
         toast.success(`Task Complete! You earned ${formatCurrency(data.runnerEarning ?? task.runnerEarning)}`);
       },
       onError: () => toast.error("Invalid OTP"),
@@ -325,7 +325,7 @@ export default function ActiveTask() {
   if (isLoading) return (
     <div className="min-h-screen flex items-center justify-center" style={{ background: BG }}>
       <div className="text-center">
-        <div className="w-12 h-12 border-4 border-t-transparent rounded-full animate-spin mx-auto mb-3" style={{ borderColor: GOLD, borderTopColor: "transparent" }} />
+        <div className="w-12 h-12 border-4 border-t-transparent rounded-full animate-spin mx-auto mb-3" style={{ borderColor: BLUE, borderTopColor: "transparent" }} />
         <p className="text-white/50">Loading active task...</p>
       </div>
     </div>
@@ -335,10 +335,10 @@ export default function ActiveTask() {
   const uploadProgressUI = uploadProgress != null && (
     <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center backdrop-blur-sm">
       <div className="bg-white/10 border border-white/20 rounded-2xl p-6 text-center w-64">
-        <div className="w-10 h-10 border-4 border-t-transparent rounded-full animate-spin mx-auto mb-3" style={{ borderColor: GOLD, borderTopColor: "transparent" }} />
+        <div className="w-10 h-10 border-4 border-t-transparent rounded-full animate-spin mx-auto mb-3" style={{ borderColor: BLUE, borderTopColor: "transparent" }} />
         <p className="text-white text-sm font-bold mb-2">Uploading photo...</p>
         <div className="h-2 bg-white/10 rounded-full overflow-hidden">
-          <div className="h-full rounded-full transition-all duration-300" style={{ width: `${uploadProgress}%`, background: GOLD_GRAD }} />
+          <div className="h-full rounded-full transition-all duration-300" style={{ width: `${uploadProgress}%`, background: BLUE_GRAD }} />
         </div>
         <p className="text-white/40 text-[10px] mt-1">{uploadProgress}%</p>
       </div>
@@ -350,7 +350,7 @@ export default function ActiveTask() {
       <Moon size={48} className="text-white/20 mb-4" />
       <h3 className="text-white font-bold text-lg">No active task</h3>
       <p className="text-white/50 text-sm mt-1 mb-5">Go to Tasks tab to find new dispatch tasks</p>
-      <button onClick={() => navigate("/runner/feed")} className="px-6 py-3 rounded-xl text-[#241100] font-semibold" style={{ background: GOLD_GRAD }}>
+      <button onClick={() => navigate("/runner/feed")} className="px-6 py-3 rounded-xl text-gray-900 font-semibold" style={{ background: BLUE_GRAD }}>
         Find Tasks
       </button>
       <RunnerBottomNav />
@@ -382,8 +382,8 @@ export default function ActiveTask() {
             <p className="text-white/50 text-xs">Task #{task.id}</p>
           </div>
           {timerActive && (
-            <div className="px-3 py-1.5 rounded-xl" style={{ background: GOLD_GRAD }}>
-              <span className="text-[#241100] font-black text-lg font-mono">{formatTime(elapsed)}</span>
+            <div className="px-3 py-1.5 rounded-xl" style={{ background: BLUE_GRAD }}>
+              <span className="text-gray-900 font-black text-lg font-mono">{formatTime(elapsed)}</span>
             </div>
           )}
         </div>
@@ -403,7 +403,7 @@ export default function ActiveTask() {
               </p>
             )}
           </div>
-          <span className="font-black text-lg flex-shrink-0" style={{ color: GOLD }}>{formatCurrency(task.runnerEarning ?? 0)}</span>
+          <span className="font-black text-lg flex-shrink-0" style={{ color: BLUE }}>{formatCurrency(task.runnerEarning ?? 0)}</span>
         </div>
 
         {/* Dispatch info badges */}
@@ -430,7 +430,7 @@ export default function ActiveTask() {
         {/* Client info */}
         {task.user && (
           <div className="mt-3 pt-3 border-t border-white/10 flex items-center gap-2">
-            <div className="w-7 h-7 rounded-full flex items-center justify-center text-white text-xs font-bold" style={{ background: NAVY_GRAD }}>
+            <div className="w-7 h-7 rounded-full flex items-center justify-center text-white text-xs font-bold" style={{ background: DARK_GRAD }}>
               {task.user.name?.[0] ?? "C"}
             </div>
             <span className="text-white/60 text-xs">{task.user.name ?? "Client"}</span>
@@ -494,7 +494,7 @@ export default function ActiveTask() {
               onClick={() => handleStatusUpdate("on_the_way")}
               disabled={updateStatus.isPending}
               className="w-full py-3.5 rounded-xl text-white font-bold flex items-center justify-center gap-2"
-              style={{ background: NAVY_GRAD }}
+              style={{ background: DARK_GRAD }}
             >
               <Navigation size={16} /> I'm on my way!
             </button>
@@ -521,7 +521,7 @@ export default function ActiveTask() {
                   onClick={() => handleStatusUpdate("reached_task_location")}
                   disabled={updateStatus.isPending}
                   className="flex-1 py-3 rounded-xl text-white font-bold text-sm"
-                  style={{ background: NAVY_GRAD }}
+                  style={{ background: DARK_GRAD }}
                 >
                   Proceed →
                 </button>
@@ -552,8 +552,8 @@ export default function ActiveTask() {
                 <button
                   onClick={() => handleStatusUpdate("in_progress")}
                   disabled={updateStatus.isPending}
-                  className="flex-1 py-3 rounded-xl text-[#241100] font-bold text-sm"
-                  style={{ background: GOLD_GRAD }}
+                  className="flex-1 py-3 rounded-xl text-gray-900 font-bold text-sm"
+                  style={{ background: BLUE_GRAD }}
                 >
                   Start Task →
                 </button>
@@ -596,7 +596,7 @@ export default function ActiveTask() {
             {(task.status === "waiting_started" || waitingActive) && (
               <div>
                 <div className="text-center py-4">
-                  <div className="text-3xl font-black font-mono" style={{ color: GOLD }}>
+                  <div className="text-3xl font-black font-mono" style={{ color: BLUE }}>
                     {String(Math.floor(waitingElapsed / 60)).padStart(2, "0")}:{String(waitingElapsed % 60).padStart(2, "0")}
                   </div>
                   <p className="text-white/40 text-xs mt-1">Waiting time</p>
@@ -656,7 +656,7 @@ export default function ActiveTask() {
                   </div>
                   <div className="bg-white/10 rounded-xl p-3 text-center">
                     <p className="text-white/40 text-[9px] uppercase">Current</p>
-                    <p className="font-black text-lg" style={{ color: GOLD }}>{task.currentToken || "—"}</p>
+                    <p className="font-black text-lg" style={{ color: BLUE }}>{task.currentToken || "—"}</p>
                   </div>
                   <div className="bg-white/10 rounded-xl p-3 text-center">
                     <p className="text-white/40 text-[9px] uppercase">Counter</p>
@@ -680,7 +680,7 @@ export default function ActiveTask() {
                       </div>
                       <div className="text-center bg-white/5 rounded-lg p-1.5">
                         <p className="text-white/30 text-[8px]">Wait</p>
-                        <p className="font-bold text-xs" style={{ color: GOLD }}>{wait != null ? `${wait}m` : "—"}</p>
+                        <p className="font-bold text-xs" style={{ color: BLUE }}>{wait != null ? `${wait}m` : "—"}</p>
                       </div>
                       <div className="text-center bg-white/5 rounded-lg p-1.5">
                         <p className="text-white/30 text-[8px]">Progress</p>
@@ -733,8 +733,8 @@ export default function ActiveTask() {
                 });
               }}
               disabled={(!queueToken && !queueCounter) || updateQueueProgress.isPending}
-              className="w-full py-3 rounded-xl text-[#241100] font-bold text-sm"
-              style={{ background: !queueToken && !queueCounter ? "#374151" : GOLD_GRAD }}
+              className="w-full py-3 rounded-xl text-gray-900 font-bold text-sm"
+              style={{ background: !queueToken && !queueCounter ? "#374151" : BLUE_GRAD }}
             >
               Update Queue Status
             </button>
@@ -857,7 +857,7 @@ export default function ActiveTask() {
                   onChange={(e) => handleOtpChange(e.target.value, i)}
                   onKeyDown={(e) => { if (e.key === "Backspace" && !d && i > 0) document.getElementById(`otp-active-${i - 1}`)?.focus(); }}
                   className="w-11 h-14 bg-white/10 border-2 border-white/20 rounded-xl text-center text-2xl font-black focus:outline-none transition-colors"
-                  style={{ color: GOLD, borderColor: d ? GOLD : "" }}
+                  style={{ color: BLUE, borderColor: d ? BLUE : "" }}
                 />
               ))}
             </div>
@@ -953,9 +953,9 @@ export default function ActiveTask() {
             >
               <Sparkles size={40} className="text-green-400 mx-auto mb-3" />
               <h3 className="text-white font-black text-xl mb-1">Task Complete!</h3>
-              <p className="font-bold text-2xl" style={{ color: GOLD }}>{formatCurrency(task.runnerEarning ?? 0)}</p>
+              <p className="font-bold text-2xl" style={{ color: BLUE }}>{formatCurrency(task.runnerEarning ?? 0)}</p>
               <p className="text-white/50 text-xs mt-1">Added to your earnings</p>
-              <button onClick={() => navigate("/runner/feed")} className="mt-4 px-6 py-3 rounded-xl text-[#241100] font-semibold" style={{ background: GOLD_GRAD }}>
+              <button onClick={() => navigate("/runner/feed")} className="mt-4 px-6 py-3 rounded-xl text-gray-900 font-semibold" style={{ background: BLUE_GRAD }}>
                 Find Next Task
               </button>
             </motion.div>
