@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Check } from "lucide-react";
+import { Check, X } from "lucide-react";
 import { BLUE } from "@/lib/theme";
 
 const LANGUAGES = [
@@ -28,7 +28,7 @@ export default function LanguageSelector({ currentLanguage, onSelect, onClose }:
         <div className="flex items-center justify-between mb-5">
           <h2 className="font-black text-gray-900 text-xl">Language</h2>
           <button onClick={onClose} className="w-8 h-8 rounded-xl bg-gray-100 flex items-center justify-center text-gray-500">
-            ✕
+            <X size={18} />
           </button>
         </div>
 
