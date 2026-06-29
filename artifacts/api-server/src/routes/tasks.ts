@@ -76,7 +76,9 @@ async function getTaskWithRelations(id: number) {
   ]);
   const safeUser = user ? (({ otp, otpExpiresAt, ...u }) => u)(user) : null;
   const safeRunner = runner ? (({ otp, otpExpiresAt, aadhaarNumber, ...r }) => r)(runner) : null;
-  return { ...task, user: safeUser, runner: safeRunner };
+  // L5: Strip OTP hash from task — never expose to clients
+  const { otp: _otp, ...taskSafe } = task;
+  return { ...taskSafe, user: safeUser, runner: safeRunner };
 }
 
 // GET /tasks
@@ -374,10 +376,12 @@ router.post("/tasks", requireUser, validateBody(createTaskSchema), async (req, r
     });
 
     const enriched = await getTaskWithRelations(task.id);
+    // L5: Return plaintext OTP to the creator (only time it's visible)
     // [OFFLINE MODE] No payment order returned — tasks are cash-on-completion
     // Uncomment below to re-enable payment order in response:
     res.status(201).json({
       ...enriched,
+      otp, // plaintext 6-digit OTP — shown once to the user
       paymentOrder: null,
       // paymentOrder: paymentOrder
       //   ? {
