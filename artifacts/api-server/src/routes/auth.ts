@@ -57,25 +57,36 @@ router.post("/auth/send-otp", validateBody(sendOtpSchema), async (req, res): Pro
     return;
   }
 
-  // Upsert the user/runner record (phone registration) — OTP is handled by Twilio
-  if (role === "runner") {
-    const existing = await db.select().from(runnersTable).where(eq(runnersTable.phone, phone));
-    if (existing.length === 0) {
-      await db.insert(runnersTable).values({ phone });
+  try {
+    // Upsert the user/runner record (phone registration) — OTP is handled by Twilio
+    if (role === "runner") {
+      const existing = await db.select().from(runnersTable).where(eq(runnersTable.phone, phone));
+      if (existing.length === 0) {
+        await db.insert(runnersTable).values({ phone });
+      }
+    } else {
+      const existing = await db.select().from(usersTable).where(eq(usersTable.phone, phone));
+      if (existing.length === 0) {
+        await db.insert(usersTable).values({ phone });
+      }
     }
-  } else {
-    const existing = await db.select().from(usersTable).where(eq(usersTable.phone, phone));
-    if (existing.length === 0) {
-      await db.insert(usersTable).values({ phone });
+
+    const smsSent = await sendOtp(phone);
+
+    res.json({
+      message: smsSent ? "OTP sent" : "Failed to send OTP. Please try again.",
+      sent: smsSent,
+    });
+  } catch (err) {
+    logger.error({ err, phone, role }, "send-otp: database or SMS error");
+    // Still try to send OTP even if DB upsert fails (user might already exist)
+    try {
+      const smsSent = await sendOtp(phone);
+      res.json({ message: smsSent ? "OTP sent" : "Failed to send OTP. Please try again.", sent: smsSent });
+    } catch {
+      res.status(500).json({ error: "Failed to process OTP request. Please try again." });
     }
   }
-
-  const smsSent = await sendOtp(phone);
-
-  res.json({
-    message: smsSent ? "OTP sent" : "Failed to send OTP. Please try again.",
-    sent: smsSent,
-  });
 });
 
 // POST /auth/verify-otp — delegates to Twilio Verify for server-side validation
@@ -83,32 +94,37 @@ router.post("/auth/verify-otp", validateBody(verifyOtpSchema), async (req, res):
   const { phone, otp, role = "user" } = req.body;
   if (!phone || !otp) { res.status(400).json({ error: "Phone and OTP required" }); return; }
 
-  // Verify code with Twilio Verify (in dev, accepts any 6-digit code)
-  const isValid = await verifyOtp(phone, otp);
-  if (!isValid) { res.status(401).json({ error: "Invalid OTP" }); return; }
+  try {
+    // Verify code with Twilio Verify (in dev, accepts any 6-digit code)
+    const isValid = await verifyOtp(phone, otp);
+    if (!isValid) { res.status(401).json({ error: "Invalid OTP" }); return; }
 
-  if (role === "runner") {
-    const [runner] = await db.select().from(runnersTable).where(eq(runnersTable.phone, phone));
-    if (!runner) { res.status(401).json({ error: "Runner not found. Please request OTP first." }); return; }
+    if (role === "runner") {
+      const [runner] = await db.select().from(runnersTable).where(eq(runnersTable.phone, phone));
+      if (!runner) { res.status(401).json({ error: "Runner not found. Please request OTP first." }); return; }
 
-    const token = generateToken();
-    const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // 30 days
-    await db.insert(runnerSessionsTable).values({ runnerId: runner.id, token, expiresAt });
+      const token = generateToken();
+      const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // 30 days
+      await db.insert(runnerSessionsTable).values({ runnerId: runner.id, token, expiresAt });
 
-    const { otp: _, otpExpiresAt: __, ...safeRunner } = runner;
-    setAuthCookie(res, token);
-    res.json({ token, role: "runner", runner: safeRunner });
-  } else {
-    const [user] = await db.select().from(usersTable).where(eq(usersTable.phone, phone));
-    if (!user) { res.status(401).json({ error: "User not found. Please request OTP first." }); return; }
+      const { otp: _, otpExpiresAt: __, ...safeRunner } = runner;
+      setAuthCookie(res, token);
+      res.json({ token, role: "runner", runner: safeRunner });
+    } else {
+      const [user] = await db.select().from(usersTable).where(eq(usersTable.phone, phone));
+      if (!user) { res.status(401).json({ error: "User not found. Please request OTP first." }); return; }
 
-    const token = generateToken();
-    const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
-    await db.insert(userSessionsTable).values({ userId: user.id, token, expiresAt });
+      const token = generateToken();
+      const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+      await db.insert(userSessionsTable).values({ userId: user.id, token, expiresAt });
 
-    const { otp: _, otpExpiresAt: __, ...safeUser } = user;
-    setAuthCookie(res, token);
-    res.json({ token, role: "user", user: safeUser });
+      const { otp: _, otpExpiresAt: __, ...safeUser } = user;
+      setAuthCookie(res, token);
+      res.json({ token, role: "user", user: safeUser });
+    }
+  } catch (err) {
+    logger.error({ err, phone, role }, "verify-otp: database or session error");
+    res.status(500).json({ error: "Authentication failed. Please try again." });
   }
 });
 
@@ -128,38 +144,43 @@ router.post("/auth/logout", async (req, res): Promise<void> => {
 router.post("/auth/signup", validateBody(signupSchema), async (req, res): Promise<void> => {
   const { email, password, role = "user", name, phone } = req.body;
 
-  // Check if user/runner already exists with this email
-  const table = role === "runner" ? runnersTable : usersTable;
-  const [existing] = await db.select().from(table).where(eq(table.email, email));
-  if (existing) {
-    res.status(400).json({ error: "Account with this email already exists" });
-    return;
-  }
+  try {
+    // Check if user/runner already exists with this email
+    const table = role === "runner" ? runnersTable : usersTable;
+    const [existing] = await db.select().from(table).where(eq(table.email, email));
+    if (existing) {
+      res.status(400).json({ error: "Account with this email already exists" });
+      return;
+    }
 
-  // Hash password
-  const passwordHash = hashPassword(password);
+    // Hash password
+    const passwordHash = hashPassword(password);
 
-  // Create new user/runner
-  const newRecord = role === "runner"
-    ? { email, passwordHash, name, phone }
-    : { email, passwordHash, name, phone };
+    // Create new user/runner
+    const newRecord = role === "runner"
+      ? { email, passwordHash, name, phone }
+      : { email, passwordHash, name, phone };
 
-  const [record] = await db.insert(table).values(newRecord).returning();
+    const [record] = await db.insert(table).values(newRecord).returning();
 
-  // Generate token
-  const token = generateToken();
-  const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // 30 days
+    // Generate token
+    const token = generateToken();
+    const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // 30 days
 
-  if (role === "runner") {
-    await db.insert(runnerSessionsTable).values({ runnerId: record.id, token, expiresAt });
-    const { passwordHash: _, otp: __, otpExpiresAt: ___, ...safeRunner } = record;
-    setAuthCookie(res, token);
-    res.json({ token, role: "runner", runner: safeRunner });
-  } else {
-    await db.insert(userSessionsTable).values({ userId: record.id, token, expiresAt });
-    const { passwordHash: _, otp: __, otpExpiresAt: ___, ...safeUser } = record;
-    setAuthCookie(res, token);
-    res.json({ token, role: "user", user: safeUser });
+    if (role === "runner") {
+      await db.insert(runnerSessionsTable).values({ runnerId: record.id, token, expiresAt });
+      const { passwordHash: _, otp: __, otpExpiresAt: ___, ...safeRunner } = record;
+      setAuthCookie(res, token);
+      res.json({ token, role: "runner", runner: safeRunner });
+    } else {
+      await db.insert(userSessionsTable).values({ userId: record.id, token, expiresAt });
+      const { passwordHash: _, otp: __, otpExpiresAt: ___, ...safeUser } = record;
+      setAuthCookie(res, token);
+      res.json({ token, role: "user", user: safeUser });
+    }
+  } catch (err) {
+    logger.error({ err, email, role }, "signup: database error");
+    res.status(500).json({ error: "Failed to create account. Please try again." });
   }
 });
 
@@ -167,33 +188,38 @@ router.post("/auth/signup", validateBody(signupSchema), async (req, res): Promis
 router.post("/auth/login", validateBody(loginSchema), async (req, res): Promise<void> => {
   const { email, password, role = "user" } = req.body;
 
-  const table = role === "runner" ? runnersTable : usersTable;
-  const [record] = await db.select().from(table).where(eq(table.email, email));
+  try {
+    const table = role === "runner" ? runnersTable : usersTable;
+    const [record] = await db.select().from(table).where(eq(table.email, email));
 
-  if (!record || !record.passwordHash) {
-    res.status(401).json({ error: "Invalid credentials" });
-    return;
-  }
+    if (!record || !record.passwordHash) {
+      res.status(401).json({ error: "Invalid credentials" });
+      return;
+    }
 
-  if (!verifyPassword(password, record.passwordHash)) {
-    res.status(401).json({ error: "Invalid credentials" });
-    return;
-  }
+    if (!verifyPassword(password, record.passwordHash)) {
+      res.status(401).json({ error: "Invalid credentials" });
+      return;
+    }
 
-  // Generate token
-  const token = generateToken();
-  const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // 30 days
+    // Generate token
+    const token = generateToken();
+    const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // 30 days
 
-  if (role === "runner") {
-    await db.insert(runnerSessionsTable).values({ runnerId: record.id, token, expiresAt });
-    const { passwordHash: _, otp: __, otpExpiresAt: ___, ...safeRunner } = record;
-    setAuthCookie(res, token);
-    res.json({ token, role: "runner", runner: safeRunner });
-  } else {
-    await db.insert(userSessionsTable).values({ userId: record.id, token, expiresAt });
-    const { passwordHash: _, otp: __, otpExpiresAt: ___, ...safeUser } = record;
-    setAuthCookie(res, token);
-    res.json({ token, role: "user", user: safeUser });
+    if (role === "runner") {
+      await db.insert(runnerSessionsTable).values({ runnerId: record.id, token, expiresAt });
+      const { passwordHash: _, otp: __, otpExpiresAt: ___, ...safeRunner } = record;
+      setAuthCookie(res, token);
+      res.json({ token, role: "runner", runner: safeRunner });
+    } else {
+      await db.insert(userSessionsTable).values({ userId: record.id, token, expiresAt });
+      const { passwordHash: _, otp: __, otpExpiresAt: ___, ...safeUser } = record;
+      setAuthCookie(res, token);
+      res.json({ token, role: "user", user: safeUser });
+    }
+  } catch (err) {
+    logger.error({ err, email, role }, "login: database error");
+    res.status(500).json({ error: "Login failed. Please try again." });
   }
 });
 
@@ -283,61 +309,66 @@ router.post("/auth/neon-callback", async (req, res): Promise<void> => {
   const { neonToken, role = "user" } = req.body;
   if (!neonToken) { res.status(400).json({ error: "Neon token required" }); return; }
 
-  // Validate the Neon Auth JWT against their JWKS
-  const neonUser = await validateNeonToken(neonToken);
-  if (!neonUser || !neonUser.email) {
-    res.status(401).json({ error: "Invalid or expired Neon Auth token" }); return;
-  }
-
-  const email = neonUser.email;
-  const name = neonUser.name || email.split("@")[0];
-
-  // Security: check which table already has this email to prevent role escalation.
-  // Never trust the client-supplied role — resolve it from the database.
-  const [existingUser] = await db.select({ id: usersTable.id }).from(usersTable).where(eq(usersTable.email, email)).limit(1);
-  const [existingRunner] = await db.select({ id: runnersTable.id }).from(runnersTable).where(eq(runnersTable.email, email)).limit(1);
-
-  let record: { id: number; [key: string]: unknown };
-  let resolvedRole: "user" | "runner";
-
-  if (existingRunner) {
-    // Email already registered as a runner
-    resolvedRole = "runner";
-    const [r] = await db.select().from(runnersTable).where(eq(runnersTable.email, email));
-    record = r!;
-  } else if (existingUser) {
-    // Email already registered as a user
-    resolvedRole = "user";
-    const [r] = await db.select().from(usersTable).where(eq(usersTable.email, email));
-    record = r!;
-  } else {
-    // New email — use client-requested role (safe since no account exists yet)
-    resolvedRole = role === "runner" ? "runner" : "user";
-    if (resolvedRole === "runner") {
-      const [r] = await db.insert(runnersTable).values({ email, name, phone: null }).returning();
-      record = r;
-    } else {
-      const [r] = await db.insert(usersTable).values({ email, name, phone: null }).returning();
-      record = r;
+  try {
+    // Validate the Neon Auth JWT against their JWKS
+    const neonUser = await validateNeonToken(neonToken);
+    if (!neonUser || !neonUser.email) {
+      res.status(401).json({ error: "Invalid or expired Neon Auth token" }); return;
     }
-  }
 
-  // Create a GoLineLess session token
-  const token = generateToken();
-  const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // 30 days
-  if (resolvedRole === "runner") {
-    await db.insert(runnerSessionsTable).values({ runnerId: record.id, token, expiresAt });
-  } else {
-    await db.insert(userSessionsTable).values({ userId: record.id, token, expiresAt });
-  }
+    const email = neonUser.email;
+    const name = neonUser.name || email.split("@")[0];
 
-  // Strip sensitive fields
-  const { passwordHash: _, otp: __, otpExpiresAt: ___, passwordResetToken: ____, passwordResetExpiresAt: _____, ...safeRecord } = record;
+    // Security: check which table already has this email to prevent role escalation.
+    // Never trust the client-supplied role — resolve it from the database.
+    const [existingUser] = await db.select({ id: usersTable.id }).from(usersTable).where(eq(usersTable.email, email)).limit(1);
+    const [existingRunner] = await db.select({ id: runnersTable.id }).from(runnersTable).where(eq(runnersTable.email, email)).limit(1);
 
-  if (resolvedRole === "runner") {
-    res.json({ token, role: "runner", runner: safeRecord });
-  } else {
-    res.json({ token, role: "user", user: safeRecord });
+    let record: { id: number; [key: string]: unknown };
+    let resolvedRole: "user" | "runner";
+
+    if (existingRunner) {
+      // Email already registered as a runner
+      resolvedRole = "runner";
+      const [r] = await db.select().from(runnersTable).where(eq(runnersTable.email, email));
+      record = r!;
+    } else if (existingUser) {
+      // Email already registered as a user
+      resolvedRole = "user";
+      const [r] = await db.select().from(usersTable).where(eq(usersTable.email, email));
+      record = r!;
+    } else {
+      // New email — use client-requested role (safe since no account exists yet)
+      resolvedRole = role === "runner" ? "runner" : "user";
+      if (resolvedRole === "runner") {
+        const [r] = await db.insert(runnersTable).values({ email, name, phone: null }).returning();
+        record = r;
+      } else {
+        const [r] = await db.insert(usersTable).values({ email, name, phone: null }).returning();
+        record = r;
+      }
+    }
+
+    // Create a GoLineLess session token
+    const token = generateToken();
+    const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // 30 days
+    if (resolvedRole === "runner") {
+      await db.insert(runnerSessionsTable).values({ runnerId: record.id, token, expiresAt });
+    } else {
+      await db.insert(userSessionsTable).values({ userId: record.id, token, expiresAt });
+    }
+
+    // Strip sensitive fields
+    const { passwordHash: _, otp: __, otpExpiresAt: ___, passwordResetToken: ____, passwordResetExpiresAt: _____, ...safeRecord } = record;
+
+    if (resolvedRole === "runner") {
+      res.json({ token, role: "runner", runner: safeRecord });
+    } else {
+      res.json({ token, role: "user", user: safeRecord });
+    }
+  } catch (err) {
+    logger.error({ err }, "neon-callback: authentication error");
+    res.status(500).json({ error: "Authentication failed. Please try again." });
   }
 });
 
