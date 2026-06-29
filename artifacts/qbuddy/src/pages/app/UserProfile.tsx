@@ -45,6 +45,8 @@ export default function UserProfile() {
   });
   const [aadhaarFront, setAadhaarFront] = useState<string | null>(null);
   const [aadhaarBack, setAadhaarBack] = useState<string | null>(null);
+  const [kycLoading, setKycLoading] = useState(false);
+  const [kycError, setKycError] = useState<string | null>(null);
 
   const { data: notifications } = useListNotifications();
   const unreadCount = ((notifications ?? []) as NotificationType[]).filter(n => !n.isRead).length;
@@ -72,14 +74,37 @@ export default function UserProfile() {
   };
 
   const submitKyc = async () => {
+    setKycError(null);
+    if (!kycForm.aadhaarNumber.trim()) { setKycError("Aadhaar number is required"); return; }
+    if (!aadhaarFront || !aadhaarBack) { setKycError("Please upload both sides of your Aadhaar card"); return; }
+    setKycLoading(true);
     try {
       const res = await fetch("/api/users/me/kyc", {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${localStorage.getItem("golineless_user_token")}` },
-        body: JSON.stringify({ ...kycForm, aadhaarFront, aadhaarBack }),
+        body: JSON.stringify({
+          aadhaarNumber: kycForm.aadhaarNumber,
+          aadhaarFront,
+          aadhaarBack,
+          emergencyContact: [kycForm.emergencyContactName, kycForm.emergencyContactPhone].filter(Boolean).join(", "),
+        }),
       });
-      if (res.ok) { setShowKyc(false); refetch(); }
-    } catch { /* ignore */ }
+      const data = await res.json();
+      if (res.ok) {
+        setShowKyc(false);
+        setKycStep(0);
+        setKycForm({ aadhaarNumber: "", emergencyContactName: "", emergencyContactPhone: "" });
+        setAadhaarFront(null);
+        setAadhaarBack(null);
+        refetch();
+      } else {
+        setKycError(data.error || "Submission failed. Please try again.");
+      }
+    } catch (e) {
+      setKycError("Network error. Please check your connection and try again.");
+    } finally {
+      setKycLoading(false);
+    }
   };
 
   const handleFileRead = (setter: (v: string) => void) => (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -296,14 +321,17 @@ export default function UserProfile() {
                 </div>
               </div>
             )}
+            {kycError && (
+              <div className="mb-3 p-3 bg-red-50 border border-red-200 rounded-xl text-red-600 text-sm font-medium">{kycError}</div>
+            )}
             <div className="flex gap-3 mt-4">
               {kycStep > 0 && (
-                <button onClick={() => setKycStep(s => s - 1)} className="flex-1 py-3.5 rounded-2xl text-gray-500 font-bold border border-gray-200">← Back</button>
+                <button onClick={() => { setKycError(null); setKycStep(s => s - 1); }} disabled={kycLoading} className="flex-1 py-3.5 rounded-2xl text-gray-500 font-bold border border-gray-200 disabled:opacity-50">← Back</button>
               )}
               {kycStep < KYC_STEPS.length - 1 ? (
-                <button onClick={() => setKycStep(s => s + 1)} className="flex-1 py-3.5 rounded-2xl text-white font-bold" style={{ background: DARK_GRAD }}>Continue →</button>
+                <button onClick={() => { setKycError(null); setKycStep(s => s + 1); }} className="flex-1 py-3.5 rounded-2xl text-white font-bold" style={{ background: DARK_GRAD }}>Continue →</button>
               ) : (
-                <button onClick={submitKyc} className="flex-1 py-3.5 rounded-2xl text-white font-bold" style={{ background: BLUE }}>Submit KYC</button>
+                <button onClick={submitKyc} disabled={kycLoading} className="flex-1 py-3.5 rounded-2xl text-white font-bold disabled:opacity-60" style={{ background: BLUE }}>{kycLoading ? "Submitting..." : "Submit KYC"}</button>
               )}
             </div>
           </div>
