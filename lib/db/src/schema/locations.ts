@@ -1,4 +1,4 @@
-import { pgTable, text, serial, timestamp, integer, numeric, boolean } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, timestamp, integer, numeric, boolean, index } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 import { runnersTable } from "./runners";
@@ -14,7 +14,12 @@ export const runnerLocationsTable = pgTable("runner_locations", {
   heading: numeric("heading", { precision: 5, scale: 2 }).default("0"),
   speed: numeric("speed", { precision: 5, scale: 2 }).default("0"),
   recordedAt: timestamp("recorded_at", { withTimezone: true }).notNull().defaultNow(),
-});
+}, (table) => ({
+  runnerIdIdx: index("idx_runner_locations_runner_id").on(table.runnerId),
+  taskIdIdx: index("idx_runner_locations_task_id").on(table.taskId),
+  recordedAtIdx: index("idx_runner_locations_recorded_at").on(table.recordedAt),
+  runnerRecordedIdx: index("idx_runner_locations_runner_recorded").on(table.runnerId, table.recordedAt),
+}));
 
 export const insertRunnerLocationSchema = createInsertSchema(runnerLocationsTable).omit({ id: true, recordedAt: true });
 export type InsertRunnerLocation = z.infer<typeof insertRunnerLocationSchema>;
@@ -80,4 +85,9 @@ export const deviceTokensTable = pgTable("device_tokens", {
   isActive: boolean("is_active").notNull().default(true),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
-});
+}, (table) => ({
+  userIdx: index("idx_device_tokens_user_id").on(table.userId),
+  runnerIdx: index("idx_device_tokens_runner_id").on(table.runnerId),
+  tokenIdx: index("idx_device_tokens_token").on(table.token),
+  activeIdx: index("idx_device_tokens_active").on(table.isActive),
+}));

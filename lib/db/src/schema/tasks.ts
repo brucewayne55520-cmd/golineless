@@ -113,6 +113,10 @@ export const tasksTable = pgTable("tasks", {
   runnerStatusIdx: index("idx_tasks_runner_status").on(table.runnerId, table.status),
   completedAtIdx: index("idx_tasks_completed_at").on(table.completedAt),
   paymentMethodStatusIdx: index("idx_tasks_payment_method_status").on(table.paymentMethod, table.paymentStatus),
+  categoryIdx: index("idx_tasks_category").on(table.category),
+  urgencyIdx: index("idx_tasks_urgency").on(table.urgency),
+  activeRunnerIdIdx: index("idx_tasks_active_runner_id").on(table.activeRunnerId),
+  locationCityAreaIdx: index("idx_tasks_location_city_area").on(table.locationCity, table.locationArea),
 }));
 
 export const insertTaskSchema = createInsertSchema(tasksTable).omit({ id: true, createdAt: true, updatedAt: true });

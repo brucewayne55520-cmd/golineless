@@ -33,6 +33,7 @@ export const taskTimelineEventsTable = pgTable("task_timeline_events", {
   taskIdx: index("idx_timeline_task_id").on(table.taskId),
   statusIdx: index("idx_timeline_status").on(table.status),
   eventTimestampIdx: index("idx_timeline_event_timestamp").on(table.eventTimestamp),
+  taskStatusIdx: index("idx_timeline_task_status").on(table.taskId, table.status),
 }));
 
 export const insertTaskTimelineEventSchema = createInsertSchema(taskTimelineEventsTable).omit({ id: true, createdAt: true });

@@ -21,6 +21,7 @@ export const notificationsTable = pgTable("notifications", {
   runnerIdIsReadIdx: index("idx_notifications_runner_read").on(table.runnerId, table.isRead),
   runnerIdIdx: index("idx_notifications_runner_id").on(table.runnerId),
   taskIdIdx: index("idx_notifications_task_id").on(table.taskId),
+  typeIdx: index("idx_notifications_type").on(table.type),
 }));
 
 export const insertNotificationSchema = createInsertSchema(notificationsTable).omit({ id: true, createdAt: true });

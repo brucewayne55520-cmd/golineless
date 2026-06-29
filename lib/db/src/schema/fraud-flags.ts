@@ -48,6 +48,7 @@ export const fraudFlagsTable = pgTable("fraud_flags", {
   runnerIdx: index("idx_fraud_flag_runner_id").on(table.runnerId),
   typeIdx: index("idx_fraud_flag_type").on(table.type),
   createdAtIdx: index("idx_fraud_flag_created_at").on(table.createdAt),
+  runnerTypeIdx: index("idx_fraud_flag_runner_type").on(table.runnerId, table.type),
 }));
 
 export const insertFraudFlagSchema = createInsertSchema(fraudFlagsTable).omit({ id: true, createdAt: true });

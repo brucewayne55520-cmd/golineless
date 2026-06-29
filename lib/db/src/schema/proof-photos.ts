@@ -34,6 +34,7 @@ export const proofPhotosTable = pgTable("proof_photos", {
   runnerIdx: index("idx_proof_photo_runner_id").on(table.runnerId),
   proofTypeIdx: index("idx_proof_photo_type").on(table.proofType),
   createdAtIdx: index("idx_proof_photo_created_at").on(table.createdAt),
+  taskTypeIdx: index("idx_proof_photo_task_type").on(table.taskId, table.proofType),
 }));
 
 export const insertProofPhotoSchema = createInsertSchema(proofPhotosTable).omit({ id: true, createdAt: true });

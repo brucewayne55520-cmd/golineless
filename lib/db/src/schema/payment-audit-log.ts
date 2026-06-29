@@ -16,6 +16,8 @@ export const paymentAuditLogTable = pgTable("payment_audit_log", {
 }, (table) => ({
   taskIdIdx: index("idx_payaudit_task_id").on(table.taskId),
   createdAtIdx: index("idx_payaudit_created_at").on(table.createdAt),
+  newStatusIdx: index("idx_payaudit_new_status").on(table.newStatus),
+  actorTypeIdx: index("idx_payaudit_actor_type").on(table.actorType),
 }));
 
 export const insertPaymentAuditLogSchema = createInsertSchema(paymentAuditLogTable).omit({ id: true, createdAt: true });

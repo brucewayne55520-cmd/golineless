@@ -1,4 +1,4 @@
-import { pgTable, text, serial, timestamp, integer, boolean, numeric } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, timestamp, integer, boolean, numeric, index } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 import { tasksTable } from "./tasks";
@@ -18,7 +18,12 @@ export const qualityReviewsTable = pgTable("quality_reviews", {
   completionTimeMinutes: integer("completion_time_minutes"),
   reviewedAt: timestamp("reviewed_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-});
+}, (table) => ({
+  taskIdIdx: index("idx_qr_task_id").on(table.taskId),
+  runnerIdIdx: index("idx_qr_runner_id").on(table.runnerId),
+  slaGradeIdx: index("idx_qr_sla_grade").on(table.slaGrade),
+  createdAtIdx: index("idx_qr_created_at").on(table.createdAt),
+}));
 
 export const insertQualityReviewSchema = createInsertSchema(qualityReviewsTable).omit({ id: true, createdAt: true });
 export type InsertQualityReview = z.infer<typeof insertQualityReviewSchema>;

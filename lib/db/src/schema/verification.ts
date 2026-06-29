@@ -28,6 +28,7 @@ export const verificationSessionsTable = pgTable("verification_sessions", {
   taskIdx: index("idx_vsession_task_id").on(table.taskId),
   statusIdx: index("idx_vsession_status").on(table.status),
   challengeIdx: index("idx_vsession_challenge_id").on(table.challengeId),
+  createdAtIdx: index("idx_vsession_created_at").on(table.createdAt),
 }));
 
 // ============================================================
@@ -71,6 +72,8 @@ export const photoUploadsTable = pgTable("photo_uploads", {
   verificationIdx: index("idx_photo_verification_id").on(table.verificationId),
   statusIdx: index("idx_photo_status").on(table.status),
   createdAtIdx: index("idx_photo_created_at").on(table.createdAt),
+  riskScoreIdx: index("idx_photo_risk_score").on(table.riskScore),
+  statusRiskIdx: index("idx_photo_status_risk").on(table.status, table.riskScore),
 }));
 
 // ============================================================
@@ -94,6 +97,7 @@ export const verificationAuditLogsTable = pgTable("verification_audit_logs", {
   photoIdx: index("idx_vaudit_photo_id").on(table.photoId),
   actionIdx: index("idx_vaudit_action").on(table.action),
   createdAtIdx: index("idx_vaudit_created_at").on(table.createdAt),
+  runnerIdx: index("idx_vaudit_runner_id").on(table.runnerId),
 }));
 
 // ============================================================
@@ -107,6 +111,7 @@ export const verificationHashesTable = pgTable("verification_hashes", {
   occurrenceCount: integer("occurrence_count").notNull().default(1),
 }, (table) => ({
   hashIdx: index("idx_vhash_original_hash").on(table.originalHash),
+  occurrenceIdx: index("idx_vhash_occurrence").on(table.occurrenceCount),
 }));
 
 // ============================================================

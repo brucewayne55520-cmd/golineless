@@ -1,4 +1,4 @@
-import { pgTable, text, serial, timestamp, integer } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, timestamp, integer, index } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 import { tasksTable } from "./tasks";
@@ -22,7 +22,17 @@ export const supportTicketsTable = pgTable("support_tickets", {
   closedAt: timestamp("closed_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
-});
+}, (table) => ({
+  ticketIdIdx: index("idx_support_ticket_id").on(table.ticketId),
+  statusIdx: index("idx_support_status").on(table.status),
+  priorityIdx: index("idx_support_priority").on(table.priority),
+  categoryIdx: index("idx_support_category").on(table.category),
+  userIdIdx: index("idx_support_user_id").on(table.userId),
+  runnerIdIdx: index("idx_support_runner_id").on(table.runnerId),
+  taskIdIdx: index("idx_support_task_id").on(table.taskId),
+  statusPriorityIdx: index("idx_support_status_priority").on(table.status, table.priority),
+  createdAtIdx: index("idx_support_created_at").on(table.createdAt),
+}));
 
 export const insertSupportTicketSchema = createInsertSchema(supportTicketsTable).omit({ id: true, createdAt: true, updatedAt: true });
 export type InsertSupportTicket = z.infer<typeof insertSupportTicketSchema>;
