@@ -21,8 +21,9 @@ cd artifacts/qbuddy
 # VITE_API_URL must be empty for unified deployment (API + SPA on same origin)
 # The frontend code uses `import.meta.env.VITE_API_URL || ""` which falls back to same-origin
 unset VITE_API_URL
-# Pass Google Client ID from Render env to Vite build
+# Pass Vite env vars from Render env to the build
 export VITE_GOOGLE_CLIENT_ID="${VITE_GOOGLE_CLIENT_ID:-}"
+export VITE_NEON_AUTH_URL="${VITE_NEON_AUTH_URL:-}"
 NODE_ENV=production pnpm run build
 cd ../..
 
