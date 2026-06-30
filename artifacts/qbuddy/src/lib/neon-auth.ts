@@ -28,7 +28,7 @@ export async function requestMagicLink(
   }
 
   try {
-    const res = await fetch(`${NEON_AUTH_URL}/api/auth/sign-in/magic-link`, {
+    const res = await fetch(`${NEON_AUTH_URL}/sign-in/magic-link`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
