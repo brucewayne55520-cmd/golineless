@@ -3,73 +3,22 @@ import { useLocation } from "wouter";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
-import type { Runner } from "@workspace/api-client-react";
-import { DARK_GRAD, BLUE } from "@/lib/theme";
-import { requestMagicLink, sendPhoneOtp, verifyPhoneOtp, exchangeNeonToken } from "@/lib/neon-auth";
+import { DARK_GRAD } from "@/lib/theme";
+import { requestMagicLink } from "@/lib/neon-auth";
 
 const API_BASE = import.meta.env.VITE_API_URL || "";
 
 export default function RunnerLogin() {
-  const [step, setStep] = useState<"phone" | "otp" | "email" | "password">("phone");
-  const [phone, setPhone] = useState("");
-  const [otp, setOtp] = useState(["", "", "", "", "", ""]);
+  const [mode, setMode] = useState<"email" | "password">("email");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
   const [isSigningUp, setIsSigningUp] = useState(false);
   const [sendingLink, setSendingLink] = useState(false);
-  const [sendingOtp, setSendingOtp] = useState(false);
-  const [verifyingOtp, setVerifyingOtp] = useState(false);
   const [magicLinkSent, setMagicLinkSent] = useState(false);
   const [loading, setLoading] = useState(false);
   const [, navigate] = useLocation();
   const { login } = useAuth();
-
-  const handleSend = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!phone || phone.length < 10) { toast.error("Enter a valid 10-digit phone number"); return; }
-    setSendingOtp(true);
-    const result = await sendPhoneOtp(`+91${phone}`);
-    setSendingOtp(false);
-    if (result.success) {
-      toast.success("OTP sent!");
-      setStep("otp");
-    } else {
-      toast.error(result.error || "Failed to send OTP");
-    }
-  };
-
-  const handleVerify = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const otpStr = otp.join("");
-    if (otpStr.length !== 6) { toast.error("Enter 6-digit OTP"); return; }
-    setVerifyingOtp(true);
-    const verifyResult = await verifyPhoneOtp(`+91${phone}`, otpStr);
-    setVerifyingOtp(false);
-    
-    if (!verifyResult.success || !verifyResult.token) {
-      toast.error(verifyResult.error || "Invalid OTP");
-      return;
-    }
-
-    // Exchange the Neon Auth JWT for a local session
-    const exchangeResult = await exchangeNeonToken(verifyResult.token, "runner");
-    if (exchangeResult.error) {
-      toast.error(exchangeResult.error);
-      return;
-    }
-
-    login(exchangeResult.token, "runner", undefined, exchangeResult.runner as Runner | undefined);
-    toast.success("Welcome, Runner!");
-    navigate("/runner/feed");
-  };
-
-  const handleOtpChange = (val: string, idx: number) => {
-    if (val.length > 1) return;
-    const next = [...otp]; next[idx] = val;
-    setOtp(next);
-    if (val && idx < 5) document.getElementById(`otp-r-${idx + 1}`)?.focus();
-  };
 
   return (
     <div className="min-h-screen flex items-center justify-center px-4 relative overflow-hidden" style={{ background: DARK_GRAD }}>
@@ -98,13 +47,13 @@ export default function RunnerLogin() {
               <p className="text-white/40 text-xs mt-3">Click the link in the email to sign in. No password needed!</p>
               <button
                 type="button"
-                onClick={() => { setMagicLinkSent(false); setEmail(""); setStep("phone"); }}
+                onClick={() => { setMagicLinkSent(false); setEmail(""); setMode("email"); }}
                 className="mt-4 text-sm font-medium text-blue-400 hover:text-blue-300 underline"
               >
                 Use a different method
               </button>
             </div>
-          ) : step === "email" ? (
+          ) : mode === "email" ? (
             <form
               onSubmit={async (e) => {
                 e.preventDefault();
@@ -140,61 +89,12 @@ export default function RunnerLogin() {
                 {sendingLink ? "Sending..." : "Send magic link"}
               </button>
               <p className="text-center text-sm text-white/60">
-                <button type="button" onClick={() => setStep("phone")} className="font-semibold text-blue-400 hover:text-blue-300">
-                  Use phone instead
+                <button type="button" onClick={() => setMode("password")} className="font-semibold text-blue-400 hover:text-blue-300">
+                  Sign in with email + password instead
                 </button>
               </p>
             </form>
-          ) : step === "phone" ? (
-            <form onSubmit={handleSend} className="space-y-4">
-              <div>
-                <label className="text-sm font-medium text-white/80 mb-1 block">Mobile Number</label>
-                <div className="flex border border-white/20 rounded-xl overflow-hidden bg-white/5">
-                  <span className="px-3 py-3 text-white/60 border-r border-white/20 font-medium">+91</span>
-                  <input
-                    type="tel"
-                    maxLength={10}
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value.replace(/\D/g, ""))}
-                    placeholder="9876543210"
-                    className="flex-1 px-3 py-3 outline-none bg-transparent text-white text-lg tracking-wider placeholder:text-white/30"
-                  />
-                </div>
-              </div>
-              <button
-                type="submit"
-                disabled={sendingOtp}
-                className="w-full py-4 rounded-xl bg-blue-600 text-white font-bold text-lg shadow-lg hover:bg-blue-700 transition-all disabled:opacity-60"
-              >
-                {sendingOtp ? "Sending..." : "Get OTP"}
-              </button>
-              <div className="flex items-center gap-3">
-                <div className="flex-1 h-px bg-white/20" />
-                <span className="text-xs text-white/40">OR</span>
-                <div className="flex-1 h-px bg-white/20" />
-              </div>
-              <button
-                type="button"
-                onClick={() => setStep("email")}
-                className="w-full py-3 rounded-xl border border-white/20 text-white font-semibold text-sm bg-white/5 hover:bg-white/10 transition"
-              >
-                Sign in with email instead
-              </button>
-              <button
-                type="button"
-                onClick={() => setStep("password")}
-                className="w-full py-3 rounded-xl border border-white/20 text-white font-semibold text-sm bg-white/5 hover:bg-white/10 transition"
-              >
-                Sign in with email + password
-              </button>
-              <p className="text-center text-sm text-white/60">
-                Looking to hire?{" "}
-                <button type="button" onClick={() => navigate("/login")} className="font-semibold text-blue-400 hover:text-blue-300">
-                  Book a runner
-                </button>
-              </p>
-            </form>
-          ) : step === "password" ? (
+          ) : (
             <form
               onSubmit={async (e) => {
                 e.preventDefault();
@@ -250,42 +150,19 @@ export default function RunnerLogin() {
                 </button>
               </p>
               <p className="text-center text-sm text-white/60">
-                <button type="button" onClick={() => setStep("phone")} className="font-semibold text-blue-400 hover:text-blue-300">
-                  Use phone instead
+                <button type="button" onClick={() => setMode("email")} className="font-semibold text-blue-400 hover:text-blue-300">
+                  Use magic link instead
                 </button>
               </p>
             </form>
-          ) : (
-            <form onSubmit={handleVerify} className="space-y-6">
-              <div className="text-center">
-                <p className="text-sm text-white/60">Enter 6-digit OTP sent to</p>
-                <p className="font-semibold text-white">+91 {phone}</p>
-              </div>
-              <div className="flex gap-2 justify-center">
-                {otp.map((digit, idx) => (
-                  <input
-                    key={idx}
-                    id={`otp-r-${idx}`}
-                    type="text"
-                    inputMode="numeric"
-                    maxLength={1}
-                    value={digit}
-                    onChange={(e) => handleOtpChange(e.target.value, idx)}
-                    onKeyDown={(e) => { if (e.key === "Backspace" && !digit && idx > 0) document.getElementById(`otp-r-${idx - 1}`)?.focus(); }}
-                    className="w-11 h-14 bg-white/10 border-2 rounded-xl text-center text-2xl font-bold focus:outline-none transition-colors"
-                    style={{ color: BLUE, borderColor: digit ? BLUE : "rgba(255,255,255,0.2)" }}
-                  />
-                ))}
-              </div>
-              <button
-                type="submit"
-                disabled={verifyingOtp}
-                className="w-full py-4 rounded-xl bg-blue-600 text-white font-bold text-lg shadow-lg hover:bg-blue-700 transition-all disabled:opacity-60"
-              >
-                {verifyingOtp ? "Verifying..." : "Start Earning!"}
-              </button>
-            </form>
           )}
+
+          <p className="text-center text-sm text-white/60 mt-5">
+            Looking to hire?{" "}
+            <button type="button" onClick={() => navigate("/login")} className="font-semibold text-blue-400 hover:text-blue-300">
+              Book a runner
+            </button>
+          </p>
         </div>
       </motion.div>
     </div>

@@ -4,24 +4,12 @@ import { db, usersTable, runnersTable, userSessionsTable, runnerSessionsTable, a
 import { eq, and, ne } from "drizzle-orm";
 import { generateToken, verifyPassword, extractToken, hashPassword, setAuthCookie, clearAuthCookie, requireAdmin } from "../lib/auth";
 import { validateNeonToken } from "../lib/neon-auth";
-import { sendOtp, verifyOtp } from "../lib/sms";
+
 import { sendEmail } from "../lib/email";
-import { isValidIndianPhone } from "../lib/gps-engine";
 import { validateBody } from "../lib/validate";
 import { logger } from "../lib/logger";
 
 const router: IRouter = Router();
-
-const sendOtpSchema = z.object({
-  phone: z.string().min(1),
-  role: z.enum(["user", "runner"]).optional(),
-}).passthrough();
-
-const verifyOtpSchema = z.object({
-  phone: z.string().min(1),
-  otp: z.string().regex(/^\d{6}$/, "OTP must be 6 digits"),
-  role: z.enum(["user", "runner"]).optional(),
-}).passthrough();
 
 const signupSchema = z.object({
   email: z.string().email(),
@@ -48,85 +36,7 @@ const resetPasswordSchema = z.object({
   role: z.enum(["user", "runner"]).optional(),
 }).passthrough();
 
-// POST /auth/send-otp — now uses Twilio Verify (generates & sends OTP automatically)
-router.post("/auth/send-otp", validateBody(sendOtpSchema), async (req, res): Promise<void> => {
-  const { phone, role = "user" } = req.body;
-  if (!phone) { res.status(400).json({ error: "Phone required" }); return; }
-  if (!isValidIndianPhone(phone)) {
-    res.status(400).json({ error: "Invalid phone number. Please provide a valid 10-digit Indian mobile number." });
-    return;
-  }
 
-  try {
-    // Upsert the user/runner record (phone registration) — OTP is handled by Twilio
-    if (role === "runner") {
-      const existing = await db.select().from(runnersTable).where(eq(runnersTable.phone, phone));
-      if (existing.length === 0) {
-        await db.insert(runnersTable).values({ phone });
-      }
-    } else {
-      const existing = await db.select().from(usersTable).where(eq(usersTable.phone, phone));
-      if (existing.length === 0) {
-        await db.insert(usersTable).values({ phone });
-      }
-    }
-
-    const smsSent = await sendOtp(phone);
-
-    res.json({
-      message: smsSent ? "OTP sent" : "Failed to send OTP. Please try again.",
-      sent: smsSent,
-    });
-  } catch (err) {
-    logger.error({ err, phone, role }, "send-otp: database or SMS error");
-    // Still try to send OTP even if DB upsert fails (user might already exist)
-    try {
-      const smsSent = await sendOtp(phone);
-      res.json({ message: smsSent ? "OTP sent" : "Failed to send OTP. Please try again.", sent: smsSent });
-    } catch {
-      res.status(500).json({ error: "Failed to process OTP request. Please try again." });
-    }
-  }
-});
-
-// POST /auth/verify-otp — delegates to Twilio Verify for server-side validation
-router.post("/auth/verify-otp", validateBody(verifyOtpSchema), async (req, res): Promise<void> => {
-  const { phone, otp, role = "user" } = req.body;
-  if (!phone || !otp) { res.status(400).json({ error: "Phone and OTP required" }); return; }
-
-  try {
-    // Verify code with Twilio Verify (in dev, accepts any 6-digit code)
-    const isValid = await verifyOtp(phone, otp);
-    if (!isValid) { res.status(401).json({ error: "Invalid OTP" }); return; }
-
-    if (role === "runner") {
-      const [runner] = await db.select().from(runnersTable).where(eq(runnersTable.phone, phone));
-      if (!runner) { res.status(401).json({ error: "Runner not found. Please request OTP first." }); return; }
-
-      const token = generateToken();
-      const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // 30 days
-      await db.insert(runnerSessionsTable).values({ runnerId: runner.id, token, expiresAt });
-
-      const { otp: _, otpExpiresAt: __, ...safeRunner } = runner;
-      setAuthCookie(res, token);
-      res.json({ token, role: "runner", runner: safeRunner });
-    } else {
-      const [user] = await db.select().from(usersTable).where(eq(usersTable.phone, phone));
-      if (!user) { res.status(401).json({ error: "User not found. Please request OTP first." }); return; }
-
-      const token = generateToken();
-      const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
-      await db.insert(userSessionsTable).values({ userId: user.id, token, expiresAt });
-
-      const { otp: _, otpExpiresAt: __, ...safeUser } = user;
-      setAuthCookie(res, token);
-      res.json({ token, role: "user", user: safeUser });
-    }
-  } catch (err) {
-    logger.error({ err, phone, role }, "verify-otp: database or session error");
-    res.status(500).json({ error: "Authentication failed. Please try again." });
-  }
-});
 
 // POST /auth/logout
 router.post("/auth/logout", async (req, res): Promise<void> => {
@@ -542,43 +452,6 @@ router.post("/auth/rotate-session", async (req, res): Promise<void> => {
   res.status(401).json({ error: "No active session found" });
 });
 
-// ── Neon Auth Phone OTP Webhook ───────────────────────────────────────────
-// Neon Auth calls this webhook when it needs to deliver an OTP via SMS.
-// The webhook URL is configured in Neon Console → Auth → Webhooks.
-// Payload: { phoneNumber: string, code: string }
-// IMPORTANT: Send the exact `code` from Neon Auth via plain Twilio SMS.
-// Do NOT use the `sendOtp()` function (which uses Twilio Verify with its own code).
-router.post("/webhooks/neon-send-otp", async (req, res): Promise<void> => {
-  const { phoneNumber, code } = req.body;
-  if (!phoneNumber || !code) {
-    res.status(400).json({ error: "phoneNumber and code required" });
-    return;
-  }
 
-  const accountSid = process.env.TWILIO_ACCOUNT_SID;
-  const authToken = process.env.TWILIO_AUTH_TOKEN;
-  const from = process.env.TWILIO_PHONE_NUMBER;
-  if (!accountSid || !authToken || !from) {
-    logger.warn({ phone: phoneNumber }, "Twilio not configured — cannot deliver OTP SMS");
-    res.status(502).json({ error: "SMS provider not configured" });
-    return;
-  }
-
-  try {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports, @typescript-eslint/no-var-requires
-    const twilio = require("twilio");
-    const client = twilio(accountSid, authToken);
-    await client.messages.create({
-      body: `Your Go LineLess verification code is: ${code}`,
-      from,
-      to: phoneNumber,
-    });
-    logger.info({ phone: phoneNumber }, "Neon OTP webhook: code sent via Twilio SMS");
-    res.json({ success: true });
-  } catch (err) {
-    logger.error({ err, phone: phoneNumber }, "Neon OTP webhook: Twilio SMS send failed");
-    res.status(500).json({ error: "Failed to send SMS" });
-  }
-});
 
 export default router;
