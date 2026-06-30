@@ -3,7 +3,7 @@ import crypto from "crypto";
 import { db, usersTable, runnersTable, userSessionsTable, runnerSessionsTable, adminsTable, adminSessionsTable, paymentAuditLogTable, z } from "@workspace/db";
 import { eq, and, ne } from "drizzle-orm";
 import { generateToken, verifyPassword, extractToken, hashPassword, setAuthCookie, clearAuthCookie, requireAdmin } from "../lib/auth";
-import { validateNeonToken } from "../lib/neon-auth";
+import { validateNeonToken, exchangeSessionVerifier, type NeonAuthUser } from "../lib/neon-auth";
 
 import { sendEmail } from "../lib/email";
 import { validateBody } from "../lib/validate";
@@ -214,14 +214,22 @@ router.post("/auth/reset-password", validateBody(resetPasswordSchema), async (re
   res.json({ message: "Password reset successfully" });
 });
 
-// POST /auth/neon-callback — Exchange a Neon Auth JWT (magic link) for a GoLineLess session token
+// POST /auth/neon-callback — Exchange a Neon Auth token (JWT or session verifier) for a GoLineLess session
 router.post("/auth/neon-callback", async (req, res): Promise<void> => {
   const { neonToken, role = "user" } = req.body;
   if (!neonToken) { res.status(400).json({ error: "Neon token required" }); return; }
 
   try {
-    // Validate the Neon Auth JWT against their JWKS
-    const neonUser = await validateNeonToken(neonToken);
+    // Determine if this is a session verifier (ml-xxx) or a JWT
+    let neonUser: NeonAuthUser | null;
+    if (typeof neonToken === "string" && neonToken.startsWith("ml-")) {
+      // Session verifier from Better Auth's magic link callback
+      neonUser = await exchangeSessionVerifier(neonToken);
+    } else {
+      // Standard JWT — validate against JWKS
+      neonUser = await validateNeonToken(neonToken);
+    }
+
     if (!neonUser || (!neonUser.email && !neonUser.phoneNumber)) {
       res.status(401).json({ error: "Invalid or expired Neon Auth token" }); return;
     }

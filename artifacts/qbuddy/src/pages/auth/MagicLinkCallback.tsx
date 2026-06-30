@@ -20,7 +20,9 @@ export default function MagicLinkCallback() {
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    const neonToken = params.get("token");
+    // Better Auth passes the token as "neon_auth_session_verifier"
+    // Fall back to "token" for backwards compatibility
+    const neonToken = params.get("neon_auth_session_verifier") || params.get("token");
     const storedRole = sessionStorage.getItem("golineless_magic_link_role");
     if (storedRole) sessionStorage.removeItem("golineless_magic_link_role");
     const role = (storedRole || params.get("role") || "user") as "user" | "runner";
