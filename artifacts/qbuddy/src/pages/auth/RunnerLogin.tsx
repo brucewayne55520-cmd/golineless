@@ -2,10 +2,10 @@ import { useState } from "react";
 import { useLocation } from "wouter";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
-import { useSendOtp, useVerifyOtp } from "@workspace/api-client-react";
 import { useAuth } from "@/contexts/AuthContext";
+import type { Runner } from "@workspace/api-client-react";
 import { DARK_GRAD, BLUE } from "@/lib/theme";
-import { requestMagicLink } from "@/lib/neon-auth";
+import { requestMagicLink, sendPhoneOtp, verifyPhoneOtp, exchangeNeonToken } from "@/lib/neon-auth";
 
 const API_BASE = import.meta.env.VITE_API_URL || "";
 
@@ -18,38 +18,50 @@ export default function RunnerLogin() {
   const [name, setName] = useState("");
   const [isSigningUp, setIsSigningUp] = useState(false);
   const [sendingLink, setSendingLink] = useState(false);
+  const [sendingOtp, setSendingOtp] = useState(false);
+  const [verifyingOtp, setVerifyingOtp] = useState(false);
   const [magicLinkSent, setMagicLinkSent] = useState(false);
   const [loading, setLoading] = useState(false);
   const [, navigate] = useLocation();
   const { login } = useAuth();
-  const sendOtp = useSendOtp();
-  const verifyOtp = useVerifyOtp();
 
-  const handleSend = (e: React.FormEvent) => {
+  const handleSend = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!phone || phone.length < 10) { toast.error("Enter a valid 10-digit phone number"); return; }
-    sendOtp.mutate({ data: { phone: `+91${phone}`, role: "runner" } }, {
-      onSuccess: (data) => {
-        toast.success("OTP sent!");
-        if (data.otp) toast.info(`Dev OTP: ${data.otp}`, { duration: 10000 });
-        setStep("otp");
-      },
-      onError: () => toast.error("Failed to send OTP"),
-    });
+    setSendingOtp(true);
+    const result = await sendPhoneOtp(`+91${phone}`);
+    setSendingOtp(false);
+    if (result.success) {
+      toast.success("OTP sent!");
+      setStep("otp");
+    } else {
+      toast.error(result.error || "Failed to send OTP");
+    }
   };
 
-  const handleVerify = (e: React.FormEvent) => {
+  const handleVerify = async (e: React.FormEvent) => {
     e.preventDefault();
     const otpStr = otp.join("");
     if (otpStr.length !== 6) { toast.error("Enter 6-digit OTP"); return; }
-    verifyOtp.mutate({ data: { phone: `+91${phone}`, otp: otpStr, role: "runner" } }, {
-      onSuccess: (data) => {
-        login(data.token, "runner", undefined, data.runner);
-        toast.success("Welcome, Runner!");
-        navigate("/runner/feed");
-      },
-      onError: () => toast.error("Invalid OTP"),
-    });
+    setVerifyingOtp(true);
+    const verifyResult = await verifyPhoneOtp(`+91${phone}`, otpStr);
+    setVerifyingOtp(false);
+    
+    if (!verifyResult.success || !verifyResult.token) {
+      toast.error(verifyResult.error || "Invalid OTP");
+      return;
+    }
+
+    // Exchange the Neon Auth JWT for a local session
+    const exchangeResult = await exchangeNeonToken(verifyResult.token, "runner");
+    if (exchangeResult.error) {
+      toast.error(exchangeResult.error);
+      return;
+    }
+
+    login(exchangeResult.token, "runner", undefined, exchangeResult.runner as Runner | undefined);
+    toast.success("Welcome, Runner!");
+    navigate("/runner/feed");
   };
 
   const handleOtpChange = (val: string, idx: number) => {
@@ -151,10 +163,10 @@ export default function RunnerLogin() {
               </div>
               <button
                 type="submit"
-                disabled={sendOtp.isPending}
+                disabled={sendingOtp}
                 className="w-full py-4 rounded-xl bg-blue-600 text-white font-bold text-lg shadow-lg hover:bg-blue-700 transition-all disabled:opacity-60"
               >
-                {sendOtp.isPending ? "Sending..." : "Get OTP"}
+                {sendingOtp ? "Sending..." : "Get OTP"}
               </button>
               <div className="flex items-center gap-3">
                 <div className="flex-1 h-px bg-white/20" />
@@ -267,10 +279,10 @@ export default function RunnerLogin() {
               </div>
               <button
                 type="submit"
-                disabled={verifyOtp.isPending}
+                disabled={verifyingOtp}
                 className="w-full py-4 rounded-xl bg-blue-600 text-white font-bold text-lg shadow-lg hover:bg-blue-700 transition-all disabled:opacity-60"
               >
-                {verifyOtp.isPending ? "Verifying..." : "Start Earning!"}
+                {verifyingOtp ? "Verifying..." : "Start Earning!"}
               </button>
             </form>
           )}

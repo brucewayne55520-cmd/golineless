@@ -89,3 +89,77 @@ export async function exchangeNeonToken(
     };
   }
 }
+
+/**
+ * Send an OTP to a phone number via Neon Auth (Phone Number plugin).
+ * Neon Auth generates the code and fires the send.otp webhook to deliver it.
+ */
+export async function sendPhoneOtp(
+  phoneNumber: string,
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const res = await fetch(`${NEON_AUTH_URL}/phone-number/send-otp`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ phoneNumber }),
+    });
+
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      return {
+        success: false,
+        error: (body as { message?: string }).message || "Failed to send OTP",
+      };
+    }
+
+    return { success: true };
+  } catch (err) {
+    return {
+      success: false,
+      error: err instanceof Error ? err.message : "Network error",
+    };
+  }
+}
+
+/**
+ * Verify an OTP code via Neon Auth (Phone Number plugin).
+ * On success, returns a JWT that can be exchanged for a local session.
+ */
+export async function verifyPhoneOtp(
+  phoneNumber: string,
+  code: string,
+): Promise<{ success: boolean; token?: string; error?: string }> {
+  try {
+    const res = await fetch(`${NEON_AUTH_URL}/phone-number/verify`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ phoneNumber, code }),
+    });
+
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      return {
+        success: false,
+        error: (body as { message?: string }).message || "Invalid OTP",
+      };
+    }
+
+    // Better Auth returns both token and user session data
+    const body = await res.json();
+    
+    // The response may contain a token directly or as a nested property
+    const neonToken = (body as { token?: string }).token ||
+      (body as { data?: { token?: string } }).data?.token || "";
+
+    if (!neonToken) {
+      return { success: false, error: "No token received from Neon Auth" };
+    }
+
+    return { success: true, token: neonToken };
+  } catch (err) {
+    return {
+      success: false,
+      error: err instanceof Error ? err.message : "Network error",
+    };
+  }
+}

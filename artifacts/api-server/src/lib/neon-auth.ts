@@ -8,7 +8,8 @@ const JWKS = createRemoteJWKSet(new URL(NEON_JWKS_URL));
 export interface NeonAuthUser {
   iat: number;
   name?: string;
-  email: string;
+  email?: string;
+  phoneNumber?: string;
   emailVerified: boolean;
   image?: string;
   createdAt: string;

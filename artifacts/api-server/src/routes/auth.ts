@@ -304,7 +304,7 @@ router.post("/auth/reset-password", validateBody(resetPasswordSchema), async (re
   res.json({ message: "Password reset successfully" });
 });
 
-// POST /auth/neon-callback — Exchange a Neon Auth JWT for a GoLineLess session token
+// POST /auth/neon-callback — Exchange a Neon Auth JWT (magic link) for a GoLineLess session token
 router.post("/auth/neon-callback", async (req, res): Promise<void> => {
   const { neonToken, role = "user" } = req.body;
   if (!neonToken) { res.status(400).json({ error: "Neon token required" }); return; }
@@ -312,41 +312,67 @@ router.post("/auth/neon-callback", async (req, res): Promise<void> => {
   try {
     // Validate the Neon Auth JWT against their JWKS
     const neonUser = await validateNeonToken(neonToken);
-    if (!neonUser || !neonUser.email) {
+    if (!neonUser || (!neonUser.email && !neonUser.phoneNumber)) {
       res.status(401).json({ error: "Invalid or expired Neon Auth token" }); return;
     }
 
-    const email = neonUser.email;
-    const name = neonUser.name || email.split("@")[0];
+    const email = neonUser.email || "";
+    const name = neonUser.name || email.split("@")[0] || `user_${neonUser.phoneNumber || ""}`;
+    const phoneNumber = neonUser.phoneNumber;
 
     // Security: check which table already has this email to prevent role escalation.
     // Never trust the client-supplied role — resolve it from the database.
-    const [existingUser] = await db.select({ id: usersTable.id }).from(usersTable).where(eq(usersTable.email, email)).limit(1);
-    const [existingRunner] = await db.select({ id: runnersTable.id }).from(runnersTable).where(eq(runnersTable.email, email)).limit(1);
+    let existingUser: { id: number } | undefined;
+    let existingRunner: { id: number } | undefined;
+
+    if (email) {
+      const [u] = await db.select({ id: usersTable.id }).from(usersTable).where(eq(usersTable.email, email)).limit(1);
+      existingUser = u;
+      const [r] = await db.select({ id: runnersTable.id }).from(runnersTable).where(eq(runnersTable.email, email)).limit(1);
+      existingRunner = r;
+    }
+
+    if (!existingUser && !existingRunner && phoneNumber) {
+      // Look up by phone number for phone-OTP-based accounts
+      const [u] = await db.select({ id: usersTable.id }).from(usersTable).where(eq(usersTable.phone, phoneNumber)).limit(1);
+      existingUser = u;
+      const [r] = await db.select({ id: runnersTable.id }).from(runnersTable).where(eq(runnersTable.phone, phoneNumber)).limit(1);
+      existingRunner = r;
+    }
 
     let record: { id: number; [key: string]: unknown };
     let resolvedRole: "user" | "runner";
 
     if (existingRunner) {
-      // Email already registered as a runner
       resolvedRole = "runner";
-      const [r] = await db.select().from(runnersTable).where(eq(runnersTable.email, email));
+      const [r] = await db.select().from(runnersTable).where(eq(runnersTable.id, existingRunner.id));
       record = r!;
     } else if (existingUser) {
-      // Email already registered as a user
       resolvedRole = "user";
-      const [r] = await db.select().from(usersTable).where(eq(usersTable.email, email));
+      const [r] = await db.select().from(usersTable).where(eq(usersTable.id, existingUser.id));
       record = r!;
-    } else {
+    } else if (email) {
       // New email — use client-requested role (safe since no account exists yet)
       resolvedRole = role === "runner" ? "runner" : "user";
       if (resolvedRole === "runner") {
-        const [r] = await db.insert(runnersTable).values({ email, name, phone: null }).returning();
+        const [r] = await db.insert(runnersTable).values({ email, name, phone: phoneNumber || null }).returning();
         record = r;
       } else {
-        const [r] = await db.insert(usersTable).values({ email, name, phone: null }).returning();
+        const [r] = await db.insert(usersTable).values({ email, name, phone: phoneNumber || null }).returning();
         record = r;
       }
+    } else if (phoneNumber) {
+      // Pure phone-based account, no email
+      resolvedRole = role === "runner" ? "runner" : "user";
+      if (resolvedRole === "runner") {
+        const [r] = await db.insert(runnersTable).values({ phone: phoneNumber }).returning();
+        record = r;
+      } else {
+        const [r] = await db.insert(usersTable).values({ phone: phoneNumber }).returning();
+        record = r;
+      }
+    } else {
+      res.status(401).json({ error: "Could not resolve user identity from token" }); return;
     }
 
     // Create a GoLineLess session token
@@ -514,6 +540,45 @@ router.post("/auth/rotate-session", async (req, res): Promise<void> => {
   }
 
   res.status(401).json({ error: "No active session found" });
+});
+
+// ── Neon Auth Phone OTP Webhook ───────────────────────────────────────────
+// Neon Auth calls this webhook when it needs to deliver an OTP via SMS.
+// The webhook URL is configured in Neon Console → Auth → Webhooks.
+// Payload: { phoneNumber: string, code: string }
+// IMPORTANT: Send the exact `code` from Neon Auth via plain Twilio SMS.
+// Do NOT use the `sendOtp()` function (which uses Twilio Verify with its own code).
+router.post("/webhooks/neon-send-otp", async (req, res): Promise<void> => {
+  const { phoneNumber, code } = req.body;
+  if (!phoneNumber || !code) {
+    res.status(400).json({ error: "phoneNumber and code required" });
+    return;
+  }
+
+  const accountSid = process.env.TWILIO_ACCOUNT_SID;
+  const authToken = process.env.TWILIO_AUTH_TOKEN;
+  const from = process.env.TWILIO_PHONE_NUMBER;
+  if (!accountSid || !authToken || !from) {
+    logger.warn({ phone: phoneNumber }, "Twilio not configured — cannot deliver OTP SMS");
+    res.status(502).json({ error: "SMS provider not configured" });
+    return;
+  }
+
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports, @typescript-eslint/no-var-requires
+    const twilio = require("twilio");
+    const client = twilio(accountSid, authToken);
+    await client.messages.create({
+      body: `Your Go LineLess verification code is: ${code}`,
+      from,
+      to: phoneNumber,
+    });
+    logger.info({ phone: phoneNumber }, "Neon OTP webhook: code sent via Twilio SMS");
+    res.json({ success: true });
+  } catch (err) {
+    logger.error({ err, phone: phoneNumber }, "Neon OTP webhook: Twilio SMS send failed");
+    res.status(500).json({ error: "Failed to send SMS" });
+  }
 });
 
 export default router;
