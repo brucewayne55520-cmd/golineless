@@ -10,7 +10,7 @@ export const qualityReviewsTable = pgTable("quality_reviews", {
   runnerId: integer("runner_id").notNull().references(() => runnersTable.id),
   customerRating: integer("customer_rating"), // 1-5
   customerFeedback: text("customer_feedback"),
-  comradeFeedback: text("comrade_feedback"),
+  runnerFeedback: text("comrade_feedback"),
   taskQualityScore: integer("task_quality_score"), // 0-100 computed
   slaGrade: text("sla_grade"), // excellent, good, average, poor
   acceptanceTimeSeconds: integer("acceptance_time_seconds"),

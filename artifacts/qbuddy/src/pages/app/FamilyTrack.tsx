@@ -34,8 +34,8 @@ export default function FamilyTrack({ token }: Props) {
         });
 
 
-      } catch (err) {
-        // Socket.IO not available — fallback to polling only
+      } catch {
+        // Socket.IO not available — fallback to polling only (already configured via refetchInterval)
       }
     })();
 

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { toast } from "sonner";
 import { useLocation } from "wouter";
 import { CheckCircle2, Clock, Wallet, Crown, Bell, Globe, HelpCircle, Lock, FileText, Info, ChevronRight, MapPin, Camera, Edit3, Shield, User, Phone, Mail, Calendar, CreditCard, X } from "lucide-react";
 import { useListNotifications } from "@workspace/api-client-react";
@@ -64,15 +65,60 @@ export default function UserProfile() {
     setEditingProfile(true);
   };
 
+  const [otpRequired, setOtpRequired] = useState(false);
+  const [otpCode, setOtpCode] = useState("");
+  const [otpLoading, setOtpLoading] = useState(false);
+  const [profileError, setProfileError] = useState<string | null>(null);
+
   const saveProfile = async () => {
+    setProfileError(null);
     try {
       const res = await fetch("/api/users/me", {
         method: "PATCH",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${localStorage.getItem("golineless_user_token")}` },
         body: JSON.stringify(editForm),
       });
-      if (res.ok) { setEditingProfile(false); refetch(); }
-    } catch { /* ignore */ }
+      const data = await res.json();
+      if (res.ok) {
+        setEditingProfile(false);
+        setOtpRequired(false);
+        refetch();
+      } else if (res.status === 202) {
+        // M4: Phone change requires OTP verification
+        setOtpRequired(true);
+        setProfileError(null);
+      } else {
+        setProfileError(data.error || "Failed to update profile");
+      }
+    } catch {
+      setProfileError("Network error. Please try again.");
+    }
+  };
+
+  const verifyPhoneOtp = async () => {
+    if (!otpCode.trim()) { setProfileError("Please enter the OTP"); return; }
+    setOtpLoading(true);
+    try {
+      const res = await fetch("/api/users/me", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${localStorage.getItem("golineless_user_token")}` },
+        body: JSON.stringify({ ...editForm, otp: otpCode }),
+      });
+      if (res.ok) {
+        setEditingProfile(false);
+        setOtpRequired(false);
+        setOtpCode("");
+        refetch();
+        toast.success("Profile updated!");
+      } else {
+        const data = await res.json();
+        setProfileError(data.error || "Invalid OTP. Please try again.");
+      }
+    } catch {
+      setProfileError("Network error. Please try again.");
+    } finally {
+      setOtpLoading(false);
+    }
   };
 
   const submitKyc = async () => {
@@ -261,7 +307,30 @@ export default function UserProfile() {
                 </div>
               ))}
             </div>
-            <button onClick={saveProfile} className="w-full py-3.5 rounded-2xl text-white font-bold mt-4" style={{ background: DARK_GRAD }}>Save Changes</button>
+            {profileError && (
+              <div className="mb-3 p-3 bg-red-50 border border-red-200 rounded-xl text-red-600 text-sm font-medium">{profileError}</div>
+            )}
+            {otpRequired ? (
+              <div className="space-y-3">
+                <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-amber-700 text-xs font-medium">
+                  Phone number changed — enter the OTP sent to your new number.
+                </div>
+                <input
+                  type="text"
+                  value={otpCode}
+                  onChange={(e) => setOtpCode(e.target.value)}
+                  placeholder="Enter 6-digit OTP"
+                  maxLength={6}
+                  className={inputClass}
+                />
+                <div className="flex gap-3">
+                  <button onClick={() => { setOtpRequired(false); setProfileError(null); }} className="flex-1 py-3.5 rounded-2xl text-gray-500 font-bold border border-gray-200">Cancel</button>
+                  <button onClick={verifyPhoneOtp} disabled={otpLoading} className="flex-1 py-3.5 rounded-2xl text-white font-bold" style={{ background: BLUE }}>{otpLoading ? "Verifying..." : "Verify OTP"}</button>
+                </div>
+              </div>
+            ) : (
+              <button onClick={saveProfile} className="w-full py-3.5 rounded-2xl text-white font-bold mt-4" style={{ background: DARK_GRAD }}>Save Changes</button>
+            )}
           </div>
         </div>
       )}

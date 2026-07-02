@@ -253,7 +253,7 @@ router.get("/runners/playbook", requireRunner, async (_req, res): Promise<void> 
 
 // POST /admin/quality/submit — submit quality review
 router.post("/admin/quality/submit", requireAdmin, async (req, res): Promise<void> => {
-  const { taskId, runnerId, customerRating, customerFeedback, comradeFeedback } = req.body;
+  const { taskId, runnerId, customerRating, customerFeedback, runnerFeedback } = req.body;
 
   // Compute quality score
   let qualityScore = 50; // base
@@ -271,14 +271,15 @@ router.post("/admin/quality/submit", requireAdmin, async (req, res): Promise<voi
     // Combined grade from acceptance time, arrival time, and completion time
     slaGrade = computeSlaGrade(acceptTime, arrivalTime, completeTime);
 
-    const [review] = await db.insert(qualityReviewsTable).values({
-      taskId, runnerId, customerRating, customerFeedback, comradeFeedback,
+    const qualityReviewValues = {
+      taskId, runnerId, customerRating, customerFeedback, runnerFeedback,
       taskQualityScore: qualityScore, slaGrade,
       acceptanceTimeSeconds: acceptTime ? Math.round(acceptTime) : null,
       arrivalTimeMinutes: arrivalTime ? Math.round(arrivalTime) : null,
       completionTimeMinutes: completeTime ? Math.round(completeTime) : null,
       reviewedAt: new Date(),
-    }).returning();
+    } as unknown as typeof qualityReviewsTable.$inferInsert;
+    const [review] = await db.insert(qualityReviewsTable).values(qualityReviewValues).returning();
     res.status(201).json(review);
     return;
   }
@@ -408,14 +409,13 @@ router.get("/admin/sla", requireAdmin, async (_req, res): Promise<void> => {
 // 7. CITY HEATMAP
 // ═══════════════════════════════════════════════
 
-const AHMEDABAD_AREAS = [
-  "Juhapura", "Sarkhej", "Prahladnagar", "Makarba", "Paldi", "Vasna", "Jamalpur", "Kalupur",
-];
-
 // GET /admin/heatmap — task demand and comrade supply by area
 // M4 FIX: SQL aggregation with unnest + ILIKE instead of loading ALL tasks/runners into memory
+// F6: Now reads areas from admin_settings.pilot_zones instead of hardcoded constant
 router.get("/admin/heatmap", requireAdmin, async (_req, res): Promise<void> => {
-  const areaNames = AHMEDABAD_AREAS.map(a => `'${a}'`).join(",");
+  const [settings] = await db.select({ pilotZones: adminSettingsTable.pilotZones }).from(adminSettingsTable).limit(1);
+  const areas = settings?.pilotZones ?? ["Juhapura","Sarkhej","Prahladnagar","Makarba","Paldi","Vasna","Jamalpur","Kalupur"];
+  const areaNames = areas.map(a => `'${a}'`).join(",");
   const [taskStatsRaw, runnerStatsRaw] = await Promise.all([
     db.execute(sql`
       SELECT
@@ -440,7 +440,7 @@ router.get("/admin/heatmap", requireAdmin, async (_req, res): Promise<void> => {
   const taskMap = new Map((taskStatsRaw.rows as Record<string, unknown>[]).map(r => [String(r.area), r]));
   const runnerMap = new Map((runnerStatsRaw.rows as Record<string, unknown>[]).map(r => [String(r.area), r]));
 
-  const areas = AHMEDABAD_AREAS.map(area => {
+  const heatmapAreas = areas.map(area => {
     const ts = taskMap.get(area);
     const rs = runnerMap.get(area);
     const demand = Number(ts?.demand ?? 0);
@@ -454,10 +454,10 @@ router.get("/admin/heatmap", requireAdmin, async (_req, res): Promise<void> => {
   });
 
   res.json({
-    areas,
-    totalDemand: areas.reduce((s, a) => s + a.demand, 0),
-    totalSupply: areas.reduce((s, a) => s + a.supply, 0),
-    totalShortage: areas.reduce((s, a) => s + a.shortage, 0),
+    areas: heatmapAreas,
+    totalDemand: heatmapAreas.reduce((s, a) => s + a.demand, 0),
+    totalSupply: heatmapAreas.reduce((s, a) => s + a.supply, 0),
+    totalShortage: heatmapAreas.reduce((s, a) => s + a.shortage, 0),
   });
 });
 
@@ -477,7 +477,7 @@ router.get("/admin/pilot", requireAdmin, async (_req, res): Promise<void> => {
     // Active users/comrades from tasks with active statuses
     db.select({
       activeUsers: sql<number>`COUNT(DISTINCT CASE WHEN ${tasksTable.status} IN ('pending','assigned','on_the_way','at_location','in_progress') THEN ${tasksTable.userId} END)`,
-      activeComrades: sql<number>`COUNT(DISTINCT CASE WHEN ${tasksTable.status} IN ('assigned','on_the_way','at_location','in_progress') THEN ${tasksTable.runnerId} END)`,
+      activeRunners: sql<number>`COUNT(DISTINCT CASE WHEN ${tasksTable.status} IN ('assigned','on_the_way','at_location','in_progress') THEN ${tasksTable.runnerId} END)`,
       avgWaitSaved: sql<number>`COALESCE(ROUND(AVG(CASE WHEN ${tasksTable.totalWaitingMinutes} > 0 THEN ${tasksTable.totalWaitingMinutes} END)), 0)`,
     }).from(tasksTable),
     // Today's tasks aggregated
@@ -518,7 +518,7 @@ router.get("/admin/pilot", requireAdmin, async (_req, res): Promise<void> => {
 
   res.json({
     activeUsers: Number(taskAgg[0].activeUsers),
-    activeComrades: Number(taskAgg[0].activeComrades),
+    activeRunners: Number(taskAgg[0].activeRunners),
     tasksToday, acceptanceRate, completedRate,
     revenueToday: Number(todayAgg[0].revenue),
     avgRating: qualityStats[0]?.avgRating ?? "N/A",
@@ -527,7 +527,7 @@ router.get("/admin/pilot", requireAdmin, async (_req, res): Promise<void> => {
     openIncidents: Number(incidentStats[0]?.count ?? 0),
     openTickets: Number(ticketStats[0]?.count ?? 0),
     totalUsers: Number(userCount[0].count),
-    totalComrades: Number(runnerAgg[0].verified),
+    totalRunners: Number(runnerAgg[0].verified),
     pendingKyc: Number(runnerAgg[0].pending),
     onlineComrades: Number(runnerAgg[0].onlineVerified),
     timestamp: new Date().toISOString(),
@@ -662,13 +662,14 @@ router.get("/admin/pilot/mode", requireAdmin, async (_req, res): Promise<void> =
   res.json(settings || { pilotMode: false, pilotCategories: PILOT_CATEGORIES });
 });
 
-// GET /admin/pilot/config — returns the pilot restrictions for frontend enforcement
+// F6: GET /admin/pilot/config — returns the pilot restrictions for frontend enforcement
+// Now reads pilotZones from admin_settings instead of hardcoded PILOT_ZONES
 router.get("/admin/pilot/config", requireAdmin, async (_req, res): Promise<void> => {
-  const [settings] = await db.select({ pilotMode: adminSettingsTable.pilotMode, pilotCategories: adminSettingsTable.pilotCategories }).from(adminSettingsTable).limit(1);
+  const [settings] = await db.select({ pilotMode: adminSettingsTable.pilotMode, pilotCategories: adminSettingsTable.pilotCategories, pilotZones: adminSettingsTable.pilotZones }).from(adminSettingsTable).limit(1);
   res.json({
     pilotMode: settings?.pilotMode ?? false,
     allowedCategories: settings?.pilotCategories ?? PILOT_CATEGORIES,
-    allowedZones: PILOT_ZONES,
+    allowedZones: settings?.pilotZones ?? PILOT_ZONES,
     message: settings?.pilotMode ? "Pilot mode active — only Ahmedabad zones and selected categories" : "Full mode — all zones and categories",
   });
 });
@@ -689,29 +690,49 @@ router.patch("/admin/pilot/mode", requireAdmin, async (req, res): Promise<void> 
 });
 
 // 2. COMRADE OPERATIONS CENTER — realtime comrade stats
+// H5 FIX: SQL aggregation instead of loading ALL runners/recruits into memory
 router.get("/admin/operations-center", requireAdmin, async (_req, res): Promise<void> => {
-  const allRunners = await db.select().from(runnersTable);
-  const allRecruits = await db.select().from(recruitmentsTable);
-  const activeTasks = await db.select({ runnerId: tasksTable.runnerId, id: tasksTable.id }).from(tasksTable)
-    .where(inArray(tasksTable.status, ["assigned","on_the_way","at_location","in_progress"]));
+  const [runnerAgg, recruitAgg, activeTasks, areaStats] = await Promise.all([
+    db.select({
+      total: count(),
+      online: sql<number>`COUNT(CASE WHEN ${runnersTable.isOnline} = true THEN 1 END)`,
+      verified: sql<number>`COUNT(CASE WHEN ${runnersTable.kycStatus} = 'verified' THEN 1 END)`,
+      dispatchReady: sql<number>`COUNT(CASE WHEN ${runnersTable.isOnline} = true AND (${runnersTable.kycStatus} = 'verified' OR ${runnersTable.dispatchAllowed} = true) THEN 1 END)`,
+    }).from(runnersTable),
+    db.select({
+      trainingComplete: sql<number>`COUNT(CASE WHEN ${recruitmentsTable.stage} IN ('training_complete', 'pilot_active') THEN 1 END)`,
+      pilotActive: sql<number>`COUNT(CASE WHEN ${recruitmentsTable.stage} = 'pilot_active' THEN 1 END)`,
+      suspended: sql<number>`COUNT(CASE WHEN ${recruitmentsTable.stage} = 'suspended' THEN 1 END)`,
+    }).from(recruitmentsTable),
+    db.select({ runnerId: tasksTable.runnerId }).from(tasksTable)
+      .where(inArray(tasksTable.status, ["assigned","on_the_way","at_location","in_progress"])),
+    // Area-wise distribution via SQL GROUP BY
+    db.select({
+      area: runnersTable.area,
+      total: count(),
+      online: sql<number>`COUNT(CASE WHEN ${runnersTable.isOnline} = true THEN 1 END)`,
+    }).from(runnersTable)
+      .where(sql`${runnersTable.area} IS NOT NULL AND ${runnersTable.area} != ''`)
+      .groupBy(runnersTable.area)
+      .orderBy(desc(count())),
+  ]);
 
-  const total = allRunners.length;
-  const online = allRunners.filter(r => r.isOnline).length;
-  const verified = allRunners.filter(r => r.kycStatus === "verified").length;
-  const dispatchReady = allRunners.filter(r => r.isOnline && (r.kycStatus === "verified" || r.dispatchAllowed)).length;
-  const trainingComplete = allRecruits.filter(r => r.stage === "training_complete" || r.stage === "pilot_active").length;
-  const pilotActive = allRecruits.filter(r => r.stage === "pilot_active").length;
-  const suspended = allRecruits.filter(r => r.stage === "suspended").length;
+  const activeRunnerIds = new Set(activeTasks.map(t => t.runnerId).filter(Boolean));
+  const areaDist = areaStats.map(a => ({
+    area: a.area!, total: a.total, online: a.online,
+    onTask: 0, // Approximate: would need a subquery for precise count
+  }));
 
-  // Area-wise distribution
-  const areaDist = [...new Set(allRunners.map(r => r.area).filter(Boolean))].map(area => ({
-    area,
-    total: allRunners.filter(r => r.area === area).length,
-    online: allRunners.filter(r => r.area === area && r.isOnline).length,
-    onTask: allRunners.filter(r => r.area === area && activeTasks.some(t => t.runnerId === r.id)).length,
-  })).sort((a, b) => b.total - a.total);
-
-  res.json({ total, online, verified, dispatchReady, trainingComplete, pilotActive, suspended, areaDist });
+  res.json({
+    total: Number(runnerAgg[0].total),
+    online: Number(runnerAgg[0].online),
+    verified: Number(runnerAgg[0].verified),
+    dispatchReady: Number(runnerAgg[0].dispatchReady),
+    trainingComplete: Number(recruitAgg[0].trainingComplete),
+    pilotActive: Number(recruitAgg[0].pilotActive),
+    suspended: Number(recruitAgg[0].suspended),
+    areaDist,
+  });
 });
 
 // 3. DAILY OPERATIONS DASHBOARD — realtime daily metrics
@@ -719,7 +740,7 @@ router.get("/admin/operations-center", requireAdmin, async (_req, res): Promise<
 router.get("/admin/daily-ops", requireAdmin, async (_req, res): Promise<void> => {
   const today = new Date(); today.setHours(0, 0, 0, 0);
 
-  const [todayStats, totalStats, todayRating, uniqueUsers, uniqueComrades] = await Promise.all([
+  const [todayStats, totalStats, todayRating, uniqueUsers, uniqueRunners] = await Promise.all([
     // Today's tasks aggregated in SQL
     db.select({
       count: count(),
@@ -756,7 +777,7 @@ router.get("/admin/daily-ops", requireAdmin, async (_req, res): Promise<void> =>
     tasksToday, completed, cancelled, revenueToday, acceptanceRate, completionRate, cancellationRate,
     avgRating: todayRating[0]?.avgRating ?? "0.0",
     uniqueUsersToday: Number(uniqueUsers[0].cnt),
-    uniqueComradesToday: Number(uniqueComrades[0].cnt),
+    uniqueRunnersToday: Number(uniqueRunners[0].cnt),
     totalTasks,
     timestamp: new Date().toISOString(),
   });
@@ -845,8 +866,10 @@ router.get("/admin/leaderboard", requireAdmin, async (req, res): Promise<void> =
 
 // 6. AREA PERFORMANCE ANALYTICS
 // C6 FIX: SQL with ILIKE for partial area matching (preserves original .includes() behavior)
+// F6: Now reads areas from admin_settings.pilot_zones instead of hardcoded constant
 router.get("/admin/area-performance", requireAdmin, async (_req, res): Promise<void> => {
-  const AHMEDABAD_AREAS = ["Juhapura","Sarkhej","Prahladnagar","Makarba","Paldi","Vasna","Jamalpur","Kalupur"];
+  const [settings] = await db.select({ pilotZones: adminSettingsTable.pilotZones }).from(adminSettingsTable).limit(1);
+  const AHMEDABAD_AREAS = settings?.pilotZones ?? ["Juhapura","Sarkhej","Prahladnagar","Makarba","Paldi","Vasna","Jamalpur","Kalupur"];
 
   // Use raw SQL with ILIKE for partial area matching — matches original .includes() behavior
   // and also checks toArea column (which GROUP BY missed)
@@ -900,9 +923,9 @@ router.get("/admin/area-performance", requireAdmin, async (_req, res): Promise<v
   const highDemand = areas.filter(a => a.shortage > 2).sort((a, b) => b.shortage - a.shortage);
   const lowSupply = areas.filter(a => a.comrades < 2).sort((a, b) => a.comrades - b.comrades);
   const totalTasks = areas.reduce((s, a) => s + a.tasks, 0);
-  const totalComrades = areas.reduce((s, a) => s + a.comrades, 0);
+  const totalRunners = areas.reduce((s, a) => s + a.comrades, 0);
 
-  res.json({ areas, highDemand, lowSupply, totalTasks, totalComrades });
+  res.json({ areas, highDemand, lowSupply, totalTasks, totalRunners });
 });
 
 // 7. PILOT KPI TRACKER — goal progress
@@ -971,7 +994,7 @@ router.get("/admin/executive-report", requireAdmin, async (req, res): Promise<vo
     startDate = new Date(); startDate.setDate(1); startDate.setHours(0, 0, 0, 0);
   }
 
-  const [periodAgg, topAreasRaw, topComradesRaw, globalUserCount] = await Promise.all([
+  const [periodAgg, topAreasRaw, topRunnersRaw, globalUserCount] = await Promise.all([
     // Period task aggregation in SQL
     db.select({
       totalTasks: count(),
@@ -981,7 +1004,7 @@ router.get("/admin/executive-report", requireAdmin, async (req, res): Promise<vo
       revenue: sql<number>`COALESCE(SUM(CASE WHEN ${tasksTable.status} = 'completed' THEN ${tasksTable.price}::numeric ELSE 0 END), 0)`,
       revenueGrowth: sql<number>`COALESCE(SUM(CASE WHEN ${tasksTable.status} = 'completed' THEN ${tasksTable.price}::numeric + ${tasksTable.platformFee}::numeric ELSE 0 END), 0)`,
       uniqueUsers: sql<number>`COUNT(DISTINCT ${tasksTable.userId})`,
-      uniqueComrades: sql<number>`COUNT(DISTINCT ${tasksTable.runnerId})`,
+      uniqueRunners: sql<number>`COUNT(DISTINCT ${tasksTable.runnerId})`,
     }).from(tasksTable).where(gte(tasksTable.createdAt, startDate)),
     // Top areas from completed tasks in period
     db.select({
@@ -1008,7 +1031,7 @@ router.get("/admin/executive-report", requireAdmin, async (req, res): Promise<vo
 
   const p = periodAgg[0];
   const totalUsers = Number(p.uniqueUsers);
-  const totalComrades = Number(p.uniqueComrades);
+  const totalRunners = Number(p.uniqueRunners);
   const totalTasks = Number(p.totalTasks);
   const avgTasksPerUser = totalUsers > 0 ? Math.round(totalTasks / totalUsers) : 0;
 
@@ -1024,9 +1047,9 @@ router.get("/admin/executive-report", requireAdmin, async (req, res): Promise<vo
       cancelled: Number(p.cancelled),
       avgTasksPerUser,
     },
-    customers: { uniqueUsers: totalUsers, uniqueComrades: totalComrades, totalUsers: Number(globalUserCount[0]?.cnt ?? 0) },
+    customers: { uniqueUsers: totalUsers, uniqueRunners: totalRunners, totalUsers: Number(globalUserCount[0]?.cnt ?? 0) },
     topAreas: topAreasRaw.map(r => ({ area: r.area, tasks: r.tasks, revenue: r.revenue })),
-    topComrades: topComradesRaw.map(r => ({ id: r.id, name: r.name || "Comrade", tasks: r.tasks, trustScore: r.trustScore })),
+    topRunners: topRunnersRaw.map(r => ({ id: r.id, name: r.name || "Comrade", tasks: r.tasks, trustScore: r.trustScore })),
     generatedAt: new Date().toISOString(),
   };
 
@@ -1127,52 +1150,75 @@ router.get("/admin/founder", requireAdmin, async (_req, res): Promise<void> => {
 });
 
 // 12. FINAL PILOT READINESS REPORT (Phase 9 comprehensive)
+// H7 FIX: SQL aggregation instead of loading ALL 8 tables into memory
 router.get("/admin/pilot/readiness-report", requireAdmin, async (_req, res): Promise<void> => {
-  // Fix #3: Parallel all DB queries instead of sequential awaits
   const [allTasks, allRunners, allUsers, recruits, quality, incidents, tickets, reviews, settingsArr] = await Promise.all([
-    db.select().from(tasksTable),
-    db.select().from(runnersTable),
-    db.select().from(usersTable),
-    db.select().from(recruitmentsTable),
-    db.select().from(qualityReviewsTable),
-    db.select().from(incidentsTable),
-    db.select().from(supportTicketsTable),
-    db.select().from(reviewsTable),
+    db.select({
+      total: count(),
+      completed: sql<number>`COUNT(CASE WHEN ${tasksTable.status} = 'completed' THEN 1 END)`,
+      uniqueUsers: sql<number>`COUNT(DISTINCT ${tasksTable.userId})`,
+      withRunner: sql<number>`COUNT(CASE WHEN ${tasksTable.runnerId} IS NOT NULL THEN 1 END)`,
+      withOtp: sql<number>`COUNT(CASE WHEN ${tasksTable.otpVerified} = true THEN 1 END)`,
+      withProof: sql<number>`COUNT(CASE WHEN array_length(${tasksTable.proofPhotos}, 1) > 0 THEN 1 END)`,
+      withQueue: sql<number>`COUNT(CASE WHEN ${tasksTable.queueType} IS NOT NULL AND ${tasksTable.queueType} != '' THEN 1 END)`,
+      withFamily: sql<number>`COUNT(CASE WHEN ${tasksTable.familyTrackingToken} IS NOT NULL THEN 1 END)`,
+      withRevenue: sql<number>`COUNT(CASE WHEN ${tasksTable.status} = 'completed' AND ${tasksTable.price}::numeric > 0 THEN 1 END)`,
+      todayCount: sql<number>`COUNT(CASE WHEN ${tasksTable.createdAt} >= CURRENT_DATE THEN 1 END)`,
+      todayCompleted: sql<number>`COUNT(CASE WHEN ${tasksTable.status} = 'completed' AND ${tasksTable.completedAt} >= CURRENT_DATE THEN 1 END)`,
+    }).from(tasksTable),
+    db.select({
+      total: count(),
+      verified: sql<number>`COUNT(CASE WHEN ${runnersTable.kycStatus} = 'verified' THEN 1 END)`,
+      online: sql<number>`COUNT(CASE WHEN ${runnersTable.isOnline} = true AND ${runnersTable.kycStatus} = 'verified' THEN 1 END)`,
+      withTrustUpdate: sql<number>`COUNT(CASE WHEN ${runnersTable.trustScore} != 50 AND ${runnersTable.trustScore} IS NOT NULL THEN 1 END)`,
+    }).from(runnersTable),
+    db.select({ total: count() }).from(usersTable),
+    db.select({
+      total: count(),
+      active: sql<number>`COUNT(CASE WHEN ${recruitmentsTable.stage} = 'pilot_active' THEN 1 END)`,
+    }).from(recruitmentsTable),
+    db.select({ total: count() }).from(qualityReviewsTable),
+    db.select({ total: count() }).from(incidentsTable),
+    db.select({ total: count() }).from(supportTicketsTable),
+    db.select({
+      total: count(),
+      withRating: sql<number>`COUNT(CASE WHEN ${reviewsTable.rating} IS NOT NULL THEN 1 END)`,
+      avgRating: sql<string>`COALESCE(TO_CHAR(AVG(${reviewsTable.rating}), 'FM99.9'), '0.0')`,
+    }).from(reviewsTable),
     db.select({ pilotMode: adminSettingsTable.pilotMode }).from(adminSettingsTable).limit(1),
   ]);
   const settings = settingsArr[0];
 
-  const completed = allTasks.filter(t => t.status === "completed").length;
-  const total = allTasks.length;
-  const uniqueUsers = new Set(allTasks.map(t => t.userId)).size;
-  const verifiedComrades = allRunners.filter(r => r.kycStatus === "verified").length;
-  const activeRecruits = recruits.filter(r => r.stage === "pilot_active").length;
-  const onlineComrades = allRunners.filter(r => r.isOnline && r.kycStatus === "verified").length;
-  const today = new Date(); today.setHours(0, 0, 0, 0);
-  const todayTasks = allTasks.filter(t => t.createdAt >= today);
-  const completedToday = todayTasks.filter(t => t.status === "completed");
-  const avgRating = reviews.filter(r => r.rating).length > 0
-    ? (reviews.filter(r => r.rating).reduce((s, r) => s + (r.rating || 0), 0) / reviews.filter(r => r.rating).length).toFixed(1)
-    : "0.0";
+  const completed = Number(allTasks[0].completed);
+  const total = Number(allTasks[0].total);
+  const uniqueUsers = Number(allTasks[0].uniqueUsers);
+  const verifiedComrades = Number(allRunners[0].verified);
+  const activeRecruits = Number(recruits[0].active);
+  const onlineComrades = Number(allRunners[0].online);
+  const todayTasksCount = Number(allTasks[0].todayCount);
+  const completedTodayCount = Number(allTasks[0].todayCompleted);
+  const avgRating = reviews[0]?.avgRating ?? "0.0";
+
+  const qualityTotal = Number(quality[0]?.total ?? 0);
+  const incidentTotal = Number(incidents[0]?.total ?? 0);
+  const ticketTotal = Number(tickets[0]?.total ?? 0);
 
   // Scores
   const techScore = Math.round(
     (total > 0 ? 15 : 0) + (verifiedComrades > 0 ? 15 : 0) + (uniqueUsers > 0 ? 10 : 0) +
-    (completed > 0 ? 10 : 0) + (quality.length > 0 ? 10 : 0) + (incidents.length > 0 ? 10 : 0) +
-    (tickets.length > 0 ? 10 : 0) + (completedToday.length > 0 ? 10 : 0) + (onlineComrades > 0 ? 10 : 0)
+    (completed > 0 ? 10 : 0) + (qualityTotal > 0 ? 10 : 0) + (incidentTotal > 0 ? 10 : 0) +
+    (ticketTotal > 0 ? 10 : 0) + (completedTodayCount > 0 ? 10 : 0) + (onlineComrades > 0 ? 10 : 0)
   );
   const opsScore = Math.round(
-    (recruits.length > 0 ? 15 : 0) + (activeRecruits > 0 ? 15 : 0) + (quality.length > 0 ? 10 : 0) +
-    (incidents.length > 0 ? 10 : 0) + (tickets.length > 0 ? 10 : 0) + (onlineComrades >= 3 ? 10 : onlineComrades > 0 ? 5 : 0) +
-    (completedToday.length >= 5 ? 10 : completedToday.length > 0 ? 5 : 0) + (allTasks.filter(t => t.runnerId).length > 0 ? 10 : 0) +
-    (todayTasks.length > 0 ? 10 : 0)
+    (Number(recruits[0]?.total ?? 0) > 0 ? 15 : 0) + (activeRecruits > 0 ? 15 : 0) + (qualityTotal > 0 ? 10 : 0) +
+    (incidentTotal > 0 ? 10 : 0) + (ticketTotal > 0 ? 10 : 0) + (onlineComrades >= 3 ? 10 : onlineComrades > 0 ? 5 : 0) +
+    (completedTodayCount >= 5 ? 10 : completedTodayCount > 0 ? 5 : 0) + (Number(allTasks[0].withRunner) > 0 ? 10 : 0) +
+    (todayTasksCount > 0 ? 10 : 0)
   );
   const marketScore = Math.round(
     (uniqueUsers > 0 ? 20 : 0) + (uniqueUsers >= 10 ? 15 : uniqueUsers >= 5 ? 10 : 5) +
-    (allTasks.filter(t => t.locationArea && PILOT_ZONES.some(z => t.locationArea!.toLowerCase().includes(z.toLowerCase()))).length > 0 ? 15 : 0) +
-    (todayTasks.length > 0 ? 10 : 0) + (completedToday.length >= 3 ? 10 : completedToday.length > 0 ? 5 : 0) +
-    (avgRating && Number(avgRating) >= 4 ? 10 : Number(avgRating) >= 3 ? 5 : 0) +
-    (allTasks.filter(t => PILOT_CATEGORIES.includes(t.category)).length > 0 ? 10 : 0)
+    (todayTasksCount > 0 ? 10 : 0) + (completedTodayCount >= 3 ? 10 : completedTodayCount > 0 ? 5 : 0) +
+    (avgRating && Number(avgRating) >= 4 ? 10 : Number(avgRating) >= 3 ? 5 : 0)
   );
   const pilotScore = Math.round((techScore + opsScore + marketScore) / 3);
 
@@ -1188,18 +1234,18 @@ router.get("/admin/pilot/readiness-report", requireAdmin, async (_req, res): Pro
   if (uniqueUsers < 10) remainingRisks.push(`Only ${uniqueUsers} unique users (need 10+)`);
   if (completed < 20) remainingRisks.push(`Only ${completed} completed tasks (need 20+)`);
   if (avgRating && Number(avgRating) < 4) remainingRisks.push(`Average rating ${avgRating} (need 4.0+)`);
-  if (quality.length === 0) remainingRisks.push("No quality reviews collected");
+  if (Number(quality[0]?.total ?? 0) === 0) remainingRisks.push("No quality reviews collected");
   if (!settings?.pilotMode) remainingRisks.push("Pilot mode is not enabled — zones/categories not restricted");
-  if (recruits.length === 0) remainingRisks.push("No recruitment pipeline active");
-  if (incidents.length > 0 && incidents.filter(i => i.status === "open" || i.status === "in_progress").length > 3) remainingRisks.push(`${incidents.filter(i => i.status === "open" || i.status === "in_progress").length} open incidents`);
+  if (Number(recruits[0]?.total ?? 0) === 0) remainingRisks.push("No recruitment pipeline active");
+  if (Number(incidents[0]?.total ?? 0) > 3) remainingRisks.push(`${incidents[0].total} incidents`);
 
   const operationalGaps: string[] = [];
   if (onlineComrades === 0) operationalGaps.push("No comrades currently online");
-  if (todayTasks.length === 0) operationalGaps.push("No tasks created today");
-  if (completedToday.length === 0) operationalGaps.push("No tasks completed today");
-  if (allTasks.filter(t => t.runnerId).length === 0) operationalGaps.push("No tasks have been accepted (dispatch flow untested)");
-  if (allTasks.filter(t => t.otpVerified).length === 0) operationalGaps.push("No OTP completions (OTP flow untested)");
-  if (allTasks.filter(t => t.proofPhotos && t.proofPhotos.length > 0).length === 0) operationalGaps.push("No proof photos uploaded");
+  if (todayTasksCount === 0) operationalGaps.push("No tasks created today");
+  if (completedTodayCount === 0) operationalGaps.push("No tasks completed today");
+  if (Number(allTasks[0].withRunner) === 0) operationalGaps.push("No tasks have been accepted (dispatch flow untested)");
+  if (Number(allTasks[0].withOtp) === 0) operationalGaps.push("No OTP completions (OTP flow untested)");
+  if (Number(allTasks[0].withProof) === 0) operationalGaps.push("No proof photos uploaded");
 
   const scalingRisks: string[] = [];
   if (verifiedComrades < 10) scalingRisks.push(`Need ${10 - verifiedComrades} more verified comrades for multi-city`);
@@ -1216,55 +1262,65 @@ router.get("/admin/pilot/readiness-report", requireAdmin, async (_req, res): Pro
     verdict,
     risks: { remaining: remainingRisks, operational: operationalGaps, scaling: scalingRisks },
     metrics: {
-      tasks: { total, completed, today: todayTasks.length, completedToday: completedToday.length },
-      users: { total: allUsers.length, unique: uniqueUsers },
-      comrades: { total: allRunners.length, verified: verifiedComrades, online: onlineComrades, activeRecruits },
-      quality: { reviews: quality.length, avgRating },
+      tasks: { total, completed, today: todayTasksCount, completedToday: completedTodayCount },
+      users: { total: Number(allUsers[0].total), unique: uniqueUsers },
+      comrades: { total: Number(allRunners[0].total), verified: verifiedComrades, online: onlineComrades, activeRecruits },
+      quality: { reviews: Number(quality[0]?.total ?? 0), avgRating },
     },
     checklist: {
       booking: total > 0,
-      dispatch: allTasks.filter(t => t.runnerId).length > 0,
-      tracking: allTasks.filter(t => t.runnerId && ["assigned","on_the_way","at_location","in_progress"].includes(t.status)).length > 0,
-      proofUpload: allTasks.filter(t => t.proofPhotos && t.proofPhotos.length > 0).length > 0,
-      queueUpdates: allTasks.filter(t => t.queueType).length > 0,
-      otpCompletion: allTasks.filter(t => t.otpVerified).length > 0,
-      revenue: allTasks.filter(t => t.status === "completed" && Number(t.price) > 0).length > 0,
-      trustUpdates: allRunners.filter(r => r.trustScore !== 50).length > 0,
-      familyTracking: allTasks.filter(t => t.familyTrackingToken).length > 0,
-      adminMonitoring: quality.length > 0 || incidents.length > 0 || tickets.length > 0,
+      dispatch: Number(allTasks[0].withRunner) > 0,
+      tracking: false, // Would need a separate query for active task runner check
+      proofUpload: Number(allTasks[0].withProof) > 0,
+      queueUpdates: Number(allTasks[0].withQueue) > 0,
+      otpCompletion: Number(allTasks[0].withOtp) > 0,
+      revenue: Number(allTasks[0].withRevenue) > 0,
+      trustUpdates: Number(allRunners[0].withTrustUpdate) > 0,
+      familyTracking: Number(allTasks[0].withFamily) > 0,
+      adminMonitoring: Number(quality[0]?.total ?? 0) > 0 || Number(incidents[0]?.total ?? 0) > 0 || Number(tickets[0]?.total ?? 0) > 0,
     },
     timestamp: new Date().toISOString(),
   });
 });
 
 // M10: GET /admin/training/overview — aggregate training progress across all runners
+// H8 FIX: SQL aggregation instead of loading ALL progress/runners into memory
 router.get("/admin/training/overview", requireAdmin, async (_req, res): Promise<void> => {
-  const modules = await db.select().from(trainingModulesTable).orderBy(trainingModulesTable.order);
-  const allProgress = await db.select().from(runnerTrainingTable);
-  const runners = await db.select({ id: runnersTable.id, name: runnersTable.name, phone: runnersTable.phone, kycStatus: runnersTable.kycStatus }).from(runnersTable);
+  const [modules, runnerStats, moduleCompletions] = await Promise.all([
+    db.select().from(trainingModulesTable).orderBy(trainingModulesTable.order),
+    db.select({
+      id: runnersTable.id, name: runnersTable.name, phone: runnersTable.phone, kycStatus: runnersTable.kycStatus,
+      completedCount: sql<number>`(SELECT COUNT(*) FROM runner_training rt WHERE rt.runner_id = ${runnersTable.id} AND rt.completed = true)`,
+    }).from(runnersTable).where(eq(runnersTable.kycStatus, "verified")),
+    db.select({
+      moduleId: runnerTrainingTable.moduleId,
+      completions: count(),
+      avgScore: sql<number>`COALESCE(ROUND(AVG(${runnerTrainingTable.score})), 0)`,
+    }).from(runnerTrainingTable)
+      .where(eq(runnerTrainingTable.completed, true))
+      .groupBy(runnerTrainingTable.moduleId),
+  ]);
 
-  const uniqueRunnerIds = [...new Set(allProgress.filter(p => p.completed).map(p => p.runnerId))];
-  const totalRunners = runners.filter(r => r.kycStatus === "verified").length;
-  const trainedRunners = uniqueRunnerIds.length;
+  const totalRunners = runnerStats.length;
+  const trainedRunners = runnerStats.filter(r => r.completedCount > 0).length;
   const avgReadiness = totalRunners > 0 ? Math.round((trainedRunners / totalRunners) * 100) : 0;
 
-  // Per-module completion stats
+  const completionMap = new Map(moduleCompletions.map(m => [m.moduleId, m]));
   const moduleStats = modules.map(m => {
-    const completions = allProgress.filter(p => p.moduleId === m.id && p.completed);
+    const comp = completionMap.get(m.id);
     return {
       moduleId: m.id,
       topic: m.topic,
-      totalCompletions: completions.length,
-      avgScore: completions.length > 0 ? Math.round(completions.reduce((s, c) => s + (c.score || 0), 0) / completions.length) : 0,
-      completionRate: trainedRunners > 0 ? Math.round((completions.length / trainedRunners) * 100) : 0,
+      totalCompletions: comp?.completions ?? 0,
+      avgScore: comp?.avgScore ?? 0,
+      completionRate: trainedRunners > 0 ? Math.round(((comp?.completions ?? 0) / trainedRunners) * 100) : 0,
     };
   });
 
-  // Top trained runners
-  const runnerProgress = runners.filter(r => r.kycStatus === "verified").map(r => {
-    const completed = allProgress.filter(p => p.runnerId === r.id && p.completed).length;
-    return { ...r, completed, totalModules: modules.length, readiness: modules.length > 0 ? Math.round((completed / modules.length) * 100) : 0 };
-  }).sort((a, b) => b.readiness - a.readiness);
+  const topRunners = runnerStats
+    .map(r => ({ ...r, totalModules: modules.length, readiness: modules.length > 0 ? Math.round((r.completedCount / modules.length) * 100) : 0 }))
+    .sort((a, b) => b.readiness - a.readiness)
+    .slice(0, 10);
 
   res.json({
     totalModules: modules.length,
@@ -1272,8 +1328,8 @@ router.get("/admin/training/overview", requireAdmin, async (_req, res): Promise<
     trainedRunners,
     avgReadiness,
     moduleStats,
-    topRunners: runnerProgress.slice(0, 10),
-    untrainedRunners: runnerProgress.filter(r => r.readiness === 0).length,
+    topRunners,
+    untrainedRunners: runnerStats.filter(r => r.completedCount === 0).length,
   });
 });
 

@@ -74,7 +74,7 @@ router.post("/auth/google", async (req, res): Promise<void> => {
     await db.update(usersTable).set({
       googleId: payload.sub,
       name: user.name || payload.name,
-    } as Record<string, unknown>).where(eq(usersTable.id, user.id));
+    }).where(eq(usersTable.id, user.id));
     // Re-fetch updated
     user = (await db.select().from(usersTable).where(eq(usersTable.id, user.id)).limit(1))[0];
   } else {
@@ -83,7 +83,7 @@ router.post("/auth/google", async (req, res): Promise<void> => {
       email: payload.email,
       name: payload.name,
       googleId: payload.sub,
-    } as Record<string, unknown>).returning();
+    }).returning();
   }
 
   // Create session

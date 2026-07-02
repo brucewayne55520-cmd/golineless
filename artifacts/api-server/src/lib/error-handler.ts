@@ -16,7 +16,7 @@ export class AppError extends Error {
 // Fix #82: Extract request ID from pino-http or generate one for error responses
 function getRequestId(req: Request): string | undefined {
   // pino-http attaches req.id by default
-  return (req as unknown as Record<string, unknown>).id as string | undefined;
+  return (req as { id?: string }).id;
 }
 
 export function notFoundHandler(_req: Request, res: Response): void {

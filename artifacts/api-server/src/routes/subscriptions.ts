@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { db, subscriptionPlansTable, subscriptionsTable, z } from "@workspace/db";
-import { eq, and, desc } from "drizzle-orm";
+import { eq, and, desc, sql } from "drizzle-orm";
 import { requireUser, requireAdmin } from "../lib/auth";
 import { validateBody } from "../lib/validate";
 
@@ -89,10 +89,23 @@ router.post("/subscriptions", requireUser, validateBody(createSubscriptionSchema
   res.status(201).json({ ...sub, amount: Number(sub.amount) });
 });
 
-// GET /admin/subscriptions — list all subscriptions (admin)
-router.get("/admin/subscriptions", requireAdmin, async (_req, res): Promise<void> => {
-  const subs = await db.select().from(subscriptionsTable).orderBy(desc(subscriptionsTable.createdAt));
-  res.json(subs.map(s => ({ ...s, amount: Number(s.amount) })));
+// GET /admin/subscriptions — list all subscriptions (admin, paginated)
+router.get("/admin/subscriptions", requireAdmin, async (req, res): Promise<void> => {
+  const page = Math.max(1, parseInt(String(req.query.page ?? "1"), 10) || 1);
+  const limit = Math.min(100, Math.max(1, parseInt(String(req.query.limit ?? "50"), 10) || 50));
+  const offset = (page - 1) * limit;
+
+  const [subs, countResult] = await Promise.all([
+    db.select().from(subscriptionsTable).orderBy(desc(subscriptionsTable.createdAt)).limit(limit).offset(offset),
+    db.select({ count: sql<number>`COUNT(*)::int` }).from(subscriptionsTable),
+  ]);
+
+  res.json({
+    subscriptions: subs.map(s => ({ ...s, amount: Number(s.amount) })),
+    total: Number(countResult[0]?.count ?? 0),
+    page,
+    limit,
+  });
 });
 
 // PATCH /admin/subscriptions/:id — update subscription status (admin)

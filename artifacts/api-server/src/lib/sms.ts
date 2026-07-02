@@ -75,7 +75,11 @@ export async function sendOtp(phone: string): Promise<boolean> {
       logger.warn({ err, phone }, "Twilio SMS send failed — OTP available in dev logs only");
     }
   }
-  logger.info({ phone, otp }, "[DEV OTP]");
+  if (process.env.NODE_ENV !== "production") {
+    logger.info({ phone, otp }, "[DEV OTP]");
+  } else {
+    logger.warn({ phone }, "[PROD] OTP send failed — no fallback in production");
+  }
   return true;
 }
 

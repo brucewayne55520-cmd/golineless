@@ -57,7 +57,7 @@ export default function RunnerEarnings() {
   // L11: Export earnings report as CSV
   const handleExportReport = () => {
     if (!completedTasks.length) { toast.error("No completed tasks to export"); return; }
-    const rows = [["Category","Date","Amount","Status"]];
+    const rows = [["Category","Date","Runner Earning","Status"]];
     completedTasks.forEach((t: Task) => {
       rows.push([t.category, t.completedAt ? new Date(t.completedAt).toLocaleDateString("en-IN") : "", String(t.runnerEarning ?? 0), "completed"]);
     });

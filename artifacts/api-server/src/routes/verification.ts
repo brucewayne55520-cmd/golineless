@@ -9,7 +9,7 @@ import {
   tasksTable,
 } from "@workspace/db";
 import { eq } from "drizzle-orm";
-import { extractToken, getUserFromToken, getRunnerFromToken } from "../lib/auth";
+import { extractToken, getUserFromToken, getRunnerFromToken, resolveAdmin } from "../lib/auth";
 import { logger } from "../lib/logger";
 import { uploadFile, isB2Configured } from "../lib/storage";
 import {
@@ -29,6 +29,43 @@ import { calculateRiskScore, type PhotoContext } from "../lib/fraud-detector";
 import { applyServerWatermark } from "../lib/watermark";
 
 const router: IRouter = Router();
+
+async function getRequestIdentity(req: Request): Promise<
+  | { type: "admin"; id: number }
+  | { type: "user"; id: number }
+  | { type: "runner"; id: number }
+  | null
+> {
+  const token = extractToken(req);
+  if (!token) return null;
+  const admin = await resolveAdmin(token);
+  if (admin) return { type: "admin", id: admin.id };
+  const user = await getUserFromToken(token);
+  if (user) return { type: "user", id: user.id };
+  const runner = await getRunnerFromToken(token);
+  if (runner) return { type: "runner", id: runner.id };
+  return null;
+}
+
+async function canAccessPhoto(
+  identity: Awaited<ReturnType<typeof getRequestIdentity>>,
+  photo: typeof photoUploadsTable.$inferSelect,
+): Promise<boolean> {
+  if (!identity) return false;
+  if (identity.type === "admin") return true;
+  if (identity.type === "user" && photo.userId === identity.id) return true;
+  if (identity.type === "runner" && photo.runnerId === identity.id) return true;
+  if (!photo.taskId) return false;
+  const [task] = await db
+    .select({ userId: tasksTable.userId, runnerId: tasksTable.runnerId })
+    .from(tasksTable)
+    .where(eq(tasksTable.id, photo.taskId))
+    .limit(1);
+  if (!task) return false;
+  if (identity.type === "user") return task.userId === identity.id;
+  if (identity.type === "runner") return task.runnerId === identity.id;
+  return false;
+}
 
 /** Extract client IP (respecting proxy headers) */
 function getClientIp(req: Request): string {
@@ -352,6 +389,8 @@ router.get("/verification/photos/:id", async (req: Request, res: Response): Prom
   const id = Number(req.params.id);
   const [photo] = await db.select().from(photoUploadsTable).where(eq(photoUploadsTable.id, id));
   if (!photo) { res.status(404).json({ error: "Photo not found" }); return; }
+  const identity = await getRequestIdentity(req);
+  if (!await canAccessPhoto(identity, photo)) { res.status(403).json({ error: "Forbidden" }); return; }
 
   res.json({
     id: photo.id,
@@ -375,6 +414,8 @@ router.get("/verification/photos/:id", async (req: Request, res: Response): Prom
 // ─── GET /verification/photos/check-hash/:hash ────────────────
 // Check if a hash already exists (client-side pre-check)
 router.get("/verification/photos/check-hash/:hash", async (req: Request, res: Response): Promise<void> => {
+  const identity = await getRequestIdentity(req);
+  if (!identity) { res.status(401).json({ error: "Authentication required" }); return; }
   const hash = Array.isArray(req.params.hash) ? req.params.hash[0] : req.params.hash;
   if (!hash || hash.length !== 64) { res.status(400).json({ error: "Invalid hash format" }); return; }
 

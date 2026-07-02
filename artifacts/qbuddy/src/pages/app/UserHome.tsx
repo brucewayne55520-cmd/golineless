@@ -58,7 +58,7 @@ export default function UserHome() {
           <span className="text-xs font-semibold text-gray-600">Ahmedabad, GJ</span>
         </div>
         <div className="flex items-center gap-3">
-          <button onClick={() => {}} className="relative">
+          <button onClick={() => navigate("/app/notifications")} className="relative">
             <Bell size={20} className="text-gray-400" />
             {unreadCount > 0 && (
               <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full text-white text-[9px] font-bold flex items-center justify-center">{unreadCount}</span>

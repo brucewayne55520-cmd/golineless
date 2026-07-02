@@ -1,7 +1,7 @@
 import { Router, type IRouter } from "express";
-import { db, usersTable, tasksTable } from "@workspace/db";
+import { db, usersTable, tasksTable, userSessionsTable } from "@workspace/db";
 import { eq, sql } from "drizzle-orm";
-import { requireUser } from "../lib/auth";
+import { requireUser, extractToken, getUserFromToken } from "../lib/auth";
 import { logger } from "../lib/logger";
 import crypto from "crypto";
 import { encrypt, decrypt } from "../lib/crypto";
@@ -167,6 +167,35 @@ router.get("/users/me/stats", requireUser, async (req, res): Promise<void> => {
   const hoursSaved = totalTasks * 2.5; // avg 2.5 hrs saved per task
   const valueSaved = Number(stats?.valueSaved ?? 0);
   res.json({ totalTasks, hoursSaved, valueSaved });
+});
+
+// POST /users/delete-account — User requests account deletion (soft-delete)
+// S3 FIX: GDPR compliance — users can now delete their accounts
+router.post("/users/delete-account", requireUser, async (req, res): Promise<void> => {
+  const user = req.user;
+  if (!user) { res.status(401).json({ error: "Unauthorized" }); return; }
+  try {
+    // Soft-delete: anonymize PII but keep the record for referential integrity
+    await db.update(usersTable).set({
+      name: "[Deleted User]",
+      email: null,
+      phone: null,
+      avatar: null,
+      city: null,
+      area: null,
+      aadhaarNumber: null,
+      aadhaarFront: null,
+      aadhaarBack: null,
+      kycStatus: "none",
+      passwordHash: null,
+    } as Record<string, unknown>).where(eq(usersTable.id, user.id));
+    // Delete user sessions
+    await db.delete(userSessionsTable).where(eq(userSessionsTable.userId, user.id));
+    res.json({ message: "Account deleted. Your data has been anonymized." });
+  } catch (err) {
+    logger.error({ err, userId: user.id }, "POST /users/delete-account failed");
+    res.status(500).json({ error: "Failed to delete account" });
+  }
 });
 
 export default router;

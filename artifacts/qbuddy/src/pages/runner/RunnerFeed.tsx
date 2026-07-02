@@ -264,8 +264,10 @@ export default function RunnerFeed() {
     try {
       const init = async () => {
         const { io } = await import("socket.io-client");
+        const token = localStorage.getItem("golineless_runner_token") || "";
         const sock = io(window.location.origin, {
           path: "/api/socket.io",
+          auth: { token },
           reconnection: true,
           reconnectionDelay: 1000,
           reconnectionAttempts: 10,

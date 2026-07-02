@@ -86,8 +86,10 @@ export default function ActiveTask() {
     try {
       const init = async () => {
         const { io } = await import("socket.io-client");
+        const token = localStorage.getItem("golineless_runner_token") || "";
         const sock = io(window.location.origin, {
           path: "/api/socket.io",
+          auth: { token },
           reconnection: true,
           reconnectionDelay: 1000,
           reconnectionAttempts: 10,
@@ -502,7 +504,7 @@ export default function ActiveTask() {
         )}
 
         {/* Step 3: Reached Pickup (if pickup required) */}
-        {task.pickupRequired && (task.status === "on_the_way" || task.status === "reached_pickup") && (
+        {task.pickupRequired && task.status === "on_the_way" && (
           <div className="bg-white/8 border border-white/10 rounded-2xl p-4">
             <div className="flex items-center gap-2 mb-3">
               <MapPin size={16} className="text-amber-400" />
@@ -518,7 +520,7 @@ export default function ActiveTask() {
               </button>
               {uploadedPhotos["reached_pickup"] && (
                 <button
-                  onClick={() => handleStatusUpdate("reached_task_location")}
+                  onClick={() => handleStatusUpdate("reached_pickup")}
                   disabled={updateStatus.isPending}
                   className="flex-1 py-3 rounded-xl text-white font-bold text-sm"
                   style={{ background: DARK_GRAD }}
@@ -534,7 +536,7 @@ export default function ActiveTask() {
         )}
 
         {/* Step 4: Reached Task Location */}
-        {(task.status === "reached_task_location" || (task.pickupRequired && task.status === "reached_pickup")) && (
+        {(task.status === "reached_task_location" || (task.pickupRequired && task.status === "reached_pickup") || (!task.pickupRequired && task.status === "on_the_way")) && (
           <div className="bg-white/8 border border-white/10 rounded-2xl p-4">
             <div className="flex items-center gap-2 mb-3">
               <MapPin size={16} className="text-green-400" />
@@ -550,7 +552,7 @@ export default function ActiveTask() {
               </button>
               {uploadedPhotos["reached_task_location"] && (
                 <button
-                  onClick={() => handleStatusUpdate("in_progress")}
+                  onClick={() => handleStatusUpdate(!task.pickupRequired && task.status === "on_the_way" ? "reached_task_location" : "in_progress")}
                   disabled={updateStatus.isPending}
                   className="flex-1 py-3 rounded-xl text-gray-900 font-bold text-sm"
                   style={{ background: BLUE_GRAD }}

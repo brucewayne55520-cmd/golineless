@@ -124,10 +124,10 @@ export default function RunnerProfile() {
 
   const menuItems: { Icon: LucideIcon; label: string; sub: string; onClick?: () => void }[] = [
     { Icon: Star, label: "My Reviews", sub: "See what clients say", onClick: () => navigate("/runner/reviews") },
-    { Icon: TrendingUp, label: "Performance Stats", sub: "Completion rate, avg response", onClick: () => navigate("/runner/earnings") },
-    { Icon: HelpCircle, label: "Help & Support", sub: "FAQs, contact us", onClick: () => window.open("https://golineless.com/support", "_blank") },
-    { Icon: FileText, label: "Terms of Service", sub: "Runner agreement", onClick: () => window.open("https://golineless.com/terms", "_blank") },
-    { Icon: Lock, label: "Privacy Policy", sub: "Your data rights", onClick: () => window.open("https://golineless.com/privacy", "_blank") },
+    { Icon: TrendingUp, label: "Performance Stats", sub: "Completion rate, avg response", onClick: () => navigate("/runner/profile") },
+    { Icon: HelpCircle, label: "Help & Support", sub: "FAQs, contact us", onClick: () => toast.info("Help & Support coming soon") },
+    { Icon: FileText, label: "Terms of Service", sub: "Runner agreement", onClick: () => toast.info("Terms of Service coming soon") },
+    { Icon: Lock, label: "Privacy Policy", sub: "Your data rights", onClick: () => toast.info("Privacy Policy coming soon") },
   ];
 
   const stats: { Icon: LucideIcon; val: string | number; label: string; color: string; bg: string }[] = [
@@ -267,7 +267,7 @@ export default function RunnerProfile() {
             </div>
             <div>
               <p className="text-white/30 text-[8px] uppercase">On Time</p>
-              <p className="text-white text-xs font-bold">{r.onTimeArrivals ?? 0}/{r.lateArrivals ?? 0}</p>
+              <p className="text-white text-xs font-bold">{r.onTimeArrivals ?? 0}/{(r.onTimeArrivals ?? 0) + (r.lateArrivals ?? 0) || 0}</p>
             </div>
             <div>
               <p className="text-white/30 text-[8px] uppercase">Repeat</p>

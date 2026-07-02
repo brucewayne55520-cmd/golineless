@@ -98,7 +98,7 @@ export default function NotificationsPage() {
       {/* Header */}
       <div className="bg-white border-b border-gray-100 px-4 py-4 flex items-center justify-between sticky top-0 z-10">
         <div className="flex items-center gap-3">
-          <button onClick={() => navigate("/")} className="w-8 h-8 rounded-xl bg-gray-100 flex items-center justify-center">
+          <button onClick={() => navigate("/app/home")} className="w-8 h-8 rounded-xl bg-gray-100 flex items-center justify-center">
             <ChevronLeft size={18} />
           </button>
           <div>

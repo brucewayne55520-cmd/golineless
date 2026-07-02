@@ -10,6 +10,8 @@ export default function ForgotPassword() {
   const [sent, setSent] = useState(false);
   const [loading, setLoading] = useState(false);
   const [, navigate] = useLocation();
+  const role = new URLSearchParams(window.location.search).get("role") === "runner" ? "runner" : "user";
+  const loginPath = role === "runner" ? "/runner/login" : "/login";
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -19,7 +21,7 @@ export default function ForgotPassword() {
       const res = await fetch(`${API_BASE}/api/auth/forgot-password`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, role: "user" }),
+        body: JSON.stringify({ email, role }),
       });
       await res.json();
       setSent(true);
@@ -53,7 +55,7 @@ export default function ForgotPassword() {
               <p className="text-gray-400 text-xs mt-3">Click the link in the email to reset your password. The link expires in 1 hour.</p>
               <button
                 type="button"
-                onClick={() => navigate("/login")}
+                onClick={() => navigate(loginPath)}
                 className="mt-6 w-full py-3 rounded-xl bg-blue-600 text-white font-bold text-sm hover:bg-blue-700 transition-all shadow-md"
               >
                 Back to login
@@ -84,7 +86,7 @@ export default function ForgotPassword() {
         </div>
 
         <p className="text-center text-sm text-gray-500 mt-4">
-          <button type="button" onClick={() => navigate("/login")} className="font-semibold text-blue-600 hover:text-blue-700">
+          <button type="button" onClick={() => navigate(loginPath)} className="font-semibold text-blue-600 hover:text-blue-700">
             Back to login
           </button>
         </p>

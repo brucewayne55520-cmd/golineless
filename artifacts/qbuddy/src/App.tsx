@@ -163,18 +163,30 @@ import { toast } from "sonner";
 import { DARK_GRAD } from "@/lib/theme";
 
 function AdminLoginPage() {
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [, navigate] = useLocation();
   const mutation = useAdminLogin();
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    mutation.mutate({ data: { password } }, {
+    const trimmedUsername = username.trim();
+    if (!trimmedUsername) {
+      toast.error("Admin username required");
+      return;
+    }
+    mutation.mutate({ data: { username: trimmedUsername, password } }, {
       onSuccess: (data) => {
         localStorage.setItem("golineless_admin_token", data.token);
+        localStorage.setItem("golineless_auth", JSON.stringify({
+          token: data.token,
+          role: data.role || "admin",
+          user: null,
+          runner: null,
+        }));
         navigate("/admin");
       },
-      onError: () => toast.error("Invalid password"),
+      onError: () => toast.error("Invalid admin credentials"),
     });
   };
 
@@ -190,11 +202,22 @@ function AdminLoginPage() {
         </div>
         <form onSubmit={handleSubmit} className="space-y-4">
           <input
+            type="text"
+            placeholder="Admin username"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+            className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 text-gray-900 bg-gray-50 gl-transition"
+            autoComplete="username"
+            required
+          />
+          <input
             type="password"
             placeholder="Admin password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 text-gray-900 bg-gray-50 gl-transition"
+            autoComplete="current-password"
+            required
           />
           <button
             type="submit"

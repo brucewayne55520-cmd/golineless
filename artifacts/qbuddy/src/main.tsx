@@ -11,12 +11,27 @@ import "./index.css";
 const API_BASE = import.meta.env.VITE_API_URL || "";
 setBaseUrl(API_BASE);
 
+function getActiveAuthToken(): string | null {
+  try {
+    const stored = localStorage.getItem("golineless_auth");
+    if (stored) {
+      const parsed = JSON.parse(stored) as { token?: unknown };
+      if (typeof parsed.token === "string") return parsed.token;
+    }
+  } catch {
+    // Fall back to single-token detection below.
+  }
+
+  const tokens = [
+    localStorage.getItem("golineless_admin_token"),
+    localStorage.getItem("golineless_user_token"),
+    localStorage.getItem("golineless_runner_token"),
+  ].filter((token): token is string => Boolean(token));
+  return tokens.length === 1 ? tokens[0] : null;
+}
+
 setAuthTokenGetter(() => {
-  return (
-    localStorage.getItem("golineless_admin_token") ||
-    localStorage.getItem("golineless_user_token") ||
-    localStorage.getItem("golineless_runner_token")
-  );
+  return getActiveAuthToken();
 });
 
 import { isGoogleAuthConfigured } from "./lib/google-auth";

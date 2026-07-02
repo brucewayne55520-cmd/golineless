@@ -99,9 +99,10 @@ export const LogoutResponse = zod.object({
 
 
 /**
- * @summary Admin login with admin password
+ * @summary Admin login with admin username and password
  */
 export const AdminLoginBody = zod.object({
+  "username": zod.string(),
   "password": zod.string()
 })
 
@@ -4508,5 +4509,4 @@ export const GetFounderDashboardResponse = zod.object({
 }).optional(),
   "timestamp": zod.string().optional()
 })
-
 

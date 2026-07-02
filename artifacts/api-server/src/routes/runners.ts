@@ -2,9 +2,9 @@ import { Router, type IRouter } from "express";
 import crypto from "crypto";
 import { encrypt, decrypt } from "../lib/crypto";
 import { uploadDataUrl } from "../lib/storage";
-import { db, runnersTable, tasksTable, runnerLocationsTable, usersTable, reviewsTable, runnerPayoutsTable } from "@workspace/db";
+import { db, runnersTable, tasksTable, runnerLocationsTable, usersTable, reviewsTable, runnerPayoutsTable, runnerSessionsTable } from "@workspace/db";
 import { eq, desc, and, gte, sql, inArray, or, count } from "drizzle-orm";
-import { requireRunner, requireAdmin, extractToken, getUserFromToken, getRunnerFromToken, resolveAdmin } from "../lib/auth";
+import { requireRunner, requireAdmin, extractToken, getUserFromToken, getRunnerFromToken, resolveAdmin, verifyPassword } from "../lib/auth";
 import { haversineKm } from "../lib/dispatch-engine";
 import { isValidCoordinate } from "../lib/gps-engine";
 import { logger } from "../lib/logger";
@@ -754,16 +754,34 @@ router.post("/runners/delete-account", requireRunner, async (req, res): Promise<
     if (!password) {
       res.status(400).json({ error: "Password confirmation required to delete account" }); return;
     }
-    const { verifyPassword } = await import("../lib/auth");
     if (!runner.passwordHash || !await verifyPassword(password, runner.passwordHash)) {
       res.status(403).json({ error: "Incorrect password" }); return;
     }
+    // S2: Proper soft-delete — anonymize PII but keep record for referential integrity
     await db.update(runnersTable).set({
-      name: "[Deleted Comrade]",
+      name: "[Deleted Runner]",
+      email: null,
+      phone: null,
+      avatar: null,
+      city: null,
+      area: null,
+      fullName: null,
+      aadhaarNumber: null,
+      aadhaarFront: null,
+      aadhaarBack: null,
+      selfie: null,
+      bankAccount: null,
+      bankIfsc: null,
+      bankAccountHolder: null,
+      emergencyContactName: null,
+      emergencyContactPhone: null,
+      emergencyContactRelation: null,
       isOnline: false,
       dispatchAllowed: false,
+      kycStatus: "none",
+      passwordHash: null,
     } as Record<string, unknown>).where(eq(runnersTable.id, runner.id));
-    const { runnerSessionsTable } = await import("@workspace/db");
+    // S2: Use static import instead of dynamic import
     await db.delete(runnerSessionsTable).where(eq(runnerSessionsTable.runnerId, runner.id));
     res.json({ message: "Account deleted" });
   } catch (err) {

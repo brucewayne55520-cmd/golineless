@@ -73,7 +73,7 @@ router.patch("/notifications/:id/read", async (req, res): Promise<void> => {
 router.post("/notifications/read-all", async (req, res): Promise<void> => {
   const auth = req.headers.authorization;
   const token = auth?.startsWith("Bearer ") ? auth.slice(7) : null;
-  if (!token) { res.json({ message: "done" }); return; }
+  if (!token) { res.status(401).json({ error: "Authentication required" }); return; }
 
   const user = await getUserFromToken(token);
   if (user) {
@@ -89,7 +89,7 @@ router.post("/notifications/read-all", async (req, res): Promise<void> => {
     return;
   }
 
-  res.json({ message: "All notifications marked as read" });
+  res.status(401).json({ error: "Invalid or expired token" });
 });
 
 // B9: POST /admin/notifications/broadcast — duplicate removed (canonical endpoint is in admin.ts)

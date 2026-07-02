@@ -116,15 +116,14 @@ async function detectDisputeFraud(): Promise<void> {
     })
     .from(paymentAuditLogTable)
     .where(and(
-      eq(paymentAuditLogTable.newStatus, "pending"),
+      eq(paymentAuditLogTable.newStatus, "cash_pending"),
       eq(paymentAuditLogTable.actorType, "user"),
       gte(paymentAuditLogTable.createdAt, windowStart),
     ))
     .groupBy(paymentAuditLogTable.actor);
 
   for (const row of disputeCounts) {
-    if (row.count >= FRAUD_DISPUTE_THRESHOLD && row.actor) {
-      const userIdStr = row.actor.replace("user:", "");
+    if (row.count >= FRAUD_DISPUTE_THRESHOLD && row.actor) {        const userIdStr = row.actor?.replace("user:", "") ?? "";
       const userId = parseInt(userIdStr, 10);
       if (isNaN(userId)) continue;
 

@@ -1,4 +1,5 @@
 import { Router, type IRouter } from "express";
+import { db, adminSettingsTable } from "@workspace/db";
 import { getRevenueConfig, getPriorityFee, getUrgencyMultiplier, calculateTaskRevenue } from "../lib/revenue-engine";
 import { logger } from "../lib/logger";
 
@@ -52,7 +53,10 @@ router.post("/pricing/preview", async (req, res): Promise<void> => {
     let discountAmount = 0;
     let appliedCoupon: string | null = null;
 
-    if (couponCode?.toUpperCase() === "GOLINELESS10") {
+    // M2: Check configurable coupons from admin settings
+    const [couponSettings] = await db.select({ activeCoupons: adminSettingsTable.activeCoupons }).from(adminSettingsTable).limit(1);
+    const activeCoupons = couponSettings?.activeCoupons ?? ["GOLINELESS10"];
+    if (couponCode && activeCoupons.map(c => c.toUpperCase()).includes(couponCode.toUpperCase())) {
       discountAmount = Math.round(revenue.price * 0.1);
       finalPrice -= discountAmount;
       appliedCoupon = couponCode.toUpperCase();

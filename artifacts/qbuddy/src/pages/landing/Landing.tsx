@@ -527,25 +527,25 @@ export default function Landing() {
                   <div>
                     <h4 className="font-semibold text-white mb-3">Company</h4>
                     <ul className="space-y-2 text-white/40 text-[13px]">
-                      <li>About Us</li>
-                      <li>Careers</li>
-                      <li>Press</li>
-                      <li>Blog</li>
+                      <li><a href="/app/about" className="hover:text-white/70 transition-colors">About Us</a></li>
+                      <li><a href="mailto:careers@ibnayiftribe.com" className="hover:text-white/70 transition-colors">Careers</a></li>
+                      <li><a href="mailto:press@ibnayiftribe.com" className="hover:text-white/70 transition-colors">Press</a></li>
+                      <li><a href="https://golineless.com/blog" target="_blank" rel="noopener noreferrer" className="hover:text-white/70 transition-colors">Blog</a></li>
                     </ul>
                   </div>
                   <div>
                     <h4 className="font-semibold text-white mb-3">Support</h4>
                     <ul className="space-y-2 text-white/40 text-[13px]">
-                      <li>support@golineless.in</li>
-                      <li>Privacy Policy</li>
-                      <li>Terms of Service</li>
+                      <li><a href="mailto:support@golineless.in" className="hover:text-white/70 transition-colors">support@golineless.in</a></li>
+                      <li><a href="/app/privacy" className="hover:text-white/70 transition-colors">Privacy Policy</a></li>
+                      <li><a href="/app/terms" className="hover:text-white/70 transition-colors">Terms of Service</a></li>
                     </ul>
                   </div>
                 </div>
               </div>
               <div className="border-t border-white/[0.06] pt-6 text-center">
                 <p className="text-white/30 text-xs">Powered by IBNAY IFTRIBE PRIVATE LIMITED</p>
-                <p className="text-white/20 text-xs mt-1">© 2025 IBNAY IFTRIBE PRIVATE LIMITED. All rights reserved. | Registered Office: Ahmedabad, Gujarat, India</p>
+                <p className="text-white/20 text-xs mt-1">© 2026 IBNAY IFTRIBE PRIVATE LIMITED. All rights reserved. | Registered Office: Ahmedabad, Gujarat, India</p>
               </div>
             </div>
           </footer>

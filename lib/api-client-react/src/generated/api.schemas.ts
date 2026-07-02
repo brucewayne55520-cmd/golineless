@@ -112,6 +112,7 @@ export interface AuthResponse {
 }
 
 export interface AdminLoginInput {
+  username: string;
   password: string;
 }
 
@@ -1895,4 +1896,3 @@ export const GetExecutiveReportType = {
   weekly: 'weekly',
   monthly: 'monthly',
 } as const;
-

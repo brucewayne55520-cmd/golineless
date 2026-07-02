@@ -219,6 +219,34 @@ io.on("connection", (socket) => {
   const identity = socket.data.identity as SocketIdentity | null;
   const isAdmin = identity?.type === "admin";
   const allow = (cond: boolean) => !isProduction || cond;
+  const getTaskActors = async (taskId: number) => {
+    if (!Number.isFinite(taskId)) return null;
+    const [task] = await db
+      .select({ userId: tasksTable.userId, runnerId: tasksTable.runnerId })
+      .from(tasksTable)
+      .where(eq(tasksTable.id, taskId))
+      .limit(1);
+    return task ?? null;
+  };
+  const canJoinTaskRoom = async (taskId: number): Promise<boolean> => {
+    if (!isProduction) return true;
+    if (!identity) return false;
+    if (isAdmin) return true;
+    if (identity.type === "family") return identity.taskId === taskId;
+    const task = await getTaskActors(taskId);
+    if (!task) return false;
+    if (identity.type === "user") return task.userId === identity.id;
+    if (identity.type === "runner") return task.runnerId === identity.id;
+    return false;
+  };
+  const canWriteTaskRealtime = async (taskId: number): Promise<boolean> => {
+    if (!isProduction) return true;
+    if (!identity) return false;
+    if (isAdmin) return true;
+    if (identity.type !== "runner") return false;
+    const task = await getTaskActors(taskId);
+    return task?.runnerId === identity.id;
+  };
 
   socket.on("runner_location", async (data: { taskId: number; runnerId: number; lat: number; lng: number; heading?: number; speed?: number }) => {
     const { taskId, runnerId, lat, lng, heading = 0, speed = 0 } = data;
@@ -249,13 +277,13 @@ io.on("connection", (socket) => {
 
   // Join task room (requires an authenticated identity in production)
   // Family tracking tokens are authorized only for the specific task they were issued for
-  socket.on("join_task", (data: { taskId: number }) => {
+  socket.on("join_task", async (data: { taskId: number }) => {
     if (identity?.type === "family" && identity.taskId === data.taskId) {
       socket.join(`task_${data.taskId}`);
       logger.info({ socketId: socket.id, taskId: data.taskId }, "Joined task room via family tracking");
       return;
     }
-    if (!allow(identity != null)) {
+    if (!await canJoinTaskRoom(data.taskId)) {
       logger.warn({ socketId: socket.id, taskId: data.taskId }, "Unauthorized join_task");
       return;
     }
@@ -264,13 +292,21 @@ io.on("connection", (socket) => {
   });
 
   // Task status update broadcast
-  socket.on("task_status_update", (data: { taskId: number; status: string; timestamp?: string }) => {
+  socket.on("task_status_update", async (data: { taskId: number; status: string; timestamp?: string }) => {
+    if (!await canWriteTaskRealtime(data.taskId)) {
+      logger.warn({ socketId: socket.id, taskId: data.taskId }, "Unauthorized task_status_update");
+      return;
+    }
     io.to(`task_${data.taskId}`).emit("task_status_changed", data);
     io.to("admin_fleet").emit("task_status_changed", data);
   });
 
   // Proof photo uploaded event
-  socket.on("proof_photo_uploaded", (data: { taskId: number; proof: Record<string, unknown> }) => {
+  socket.on("proof_photo_uploaded", async (data: { taskId: number; proof: Record<string, unknown> }) => {
+    if (!await canWriteTaskRealtime(data.taskId)) {
+      logger.warn({ socketId: socket.id, taskId: data.taskId }, "Unauthorized proof_photo_uploaded");
+      return;
+    }
     io.to(`task_${data.taskId}`).emit("new_proof_photo", data);
     io.to("admin_fleet").emit("new_proof_photo", data);
   });
@@ -297,19 +333,31 @@ io.on("connection", (socket) => {
   });
 
   // Comrade broadcasts waiting timer start
-  socket.on("waiting_timer_start", (data: { taskId: number }) => {
+  socket.on("waiting_timer_start", async (data: { taskId: number }) => {
+    if (!await canWriteTaskRealtime(data.taskId)) {
+      logger.warn({ socketId: socket.id, taskId: data.taskId }, "Unauthorized waiting_timer_start");
+      return;
+    }
     io.to(`task_${data.taskId}`).emit("waiting_timer_update", { taskId: data.taskId, running: true, timestamp: Date.now() });
     io.to("admin_fleet").emit("waiting_timer_update", { taskId: data.taskId, running: true, timestamp: Date.now() });
   });
 
   // Comrade pauses waiting timer
-  socket.on("waiting_timer_pause", (data: { taskId: number; totalMinutes: number }) => {
+  socket.on("waiting_timer_pause", async (data: { taskId: number; totalMinutes: number }) => {
+    if (!await canWriteTaskRealtime(data.taskId)) {
+      logger.warn({ socketId: socket.id, taskId: data.taskId }, "Unauthorized waiting_timer_pause");
+      return;
+    }
     io.to(`task_${data.taskId}`).emit("waiting_timer_update", { taskId: data.taskId, running: false, totalMinutes: data.totalMinutes, timestamp: Date.now() });
     io.to("admin_fleet").emit("waiting_timer_update", { taskId: data.taskId, running: false, totalMinutes: data.totalMinutes, timestamp: Date.now() });
   });
 
   // Comrade updates queue progress
-  socket.on("queue_progress_update", (data: { taskId: number; currentToken: string; counterNumber?: string }) => {
+  socket.on("queue_progress_update", async (data: { taskId: number; currentToken: string; counterNumber?: string }) => {
+    if (!await canWriteTaskRealtime(data.taskId)) {
+      logger.warn({ socketId: socket.id, taskId: data.taskId }, "Unauthorized queue_progress_update");
+      return;
+    }
     io.to(`task_${data.taskId}`).emit("queue_progress", data);
     io.to("admin_fleet").emit("queue_progress", data);
   });

@@ -52,8 +52,9 @@ export function captureException(err: Error, context?: Record<string, unknown>):
  */
 export function getSentryErrorHandler(): ErrorRequestHandler | null {
   if (!Sentry) return null;
-  const errorHandler = (Sentry as unknown as { Handlers?: { errorHandler?: () => ErrorRequestHandler } }).Handlers?.errorHandler?.();
-  return errorHandler ?? null;
+  // Sentry v8+ may export Handlers differently; optional chaining handles null/undefined
+  const SentryAny = Sentry as unknown as { Handlers?: { errorHandler?: () => ErrorRequestHandler } };
+  return SentryAny.Handlers?.errorHandler?.() ?? null;
 }
 
 export { Sentry };

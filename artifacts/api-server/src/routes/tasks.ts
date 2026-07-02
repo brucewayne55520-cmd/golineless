@@ -4,7 +4,7 @@ import path from "path";
 import { Router, type IRouter } from "express";
 import { db, tasksTable, usersTable, runnersTable, notificationsTable, adminSettingsTable, runnerLocationsTable, reviewsTable, paymentAuditLogTable, proofPhotosTable, taskTimelineEventsTable, fraudFlagsTable, z } from "@workspace/db";
 import { eq, and, desc, inArray, sql, type SQL } from "drizzle-orm";
-import { requireUser, requireRunner, extractToken, getUserFromToken, getRunnerFromToken, resolveAdmin, generateOtp as generateAuthOtp } from "../lib/auth";
+import { requireUser, requireRunner, requireAdmin, extractToken, getUserFromToken, getRunnerFromToken, resolveAdmin, generateOtp as generateAuthOtp } from "../lib/auth";
 import { logger } from "../lib/logger";
 import { getIo } from "../lib/socket";
 import { startSmartDispatch, cancelDispatch } from "../lib/dispatch-engine";
@@ -212,7 +212,7 @@ router.post("/tasks", requireUser, validateBody(createTaskSchema), async (req, r
   }
 
   // Phase 9: Pilot Mode enforcement — zone + category validation
-  const [settings] = await db.select({ pilotMode: adminSettingsTable.pilotMode, pilotCategories: adminSettingsTable.pilotCategories, maxTasksPerRunnerPerDay: adminSettingsTable.maxTasksPerRunnerPerDay }).from(adminSettingsTable).limit(1);
+  const [settings] = await db.select({ pilotMode: adminSettingsTable.pilotMode, pilotCategories: adminSettingsTable.pilotCategories, pilotZones: adminSettingsTable.pilotZones, maxTasksPerRunnerPerDay: adminSettingsTable.maxTasksPerRunnerPerDay }).from(adminSettingsTable).limit(1);
   if (settings?.pilotMode) {
     const allowedCats = settings.pilotCategories || ["medicine","document","bank","govt_office","courier","senior_care"];
     const { category, locationArea, locationCity } = req.body;
@@ -225,8 +225,10 @@ router.post("/tasks", requireUser, validateBody(createTaskSchema), async (req, r
       res.status(403).json({ error: "Currently available only in Ahmedabad Pilot Zones", reason: "City not supported" });
       return;
     }
-    if (locationArea && !PILOT_ZONES.some(z => locationArea.toLowerCase().includes(z.toLowerCase()))) {
-      res.status(403).json({ error: "Currently available only in Ahmedabad Pilot Zones", allowedZones: PILOT_ZONES, reason: "Area not in pilot zone" });
+    // F6: Read pilotZones from admin settings instead of hardcoded PILOT_ZONES
+    const pilotZonesForTask = settings.pilotZones || PILOT_ZONES;
+    if (locationArea && !pilotZonesForTask.some(z => locationArea.toLowerCase().includes(z.toLowerCase()))) {
+      res.status(403).json({ error: "Currently available only in Ahmedabad Pilot Zones", allowedZones: pilotZonesForTask, reason: "Area not in pilot zone" });
       return;
     }
   }
@@ -301,7 +303,10 @@ router.post("/tasks", requireUser, validateBody(createTaskSchema), async (req, r
     });
     let discountAmount = 0;
     let finalPrice = revenue.price;
-    if (couponCode?.toUpperCase() === "GOLINELESS10") {
+    // M2: Check configurable coupons from admin settings
+    const [couponSettings] = await db.select({ activeCoupons: adminSettingsTable.activeCoupons }).from(adminSettingsTable).limit(1);
+    const activeCoupons = couponSettings?.activeCoupons ?? ["GOLINELESS10"];
+    if (couponCode && activeCoupons.map(c => c.toUpperCase()).includes(couponCode.toUpperCase())) {
       discountAmount = Math.round(revenue.price * 0.1);
       finalPrice -= discountAmount;
     }
@@ -350,16 +355,19 @@ router.post("/tasks", requireUser, validateBody(createTaskSchema), async (req, r
     const invoiceNumber = generateInvoiceNumber(task.id);
     await db.update(tasksTable).set({ invoiceNumber }).where(eq(tasksTable.id, task.id));
 
-    // [OFFLINE MODE] Razorpay order creation disabled for pilot — all tasks are cash-on-completion
-    // Uncomment below to re-enable online payment order creation:
-    // let paymentOrder: Record<string, unknown> | null = null;
-    // if (paymentMethod === "online" && process.env.RAZORPAY_KEY_ID && process.env.RAZORPAY_KEY_SECRET) {
-    //   const amountPaise = Math.round(Number(finalPrice) * 100);
-    //   paymentOrder = await createOrder(amountPaise, "INR", invoiceNumber, {
-    //     taskId: String(task.id),
-    //     userId: String(user.id),
-    //   });
-    // }
+    // F1: Razorpay order creation — enabled when keys are configured
+    let paymentOrder: Record<string, unknown> | null = null;
+    if (paymentMethod === "online" && process.env.RAZORPAY_KEY_ID && process.env.RAZORPAY_KEY_SECRET) {
+      try {
+        const amountPaise = Math.round(Number(finalPrice) * 100);
+        paymentOrder = await createOrder(amountPaise, "INR", invoiceNumber, {
+          taskId: String(task.id),
+          userId: String(user.id),
+        });
+      } catch (e) {
+        logger.error({ err: e }, "Razorpay order creation failed — falling back to cash mode");
+      }
+    }
 
     // Notify user via Socket.IO
     getIo().to(`user_${user.id}`).emit("task_booked", { taskId: task.id });
@@ -377,20 +385,17 @@ router.post("/tasks", requireUser, validateBody(createTaskSchema), async (req, r
 
     const enriched = await getTaskWithRelations(task.id);
     // L5: Return plaintext OTP to the creator (only time it's visible)
-    // [OFFLINE MODE] No payment order returned — tasks are cash-on-completion
-    // Uncomment below to re-enable payment order in response:
     res.status(201).json({
       ...enriched,
       otp, // plaintext 6-digit OTP — shown once to the user
-      paymentOrder: null,
-      // paymentOrder: paymentOrder
-      //   ? {
-      //       orderId: paymentOrder.id,
-      //       amount: paymentOrder.amount,
-      //       currency: paymentOrder.currency,
-      //       keyId: process.env.RAZORPAY_KEY_ID,
-      //     }
-      //   : null,
+      paymentOrder: paymentOrder
+        ? {
+            orderId: paymentOrder.id,
+            amount: paymentOrder.amount,
+            currency: paymentOrder.currency,
+            keyId: process.env.RAZORPAY_KEY_ID,
+          }
+        : null,
     });
   } catch (err: unknown) {
     const e = err instanceof Error ? err : new Error(String(err));
@@ -1088,11 +1093,8 @@ router.post("/tasks/:id/confirm-cash-user", requireUser, async (req, res): Promi
 });
 
 // POST /tasks/:id/refund — Admin-only refund for confirmed payments (#11)
-router.post("/tasks/:id/refund", requireUser, async (req, res): Promise<void> => {
-  const token = extractToken(req);
-  const isAdmin = !!(token && await resolveAdmin(token));
-  if (!isAdmin) { res.status(401).json({ error: "Admin only" }); return; }
-
+router.post("/tasks/:id/refund", requireAdmin, async (req, res): Promise<void> => {
+  const admin = req.admin;
   const id = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id, 10);
   const { reason } = req.body;
 
@@ -1113,8 +1115,8 @@ router.post("/tasks/:id/refund", requireUser, async (req, res): Promise<void> =>
 
   await db.insert(paymentAuditLogTable).values({
     taskId: id, previousStatus, newStatus: "refunded",
-    actor: "admin", actorType: "admin", reason: reason || "Admin refund",
-    metadata: JSON.stringify({ amount: task.price, refundBy: "admin" }),
+    actor: admin?.username || "admin", actorType: "admin", reason: reason || "Admin refund",
+    metadata: JSON.stringify({ amount: task.price, refundBy: admin?.username || "admin", adminId: admin?.id ?? null }),
   });
 
   // Notify user
@@ -1236,6 +1238,24 @@ router.post("/tasks/:id/verify-otp", requireRunner, async (req, res): Promise<vo
         ? "paid"
         : "pending";
   const reconciledPaidAmount = reconciledPaymentStatus === "paid" ? Number(task.price) : 0;
+  const shouldStartCashDisputeWindow =
+    task.paymentMethod === "cash" &&
+    reconciledPaymentStatus === "cash_pending" &&
+    !task.paymentConfirmedAt;
+  if (shouldStartCashDisputeWindow) {
+    const cashLabel = `Cash payment of Rs ${task.price} marked pending by OTP completion - 24hr dispute window active`;
+    timelineEntries.push(makeTimelineEntry("cash_pending", cashLabel, { runnerId: runner.id, amount: task.price }));
+    recordTimelineEvent(id, "cash_pending", cashLabel, now, { runnerId: runner.id, amount: task.price });
+    await db.insert(paymentAuditLogTable).values({
+      taskId: id,
+      previousStatus: task.paymentStatus,
+      newStatus: "cash_pending",
+      actor: runner.name || String(runner.id),
+      actorType: "runner",
+      reason: "Cash dispute window started on OTP completion",
+      metadata: JSON.stringify({ runnerId: runner.id, amount: task.price, source: "otp_completion" }),
+    });
+  }
   if (reconciledPaymentStatus !== "paid") {
     timelineEntries.push(makeTimelineEntry("payment_pending", "Task completed — online payment not yet captured"));
     // Dual-write: record payment_pending timeline event in normalized table
@@ -1250,6 +1270,7 @@ router.post("/tasks/:id/verify-otp", requireRunner, async (req, res): Promise<vo
       completedAt: now,
       paymentStatus: reconciledPaymentStatus,
       paidAmount: String(reconciledPaidAmount),
+      ...(shouldStartCashDisputeWindow ? { paymentConfirmedAt: now, paymentConfirmedBy: runner.id } : {}),
       activeRunnerId: null, // Clear active runner on completion
       otpAttempts: 0,
       otpLockedUntil: null,
@@ -1280,6 +1301,15 @@ router.post("/tasks/:id/verify-otp", requireRunner, async (req, res): Promise<vo
       message: `Your task has been completed successfully. Please rate your Comrade.`,
       taskId: task.id,
     });
+    if (shouldStartCashDisputeWindow) {
+      await db.insert(notificationsTable).values({
+        userId: task.userId,
+        type: "cash_pending",
+        title: "Confirm Cash Payment",
+        message: `Your Comrade marked Rs ${task.price} cash as received. Please confirm or dispute within 24 hours.`,
+        taskId: task.id,
+      });
+    }
     // Notify user via socket
     getIo().to(`user_${task.userId}`).emit("task_completed", { taskId: id, runnerEarning: Number(task.runnerEarning) });
   }
@@ -1341,6 +1371,10 @@ router.post("/tasks/:id/cancel", async (req, res): Promise<void> => {
 
 // Shared cancel logic (accepts optional cancelledBy for audit)
 async function cancelAndRespond(existing: typeof tasksTable.$inferSelect, id: number, res: import("express").Response, cancelledBy?: string): Promise<void> {
+  if (existing.status === "completed" || existing.status === "cancelled") {
+    res.status(409).json({ error: `Cannot cancel a task that is already ${existing.status}` });
+    return;
+  }
 
   // HIGH FIX 2: Cancel any pending dispatch waves
   cancelDispatch(id);
@@ -1388,6 +1422,17 @@ router.post("/tasks/:id/review", requireUser, validateBody(reviewSchema), async 
   // Verify the user owns this task
   if (task.userId !== user.id) {
     res.status(403).json({ error: "You can only review your own tasks" }); return;
+  }
+  if (task.status !== "completed") {
+    res.status(400).json({ error: "You can only review completed tasks" }); return;
+  }
+  const [existingReview] = await db
+    .select({ id: reviewsTable.id })
+    .from(reviewsTable)
+    .where(and(eq(reviewsTable.taskId, id), eq(reviewsTable.userId, user.id)))
+    .limit(1);
+  if (existingReview) {
+    res.status(409).json({ error: "You have already reviewed this task" }); return;
   }
 
   const [rev] = await db.insert(reviewsTable).values({
@@ -1659,8 +1704,8 @@ router.get("/family/track/:token", async (req, res): Promise<void> => {
   }
   const [user] = task.userId ? await db.select().from(usersTable).where(eq(usersTable.id, task.userId)) : [null];
   const [runner] = task.runnerId ? await db.select().from(runnersTable).where(eq(runnersTable.id, task.runnerId)) : [null];
-  // Strip sensitive data from runner
-  const safeRunner = runner ? (({ otp, otpExpiresAt, aadhaarNumber, phone, ...safe }) => safe)(runner) : null;
+  // M9: Include runner phone for family tracking (masked for privacy)
+  const safeRunner = runner ? (({ otp, otpExpiresAt, aadhaarNumber, ...safe }) => ({ ...safe, phone: safe.phone ? safe.phone.slice(0, 5) + "****" : null }))(runner) : null;
 
   // Get latest runner location
   let runnerLocation: Record<string, unknown> | null = null;

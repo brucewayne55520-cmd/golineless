@@ -208,22 +208,15 @@ export async function checkDuplicateHash(hash: string): Promise<{ isDuplicate: b
   return { isDuplicate: false, count: 1 };
 }
 
-/** Register a new image hash in the dedup index */
+/** Register a new image hash in the dedup index (uses atomic upsert to prevent race conditions) */
 export async function registerHash(hash: string, photoId: number): Promise<void> {
-  const [existing] = await db
-    .select({ id: verificationHashesTable.id })
-    .from(verificationHashesTable)
-    .where(eq(verificationHashesTable.originalHash, hash));
-
-  if (existing) {
-    // Already registered — increment count
-    await db
-      .update(verificationHashesTable)
-      .set({ occurrenceCount: sql`${verificationHashesTable.occurrenceCount} + 1` })
-      .where(eq(verificationHashesTable.originalHash, hash));
-  } else {
-    await db.insert(verificationHashesTable).values({ originalHash: hash, photoId, occurrenceCount: 1 });
-  }
+  await db
+    .insert(verificationHashesTable)
+    .values({ originalHash: hash, photoId, occurrenceCount: 1 })
+    .onConflictDoUpdate({
+      target: verificationHashesTable.originalHash,
+      set: { occurrenceCount: sql`${verificationHashesTable.occurrenceCount} + 1` },
+    });
 }
 
 /** Extract file extension from mime type */

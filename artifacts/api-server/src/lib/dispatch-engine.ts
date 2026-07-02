@@ -256,8 +256,7 @@ export async function startSmartDispatch(taskId: number): Promise<{ wave: number
         return;
       }
 
-      // Find comrades in the expanded ring (from oldRadius+1 to newRadius)
-      const innerRadius = radius;
+      // Find comrades in the expanded ring (up to newRadius)
       const batch = await findNearbyComrades(taskLat, taskLng, newRadius);
       const newComrades = batch.filter(c => !dispatch.totalNotified.has(c.runner.id));
 

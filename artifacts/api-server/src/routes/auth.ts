@@ -1,11 +1,12 @@
 import { Router, type IRouter } from "express";
 import crypto from "crypto";
-import { db, usersTable, runnersTable, userSessionsTable, runnerSessionsTable, adminsTable, adminSessionsTable, paymentAuditLogTable, z } from "@workspace/db";
+import { db, usersTable, runnersTable, userSessionsTable, runnerSessionsTable, adminsTable, adminSessionsTable, paymentAuditLogTable, adminSettingsTable, z } from "@workspace/db";
 import { eq, and, ne } from "drizzle-orm";
 import { generateToken, verifyPassword, extractToken, hashPassword, setAuthCookie, clearAuthCookie, requireAdmin } from "../lib/auth";
 import { validateNeonToken, exchangeSessionVerifier, type NeonAuthUser } from "../lib/neon-auth";
 
 import { sendEmail } from "../lib/email";
+import { sendOtp as sendPhoneOtp, verifyOtp as verifyPhoneOtp } from "../lib/sms";
 import { validateBody } from "../lib/validate";
 import { logger } from "../lib/logger";
 
@@ -36,6 +37,16 @@ const resetPasswordSchema = z.object({
   role: z.enum(["user", "runner"]).optional(),
 }).passthrough();
 
+const phoneOtpRequestSchema = z.object({
+  phone: z.string().min(1),
+  role: z.enum(["user", "runner"]).optional(),
+}).passthrough();
+
+const phoneOtpVerifySchema = z.object({
+  phone: z.string().min(1),
+  otp: z.string().min(1),
+  role: z.enum(["user", "runner"]).optional(),
+}).passthrough();
 
 
 // POST /auth/logout
@@ -48,6 +59,77 @@ router.post("/auth/logout", async (req, res): Promise<void> => {
   }
   clearAuthCookie(res);
   res.json({ message: "Logged out" });
+});
+
+// POST /auth/send-otp - Phone OTP compatibility flow
+router.post("/auth/send-otp", validateBody(phoneOtpRequestSchema), async (req, res): Promise<void> => {
+  const { phone, role = "user" } = req.body;
+
+  try {
+    // H1: Check if auto-create accounts is enabled
+    const [settings] = await db.select({ autoCreateAccounts: adminSettingsTable.autoCreateAccounts }).from(adminSettingsTable).limit(1);
+    const autoCreate = settings?.autoCreateAccounts ?? true;
+
+    if (role === "runner") {
+      const [existing] = await db.select().from(runnersTable).where(eq(runnersTable.phone, phone));
+      if (!existing && !autoCreate) { res.status(404).json({ error: "Account not found. Please sign up first." }); return; }
+      if (!existing) await db.insert(runnersTable).values({ phone }).returning();
+    } else {
+      const [existing] = await db.select().from(usersTable).where(eq(usersTable.phone, phone));
+      if (!existing && !autoCreate) { res.status(404).json({ error: "Account not found. Please sign up first." }); return; }
+      if (!existing) await db.insert(usersTable).values({ phone }).returning();
+    }
+
+    const sent = await sendPhoneOtp(phone);
+    if (!sent) { res.status(500).json({ error: "Failed to send OTP" }); return; }
+    res.json({ message: "OTP sent", sent: true });
+  } catch (err) {
+    logger.error({ err, phone, role }, "send-otp: failed");
+    res.status(500).json({ error: "Failed to send OTP" });
+  }
+});
+
+// POST /auth/verify-otp - Phone OTP compatibility flow
+router.post("/auth/verify-otp", validateBody(phoneOtpVerifySchema), async (req, res): Promise<void> => {
+  const { phone, otp, role = "user" } = req.body;
+
+  const valid = await verifyPhoneOtp(phone, otp);
+  if (!valid) { res.status(401).json({ error: "Invalid OTP" }); return; }
+
+  try {
+    const token = generateToken();
+    const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+
+  // H1: Check auto-create setting for verify-otp as well
+  const [otpSettings] = await db.select({ autoCreateAccounts: adminSettingsTable.autoCreateAccounts }).from(adminSettingsTable).limit(1);
+  const autoCreateOtp = otpSettings?.autoCreateAccounts ?? true;
+
+  if (role === "runner") {
+    let [runner] = await db.select().from(runnersTable).where(eq(runnersTable.phone, phone));
+    if (!runner && !autoCreateOtp) { res.status(404).json({ error: "Account not found. Please sign up first." }); return; }
+    if (!runner) {
+      [runner] = await db.insert(runnersTable).values({ phone }).returning();
+    }
+    await db.insert(runnerSessionsTable).values({ runnerId: runner.id, token, expiresAt });
+    const { passwordHash: _, otp: __, otpExpiresAt: ___, ...safeRunner } = runner;
+    setAuthCookie(res, token);
+    res.json({ token, role: "runner", runner: safeRunner });
+    return;
+  }
+
+  let [user] = await db.select().from(usersTable).where(eq(usersTable.phone, phone));
+  if (!user && !autoCreateOtp) { res.status(404).json({ error: "Account not found. Please sign up first." }); return; }
+  if (!user) {
+    [user] = await db.insert(usersTable).values({ phone }).returning();
+  }
+  await db.insert(userSessionsTable).values({ userId: user.id, token, expiresAt });
+  const { passwordHash: _, otp: __, otpExpiresAt: ___, ...safeUser } = user;
+  setAuthCookie(res, token);
+  res.json({ token, role: "user", user: safeUser });
+  } catch (err) {
+    logger.error({ err, phone, role }, "verify-otp: failed");
+    res.status(500).json({ error: "Failed to verify OTP" });
+  }
 });
 
 // POST /auth/signup - Email/Password Signup

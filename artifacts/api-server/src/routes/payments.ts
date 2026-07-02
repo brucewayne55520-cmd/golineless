@@ -62,7 +62,7 @@ router.post("/payments/webhook", async (req, res): Promise<void> => {
     const signature = req.headers["x-razorpay-signature"] as string;
     const webhookSecret = process.env.RAZORPAY_WEBHOOK_SECRET;
     if (webhookSecret && signature) {
-      const { verifyWebhookSignature } = await import("../lib/payments");
+      const { verifyWebhookSignature } = await import("../lib/payments") as typeof import("../lib/payments");
       const rawBody = (req as unknown as { rawBody?: string }).rawBody;
       if (!rawBody || !verifyWebhookSignature(rawBody, signature, webhookSecret)) {
         logger.warn("Webhook signature verification failed");

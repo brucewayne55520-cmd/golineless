@@ -1,5 +1,4 @@
 import crypto from "crypto";
-import { logger } from "./logger";
 
 /**
  * AES-256-GCM encryption for sensitive PII (Aadhaar numbers, etc.)
@@ -17,7 +16,7 @@ function getDerivedKey(): Buffer {
   if (_derivedKey) return _derivedKey;
   const passphrase = process.env.ENCRYPTION_KEY || process.env.SESSION_SECRET || "golineless-default-dev-key";
   if (!process.env.ENCRYPTION_KEY && !process.env.SESSION_SECRET && process.env.NODE_ENV === "production") {
-    logger.error("[CRYPTO] No ENCRYPTION_KEY or SESSION_SECRET set in production! Using default dev key. Set ENCRYPTION_KEY for real encryption.");
+    throw new Error("[CRYPTO] ENCRYPTION_KEY or SESSION_SECRET must be set in production");
   }
   _derivedKey = crypto.scryptSync(passphrase, "golineless-salt-v1", KEY_LENGTH);
   return _derivedKey;

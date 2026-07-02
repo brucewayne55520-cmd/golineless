@@ -161,6 +161,9 @@ export async function uploadDataUrl(
   // If not a data URL or B2 not configured, return as-is
   if (!dataUrl.startsWith("data:")) return dataUrl;
   if (!isConfigured) {
+    if (process.env.NODE_ENV === "production") {
+      throw new Error("B2 storage is required for data URL uploads in production");
+    }
     logger.warn({ folder }, "B2 not configured — keeping base64 data URL in DB");
     return dataUrl;
   }
@@ -179,6 +182,9 @@ export async function uploadDataUrl(
   if (result) {
     logger.info({ key: result.key, folder, sizeBytes: buffer.length }, "Data URL uploaded to B2");
     return result.url;
+  }
+  if (process.env.NODE_ENV === "production") {
+    throw new Error("B2 upload failed for data URL upload in production");
   }
   // Upload failed — keep the original data URL as fallback
   logger.error({ folder, sizeBytes: buffer.length }, "B2 upload failed — keeping base64 fallback");

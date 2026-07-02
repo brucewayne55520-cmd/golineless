@@ -47,5 +47,11 @@ export const adminSettingsTable = pgTable("admin_settings", {
   upiPayeeName: text("upi_payee_name").notNull().default("Go LineLess"),
   // S2: Specializations config — admin defines available runner specializations
   availableSpecializations: text("available_specializations").array().notNull().default(["hospital", "senior", "bank", "documentation", "emergency", "female"]),
+  // H1: OTP auto-create accounts toggle
+  autoCreateAccounts: boolean("auto_create_accounts").notNull().default(true),
+  // F6: Configurable pilot zones for heatmap
+  pilotZones: text("pilot_zones").array().notNull().default(["Juhapura","Sarkhej","Prahladnagar","Makarba","Paldi","Vasna","Jamalpur","Kalupur"]),
+  // M2: Configurable active coupons (JSON array of {code, discountPercent, isActive})
+  activeCoupons: text("active_coupons").array().notNull().default(["GOLINELESS10"]),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 });

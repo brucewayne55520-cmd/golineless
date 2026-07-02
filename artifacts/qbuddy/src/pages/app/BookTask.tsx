@@ -59,6 +59,7 @@ export default function BookTask() {
   const [description, setDescription] = useState("");
   const [seniorInvolved, setSeniorInvolved] = useState(false);
   const [urgency, setUrgency] = useState<"normal" | "urgent">("normal");
+  const [priorityLevel, setPriorityLevel] = useState<"normal" | "high" | "vip">("normal");
   const [specialInstructions, setSpecialInstructions] = useState("");
   const [scheduledDate, setScheduledDate] = useState(new Date().toISOString().split("T")[0]);
   const [scheduledTime, setScheduledTime] = useState("10:00");
@@ -111,7 +112,7 @@ export default function BookTask() {
           category,
           distanceBand,
           urgency,
-          priorityLevel: "normal",
+          priorityLevel,
           couponCode: couponApplied ? coupon : undefined,
         } as PricingInput,
       }, {          onSuccess: (data: PricingResponse) => setBackendPrice(data as unknown as NonNullable<typeof backendPrice>),
@@ -119,7 +120,7 @@ export default function BookTask() {
       });
     }, 300);
     return () => clearTimeout(timer);
-  }, [category, distanceBand, urgency, couponApplied, coupon]);
+  }, [category, distanceBand, urgency, priorityLevel, couponApplied, coupon]);
 
   // C5: ONLY use authoritative backend price. Backend already returns final price (after discount).
   const displayTotal = backendPrice != null ? backendPrice.price : null;
@@ -171,7 +172,7 @@ export default function BookTask() {
     if (navigator.vibrate) navigator.vibrate([50, 30, 50]);
     createTask.mutate({
       data: {
-        category, description, urgency, locationName, locationArea, locationCity: "Ahmedabad",
+        category, description, urgency, priorityLevel, locationName, locationArea, locationCity: "Ahmedabad",
         distanceBand, scheduledDate, scheduledTime, paymentMethod,
         couponCode: couponApplied ? coupon : undefined,
         seniorInvolved, specialInstructions,
@@ -313,6 +314,33 @@ export default function BookTask() {
                     </button>
                   ))}
                 </div>
+              </div>
+
+              {/* H11: Priority Level selector */}
+              <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
+                <label className="text-sm font-bold text-gray-700 mb-3 block">Priority Level</label>
+                <div className="grid grid-cols-3 gap-2">
+                  {([
+                    { val: "normal" as const, label: "Standard", sub: "No extra fee" },
+                    { val: "high" as const, label: "High", sub: `+Rs ${backendPrice?.breakdown?.priorityFee ?? 30}` },
+                    { val: "vip" as const, label: "VIP", sub: `+Rs ${backendPrice?.breakdown?.priorityFee ?? 60}` },
+                  ]).map((opt) => (
+                    <button
+                      key={opt.val}
+                      onClick={() => {
+                        setPriorityLevel(opt.val);
+                        if (opt.val === "vip") setUrgency("urgent");
+                        else if (urgency === "urgent" && opt.val === "normal") setUrgency("normal");
+                      }}
+                      className="p-3 rounded-xl border-2 text-left transition-all"
+                      style={priorityLevel === opt.val ? { borderColor: DARK, background: "#EEF2FA" } : { borderColor: "#E5E7EB" }}
+                    >
+                      <div className="text-sm font-bold" style={{ color: priorityLevel === opt.val ? DARK : "#374151" }}>{opt.label}</div>
+                      <div className="text-[10px] text-gray-500 mt-0.5">{opt.sub}</div>
+                    </button>
+                  ))}
+                </div>
+                <p className="text-[10px] text-gray-400 mt-2">Priority level determines dispatch urgency and pricing</p>
               </div>
 
               {/* Senior toggle */}
@@ -506,6 +534,12 @@ export default function BookTask() {
                   // Fix #47: Validate location fields before proceeding
                   if (!locationName.trim() && !locationArea.trim()) {
                     toast.error("Please enter a location name or area so the Comrade knows where to go");
+                    return;
+                  }
+                  // M14: Validate scheduled date is not in the past
+                  const selectedDateTime = new Date(`${scheduledDate}T${scheduledTime}`);
+                  if (selectedDateTime < new Date()) {
+                    toast.error("Please select a future date and time");
                     return;
                   }
                   // Haptic feedback (#96)

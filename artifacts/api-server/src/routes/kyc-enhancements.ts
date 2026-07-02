@@ -58,6 +58,12 @@ router.post("/admin/kyc/bulk", requireAdmin, async (req, res): Promise<void> => 
     return;
   }
 
+  // Validate all IDs are positive finite numbers
+  if (!ids.every(id => typeof id === "number" && Number.isFinite(id) && id > 0)) {
+    res.status(400).json({ error: "All IDs must be positive finite numbers" });
+    return;
+  }
+
   const table = entityType === "runner" ? runnersTable : usersTable;
   const results: { id: number; success: boolean; error?: string }[] = [];
 

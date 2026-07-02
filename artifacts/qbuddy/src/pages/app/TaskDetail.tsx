@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
-import { ArrowLeft, Star, Phone, MessageSquare, CheckCircle2, Camera, Clock, Navigation, Share2, UserPlus, Crosshair, AlertTriangle, FileText, Smartphone } from "lucide-react";
+import { ArrowLeft, Star, Phone, MessageSquare, CheckCircle2, Camera, Clock, Navigation, Share2, UserPlus, Crosshair, AlertTriangle, FileText, Smartphone, XCircle } from "lucide-react";
 import { useGetTask, useSubmitReview, useGetRunnerLocation, useGenerateFamilyTrackingLink, useSubmitCustomerFeedback } from "@workspace/api-client-react";
 import { UserBottomNav } from "@/components/BottomNav";
 import { CategoryIcon } from "@/components/CategoryIcon";
@@ -122,6 +122,22 @@ function ProofGallery({ photos }: { photos: string[] }) {
   );
 }
 
+type TimelineEntry = { status?: string; label?: string; timestamp?: string; proofType?: string };
+
+function parseTimelineEntries(entries: unknown[]): TimelineEntry[] {
+  return entries.flatMap((entry) => {
+    if (typeof entry === "string") {
+      try {
+        const parsed = JSON.parse(entry);
+        return parsed && typeof parsed === "object" ? [parsed as TimelineEntry] : [];
+      } catch {
+        return [];
+      }
+    }
+    return entry && typeof entry === "object" ? [entry as TimelineEntry] : [];
+  });
+}
+
 export default function TaskDetail({ id }: Props) {
   const [, navigate] = useLocation();
   const [rating, setRating] = useState(0);
@@ -149,6 +165,11 @@ export default function TaskDetail({ id }: Props) {
   const [showDisputeModal, setShowDisputeModal] = useState(false);
   const [disputeReason, setDisputeReason] = useState("");
   const [disputeLoading, setDisputeLoading] = useState(false);
+
+  // Cancel task state
+  const [showCancelModal, setShowCancelModal] = useState(false);
+  const [cancelReason, setCancelReason] = useState("");
+  const [cancelLoading, setCancelLoading] = useState(false);
 
   // (#19) Dispute countdown timer
   const [disputeCountdown, setDisputeCountdown] = useState("");
@@ -288,6 +309,35 @@ export default function TaskDetail({ id }: Props) {
   };
 
   const formatTime = (s: number) => `${String(Math.floor(s / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`;
+
+  // C1+C2: Handle cancel task
+  const handleCancelTask = async () => {
+    setCancelLoading(true);
+    try {
+      const token = localStorage.getItem("golineless_user_token") || "";
+      const res = await fetch(`/api/tasks/${id}/cancel`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ cancelReason: cancelReason || "Cancelled by user" }),
+      });
+      if (res.ok) {
+        toast.success("Task cancelled successfully");
+        setShowCancelModal(false);
+        setCancelReason("");
+        refetch();
+      } else {
+        const err = await res.json();
+        toast.error(err.error || "Failed to cancel task");
+      }
+    } catch {
+      toast.error("Failed to cancel task");
+    } finally {
+      setCancelLoading(false);
+    }
+  };
 
   const handleFamilyTracking = async () => {
     if (!familyName.trim() || !familyPhone.trim()) { toast.error("Please enter name and phone"); return; }
@@ -482,7 +532,17 @@ export default function TaskDetail({ id }: Props) {
               <span className="font-bold" style={{ color: DARK }}>{formatCurrency((Number(t.price) || 0) + (Number(t.waitingChargeAmount) || 0))}</span>
             </div>
           </div>
-          {/* (#16) Cash payment confirm/dispute actions */}           {t.paymentStatus === "cash_pending" && (
+          {/* C1+C2: Cancel button for user's own pending/assigned tasks */}
+        {t.status !== "completed" && t.status !== "cancelled" && (
+          <div className="mt-3">
+            <button onClick={() => setShowCancelModal(true)}
+              className="w-full py-2.5 rounded-xl border border-red-200 text-red-500 font-semibold text-sm flex items-center justify-center gap-2 hover:bg-red-50 transition-colors">
+              <XCircle size={14} /> Cancel Task
+            </button>
+          </div>
+        )}
+
+        {/* (#16) Cash payment confirm/dispute actions */}           {t.paymentStatus === "cash_pending" && (
             <div className="mt-3 space-y-2">
               {disputeCountdown && (
                 <div className="bg-amber-50 border border-amber-200 rounded-xl px-3 py-2 flex items-center gap-2">
@@ -679,7 +739,7 @@ export default function TaskDetail({ id }: Props) {
 
         {/* Queue Timeline — parsed from taskTimeline entries */}
         {(() => {
-          const queueEntries = (t.taskTimeline || []).filter((e: { status?: string; label?: string; timestamp?: string; proofType?: string }) => e?.status === "queue_updated");
+          const queueEntries = parseTimelineEntries(t.taskTimeline || []).filter((e) => e?.status === "queue_updated");
           if (queueEntries.length === 0) return null;
           return (
             <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
@@ -687,7 +747,7 @@ export default function TaskDetail({ id }: Props) {
                 <Navigation size={14} /> Queue Timeline
               </h3>
               <div className="space-y-2">
-                {queueEntries.map((entry: { status?: string; label?: string; timestamp?: string; proofType?: string }, i: number) => (
+                {queueEntries.map((entry, i: number) => (
                   <div key={i} className="flex items-start gap-2 text-xs">
                     <div className="w-2 h-2 rounded-full mt-1 flex-shrink-0" style={{ background: BLUE }} />
                     <div className="flex-1 min-w-0">
@@ -773,6 +833,40 @@ export default function TaskDetail({ id }: Props) {
       </div>
 
       {/* (#16) Dispute Confirmation Modal */}
+      {/* C1+C2: Cancel Task Modal */}
+      <AnimatePresence>
+        {showCancelModal && (
+          <>
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-black/40 z-40" onClick={() => setShowCancelModal(false)} />
+            <motion.div initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }} transition={{ type: "spring", stiffness: 200, damping: 25 }}
+              className="fixed bottom-0 left-0 right-0 bg-white rounded-t-3xl z-50 p-6 shadow-2xl">
+              <div className="w-10 h-1 bg-gray-200 rounded-full mx-auto mb-4" />
+              <div className="flex items-center gap-2 mb-2">
+                <AlertTriangle size={18} className="text-red-500" />
+                <h3 className="font-black text-gray-900 text-lg">Cancel Task</h3>
+              </div>
+              <p className="text-gray-400 text-sm mb-4">Are you sure you want to cancel this task? {t.runner ? "Your assigned Comrade will be notified." : "The task will be removed from the dispatch queue."}</p>
+              <div className="space-y-3">
+                <textarea value={cancelReason} onChange={e => setCancelReason(e.target.value)}
+                  placeholder="Reason for cancellation (optional)"
+                  rows={2}
+                  className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 resize-none"
+                  style={{ "--tw-ring-color": "#EF4444" } as React.CSSProperties} />
+                <div className="flex gap-3">
+                  <button onClick={() => setShowCancelModal(false)} className="flex-1 py-3 rounded-xl border border-gray-200 text-gray-600 font-semibold text-sm">
+                    Keep Task
+                  </button>
+                  <button onClick={handleCancelTask} disabled={cancelLoading}
+                    className="flex-1 py-3 rounded-xl text-white font-bold text-sm" style={{ background: "linear-gradient(135deg, #DC2626, #EF4444)" }}>
+                    {cancelLoading ? "Cancelling..." : "Cancel Task"}
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
       <AnimatePresence>
         {showDisputeModal && (
           <>

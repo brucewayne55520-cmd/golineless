@@ -322,6 +322,32 @@ async function parseSuccessBody(
   }
 }
 
+function readStoredAuthTokenForUrl(url: string): string | null {
+  if (typeof localStorage === "undefined") return null;
+
+  const adminToken = localStorage.getItem("golineless_admin_token");
+  const userToken = localStorage.getItem("golineless_user_token");
+  const runnerToken = localStorage.getItem("golineless_runner_token");
+  const lowerUrl = url.toLowerCase();
+
+  if (lowerUrl.includes("/api/admin")) return adminToken;
+  if (lowerUrl.includes("/api/runners")) return runnerToken;
+  if (lowerUrl.includes("/api/users") || lowerUrl.includes("/api/subscriptions")) return userToken;
+
+  try {
+    const stored = localStorage.getItem("golineless_auth");
+    if (stored) {
+      const parsed = JSON.parse(stored) as { token?: unknown; role?: unknown };
+      if (typeof parsed.token === "string") return parsed.token;
+    }
+  } catch {
+    // Ignore malformed local auth state and fall through to single-token fallback.
+  }
+
+  const tokens = [runnerToken, userToken, adminToken].filter((token): token is string => Boolean(token));
+  return tokens.length === 1 ? tokens[0] : null;
+}
+
 export async function customFetch<T = unknown>(
   input: RequestInfo | URL,
   options: CustomFetchOptions = {},
@@ -358,11 +384,8 @@ export async function customFetch<T = unknown>(
       token = await _authTokenGetter();
     }
 
-    if (!token && typeof localStorage !== "undefined") {
-      token =
-        localStorage.getItem("golineless_runner_token") ||
-        localStorage.getItem("golineless_user_token") ||
-        localStorage.getItem("golineless_admin_token");
+    if (!token) {
+      token = readStoredAuthTokenForUrl(resolveUrl(input));
     }
 
     if (token) {

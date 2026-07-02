@@ -111,7 +111,7 @@ paths:
     post:
       operationId: adminLogin
       tags: [auth]
-      summary: Admin login with admin password
+      summary: Admin login with admin username and password
       requestBody:
         required: true
         content:
@@ -1452,7 +1452,7 @@ paths:
     get:
       operationId: getOperationsCenter
       tags: [operations]
-      summary: Realtime comrade operations stats
+      summary: Realtime runner operations stats
       security:
         - bearerAuth: []
       responses:
@@ -2026,7 +2026,7 @@ paths:
     get:
       operationId: getHeatmap
       tags: [operations]
-      summary: Task demand and comrade supply by Ahmedabad area
+      summary: Task demand and runner supply by Ahmedabad area
       security:
         - bearerAuth: []
       responses:
@@ -2150,7 +2150,7 @@ paths:
     get:
       operationId: getLeaderboard
       tags: [operations]
-      summary: Comrade performance leaderboard
+      summary: Runner performance leaderboard
       security:
         - bearerAuth: []
       parameters:
@@ -2191,7 +2191,7 @@ paths:
     get:
       operationId: getKpiTracker
       tags: [operations]
-      summary: Pilot KPI tracker (tasks, customers, comrades goals)
+      summary: Pilot KPI tracker (tasks, customers, runners goals)
       security:
         - bearerAuth: []
       responses:
@@ -2328,8 +2328,10 @@ components:
 
     AdminLoginInput:
       type: object
-      required: [password]
+      required: [username, password]
       properties:
+        username:
+          type: string
         password:
           type: string
 
@@ -3561,9 +3563,9 @@ components:
           properties:
             avgTrustScore:
               type: integer
-            riskComrades:
+            riskRunners:
               type: integer
-            topComrades:
+            topRunners:
               type: array
               items:
                 type: object
@@ -3639,7 +3641,7 @@ components:
               type: integer
             uniqueUsers:
               type: integer
-            uniqueComrades:
+            uniqueRunners:
               type: integer
 
     ActivityItem:
@@ -4216,7 +4218,7 @@ components:
         customerFeedback:
           type: string
           nullable: true
-        comradeFeedback:
+        runnerFeedback:
           type: string
           nullable: true
         taskQualityScore:
@@ -4249,7 +4251,7 @@ components:
           maximum: 5
         customerFeedback:
           type: string
-        comradeFeedback:
+        runnerFeedback:
           type: string
 
     QualityStats:
@@ -4590,7 +4592,7 @@ components:
           type: integer
         pendingKyc:
           type: integer
-        onlineComrades:
+        onlineRunners:
           type: integer
         timestamp:
           type: string
@@ -4627,7 +4629,7 @@ components:
               type: integer
             users:
               type: integer
-            comrades:
+            runners:
               type: integer
             completed:
               type: integer
@@ -4732,7 +4734,7 @@ components:
                   type: integer
                 unique:
                   type: integer
-            comrades:
+            runners:
               type: object
               properties:
                 total:
@@ -4781,7 +4783,7 @@ components:
       properties:
         period:
           type: string
-        comrades:
+        runners:
           type: array
           items:
             type: object
@@ -4828,9 +4830,9 @@ components:
                 type: integer
               revenue:
                 type: number
-              comrades:
+              runners:
                 type: integer
-              onlineComrades:
+              onlineRunners:
                 type: integer
               avgAcceptTime:
                 type: integer
@@ -4871,7 +4873,7 @@ components:
                   type: integer
                 current:
                   type: integer
-            comrades:
+            runners:
               type: object
               properties:
                 target:
@@ -4958,7 +4960,7 @@ components:
               type: integer
             uniqueWithTasks:
               type: integer
-        comrades:
+        runners:
           type: object
           properties:
             total:
@@ -5029,7 +5031,7 @@ components:
                   type: integer
                 target:
                   type: integer
-            comrades:
+            runners:
               type: object
               properties:
                 current:

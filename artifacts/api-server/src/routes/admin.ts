@@ -2,6 +2,7 @@ import { Router, type IRouter } from "express";
 import { db, tasksTable, runnersTable, usersTable, subscriptionsTable, notificationsTable, adminSettingsTable, adminsTable, supportTicketsTable, reviewsTable, runnerPayoutsTable, paymentAuditLogTable } from "@workspace/db";
 import { eq, and, gte, desc, count, sql, inArray } from "drizzle-orm";
 import { requireAdmin, getUserFromToken, getRunnerFromToken, extractToken, hashPassword } from "../lib/auth";
+import { validateTimelineTransition } from "../lib/gps-engine";
 import { logger } from "../lib/logger";
 import { validateBody } from "../lib/validate";
 import { decrypt, isEncrypted } from "../lib/crypto";
@@ -34,7 +35,7 @@ router.get("/admin/stats", requireAdmin, async (_req, res): Promise<void> => {
     const [
       todayAgg, activeAgg, completedAgg, runnerAgg,
       totalTaskCount, categoryStats, queueTaskRows,
-      cancelledCount, uniqueUsersResult, uniqueComradesResult, pendingCount,
+      cancelledCount, uniqueUsersResult, uniqueRunnersResult, pendingCount,
       recentReviewsResult, weekRevenue, monthRevenue,
       trustTop5, trustBottom5, runnerOnlineOnTask,
       pilotTaskAgg, pilotUserCount,
@@ -69,7 +70,7 @@ router.get("/admin/stats", requireAdmin, async (_req, res): Promise<void> => {
         onlineVerified: sql<number>`COUNT(CASE WHEN ${runnersTable.isOnline} = true AND ${runnersTable.kycStatus} = 'verified' THEN 1 END)`,
         offline: sql<number>`COUNT(CASE WHEN ${runnersTable.isOnline} = false OR ${runnersTable.kycStatus} != 'verified' THEN 1 END)`,
         avgTrustScore: sql<number>`COALESCE(ROUND(AVG(CASE WHEN ${runnersTable.kycStatus} = 'verified' THEN ${runnersTable.trustScore} END)), 0)`,
-        riskComrades: sql<number>`COUNT(CASE WHEN ${runnersTable.kycStatus} = 'verified' AND (${runnersTable.trustScore} < 60 OR ${runnersTable.trustScore} IS NULL) THEN 1 END)`,
+        riskRunners: sql<number>`COUNT(CASE WHEN ${runnersTable.kycStatus} = 'verified' AND (${runnersTable.trustScore} < 60 OR ${runnersTable.trustScore} IS NULL) THEN 1 END)`,
       }).from(runnersTable),
       // Total task count
       db.select({ count: count() }).from(tasksTable),
@@ -132,7 +133,7 @@ router.get("/admin/stats", requireAdmin, async (_req, res): Promise<void> => {
         total: count(),
         completed: sql<number>`COUNT(CASE WHEN ${tasksTable.status} = 'completed' THEN 1 END)`,
         uniqueUsers: sql<number>`COUNT(DISTINCT ${tasksTable.userId})`,
-        uniqueComrades: sql<number>`COUNT(DISTINCT ${tasksTable.runnerId})`,
+        uniqueRunners: sql<number>`COUNT(DISTINCT ${tasksTable.runnerId})`,
         avgAcceptanceTime: sql<number>`COALESCE(ROUND(AVG(CASE WHEN ${tasksTable.timeToAcceptance} IS NOT NULL THEN ${tasksTable.timeToAcceptance} END)), 0)`,
         avgWaitTime: sql<number>`COALESCE(ROUND(AVG(CASE WHEN ${tasksTable.totalWaitingMinutes} > 0 THEN ${tasksTable.totalWaitingMinutes} END)), 0)`,
       }).from(tasksTable),
@@ -143,7 +144,7 @@ router.get("/admin/stats", requireAdmin, async (_req, res): Promise<void> => {
     return {
       todayAgg, activeAgg, completedAgg, runnerAgg,
       totalTaskCount, categoryStats, queueTaskRows,
-      cancelledCount, uniqueUsersResult, uniqueComradesResult, pendingCount,
+      cancelledCount, uniqueUsersResult, uniqueRunnersResult, pendingCount,
       recentReviewsResult, weekRevenue, monthRevenue,
       trustTop5, trustBottom5, runnerOnlineOnTask,
       pilotTaskAgg, pilotUserCount,
@@ -227,7 +228,7 @@ router.get("/admin/stats", requireAdmin, async (_req, res): Promise<void> => {
   const cancellationRate = totalTasks > 0 ? Math.round((cancelledTasks / totalTasks) * 100) : 0;
 
   // Trust Score Metrics — from SQL LIMIT queries (no full runner table load)
-  const topComrades = result.trustTop5.map(r => ({
+  const topRunners = result.trustTop5.map(r => ({
     id: r.id, name: r.name ?? r.phone, trustScore: r.trustScore ?? 50,
     trustBadge: r.trustBadge ?? "improving", tasksCompleted: r.tasksCompleted ?? 0,
   }));
@@ -239,7 +240,7 @@ router.get("/admin/stats", requireAdmin, async (_req, res): Promise<void> => {
   // Pilot Launch Metrics — computed from SQL aggregates instead of loading all rows
   const pilotMetrics = {
     activeUsers: Number(result.pilotTaskAgg[0]?.uniqueUsers ?? 0),
-    activeComrades: Number(result.pilotTaskAgg[0]?.uniqueComrades ?? 0),
+    activeRunners: Number(result.pilotTaskAgg[0]?.uniqueRunners ?? 0),
     completedTasks: Number(result.pilotTaskAgg[0]?.completed ?? 0),
     totalUsers: Number(result.pilotUserCount[0]?.count ?? 0),
     totalVerifiedRunners: Number(r.total) - Number(r.kycPending),
@@ -264,8 +265,8 @@ router.get("/admin/stats", requireAdmin, async (_req, res): Promise<void> => {
     },
     trustMetrics: {
       avgTrustScore: Number(r.avgTrustScore),
-      riskComrades: Number(r.riskComrades),
-      topComrades,
+      riskRunners: Number(r.riskRunners),
+      topRunners,
       lowestTrust,
     },
     revenueMetrics: {
@@ -291,7 +292,7 @@ router.get("/admin/stats", requireAdmin, async (_req, res): Promise<void> => {
       pendingTasks,
       activeTasks: activeTaskCount,
       uniqueUsers: Number(result.uniqueUsersResult[0].cnt),
-      uniqueComrades: Number(result.uniqueComradesResult[0].cnt),
+      uniqueRunners: Number(result.uniqueRunnersResult[0].cnt),
     }
   });
 });
@@ -379,7 +380,7 @@ router.get("/admin/tasks", requireAdmin, async (req, res): Promise<void> => {
     return { ...task, user: safeUser, runner: safeRunner };
   });
 
-  res.json({ tasks: enriched, total: totalCount });
+  res.json({ tasks: enriched, total: Number(totalCount ?? enriched.length) });
 });
 
 // GET /admin/tasks/dispatch-stats
@@ -523,6 +524,25 @@ router.patch("/admin/tasks/:id", requireAdmin, validateBody(adminTaskPatchSchema
   // Fetch existing task for audit comparison
   const [existing] = await db.select().from(tasksTable).where(eq(tasksTable.id, id));
   if (!existing) { res.status(404).json({ error: "Task not found" }); return; }
+
+  // H4: Validate status transition if status is being changed
+  if (status && status !== existing.status) {
+    const transition = validateTimelineTransition(existing.status, status);
+    if (!transition.valid) {
+      res.status(400).json({ error: "Invalid status transition", detail: transition.reason });
+      return;
+    }
+    // Audit log for status changes
+    await db.insert(paymentAuditLogTable).values({
+      taskId: id,
+      previousStatus: existing.status,
+      newStatus: status,
+      actor: req.admin?.username ?? "admin",
+      actorType: "admin",
+      reason: `Admin changed status from ${existing.status} to ${status}`,
+      metadata: JSON.stringify({ field: "status", oldValue: existing.status, newValue: status }),
+    });
+  }
 
   const [task] = await db.update(tasksTable).set(updates).where(eq(tasksTable.id, id)).returning();
 

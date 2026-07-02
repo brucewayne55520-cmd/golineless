@@ -13,6 +13,7 @@ export default function RunnerLogin() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
+  const [phone, setPhone] = useState("");
   const [isSigningUp, setIsSigningUp] = useState(false);
   const [sendingLink, setSendingLink] = useState(false);
   const [magicLinkSent, setMagicLinkSent] = useState(false);
@@ -104,6 +105,7 @@ export default function RunnerLogin() {
                   const endpoint = isSigningUp ? "/api/auth/signup" : "/api/auth/login";
                   const body: Record<string, string> = { email, password, role: "runner" };
                   if (isSigningUp && name) body.name = name;
+                  if (isSigningUp && phone) body.phone = phone;
                   const res = await fetch(`${API_BASE}${endpoint}`, {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
@@ -120,10 +122,16 @@ export default function RunnerLogin() {
               className="space-y-4"
             >
               {isSigningUp && (
-                <div>
-                  <label className="text-sm font-medium text-white/80 mb-1 block">Name</label>
-                  <input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="Your name" className="w-full px-4 py-3 rounded-xl bg-white/10 border border-white/20 text-white text-sm placeholder:text-white/30 focus:outline-none focus:ring-2 focus:ring-blue-400/40" />
-                </div>
+                <>
+                  <div>
+                    <label className="text-sm font-medium text-white/80 mb-1 block">Name</label>
+                    <input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="Your name" className="w-full px-4 py-3 rounded-xl bg-white/10 border border-white/20 text-white text-sm placeholder:text-white/30 focus:outline-none focus:ring-2 focus:ring-blue-400/40" />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-white/80 mb-1 block">Phone number</label>
+                    <input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+91 XXXXX XXXXX" className="w-full px-4 py-3 rounded-xl bg-white/10 border border-white/20 text-white text-sm placeholder:text-white/30 focus:outline-none focus:ring-2 focus:ring-blue-400/40" required={isSigningUp} />
+                  </div>
+                </>
               )}
               <div>
                 <label className="text-sm font-medium text-white/80 mb-1 block">Email address</label>
@@ -138,7 +146,7 @@ export default function RunnerLogin() {
               </button>
               {!isSigningUp && (
                 <p className="text-center">
-                  <button type="button" onClick={() => navigate("/forgot-password")} className="text-xs font-medium text-white/50 hover:text-white/80 transition">
+                  <button type="button" onClick={() => navigate("/forgot-password?role=runner")} className="text-xs font-medium text-white/50 hover:text-white/80 transition">
                     Forgot password?
                   </button>
                 </p>

@@ -81,7 +81,7 @@ export default function ResetPassword() {
                 <svg className="w-8 h-8 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
               </div>
               <button
-                onClick={() => navigate("/login")}
+                onClick={() => navigate(role === "runner" ? "/runner/login" : "/login")}
                 className="mt-4 w-full py-3 rounded-xl bg-blue-600 text-white font-bold text-sm hover:bg-blue-700 transition-all shadow-md"
               >
                 Go to login
@@ -125,7 +125,7 @@ export default function ResetPassword() {
         </div>
 
         <p className="text-center text-sm text-gray-500 mt-4">
-          <button type="button" onClick={() => navigate("/login")} className="font-semibold text-blue-600 hover:text-blue-700">
+          <button type="button" onClick={() => navigate(role === "runner" ? "/runner/login" : "/login")} className="font-semibold text-blue-600 hover:text-blue-700">
             Back to login
           </button>
         </p>

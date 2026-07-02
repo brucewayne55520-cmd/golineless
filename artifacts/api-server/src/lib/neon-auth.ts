@@ -100,28 +100,34 @@ export async function exchangeSessionVerifier(verifier: string): Promise<NeonAut
   return null;
 }
 
+/** Runtime type guard for string values from untyped API responses */
+function isStr(v: unknown): v is string {
+  return typeof v === 'string';
+}
+
 function parseSessionResponse(data: unknown): NeonAuthUser | null {
-  if (!data) return null;
+  if (!data || typeof data !== 'object') return null;
   const d = data as Record<string, unknown>;
   // Better Auth returns { user: {...}, session: {...} }
-  const user = (d.user || d) as Record<string, unknown>;
-  if (!user || (!user.email && !user.phoneNumber && !user.id)) return null;
+  const raw = (d.user ?? d) as Record<string, unknown> | undefined;
+  if (!raw || typeof raw !== 'object') return null;
+  if (!raw.email && !raw.phoneNumber && !raw.id) return null;
 
   return {
     iat: 0,
-    name: user.name as string || (user.email as string || '').split('@')[0] || '',
-    email: user.email as string,
-    phoneNumber: user.phoneNumber as string,
-    emailVerified: user.emailVerified === true,
-    image: user.image as string,
-    createdAt: user.createdAt as string || '',
-    updatedAt: user.updatedAt as string || '',
-    role: user.role as string || 'user',
-    banned: user.banned === true,
-    banReason: user.banReason as string | null || null,
-    banExpires: user.banExpires as string | null || null,
-    id: user.id as string || '',
-    sub: user.sub as string || user.id as string || '',
+    name: isStr(raw.name) ? raw.name : (isStr(raw.email) ? raw.email.split('@')[0] : ''),
+    email: isStr(raw.email) ? raw.email : undefined,
+    phoneNumber: isStr(raw.phoneNumber) ? raw.phoneNumber : undefined,
+    emailVerified: raw.emailVerified === true,
+    image: isStr(raw.image) ? raw.image : undefined,
+    createdAt: isStr(raw.createdAt) ? raw.createdAt : '',
+    updatedAt: isStr(raw.updatedAt) ? raw.updatedAt : '',
+    role: isStr(raw.role) ? raw.role : 'user',
+    banned: raw.banned === true,
+    banReason: isStr(raw.banReason) ? raw.banReason : null,
+    banExpires: isStr(raw.banExpires) ? raw.banExpires : null,
+    id: isStr(raw.id) ? raw.id : '',
+    sub: isStr(raw.sub) ? raw.sub : (isStr(raw.id) ? raw.id : ''),
     exp: Math.floor(Date.now() / 1000) + 3600,
     iss: '',
     aud: '',

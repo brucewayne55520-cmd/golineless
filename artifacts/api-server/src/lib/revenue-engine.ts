@@ -107,8 +107,8 @@ export function calculateWaitingChargeLegacy(
  * Calculate priority fee based on priority level
  */
 export function getPriorityFee(priorityLevel: string, config: { priorityFeeAmount: number; emergencyFeeAmount: number }): number {
-  if (priorityLevel === "emergency") return config.emergencyFeeAmount;
-  if (priorityLevel === "priority") return config.priorityFeeAmount;
+  if (priorityLevel === "emergency" || priorityLevel === "vip") return config.emergencyFeeAmount;
+  if (priorityLevel === "priority" || priorityLevel === "high") return config.priorityFeeAmount;
   return 0;
 }
 
