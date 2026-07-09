@@ -138,6 +138,11 @@ app.use((req: Request, res: Response, next) => {
   // Skip CSRF for webhook endpoints (Razorpay sends its own signatures)
   if (req.path === "/api/payments/webhook") return next();
 
+  // Skip CSRF for all auth, OTP, pricing, health, and public endpoints
+  // These are either unauthenticated (CSRF irrelevant) or already rate-limited
+  const SKIP_CSRF_PREFIXES = ["/api/auth", "/api/pricing", "/api/health"];
+  if (SKIP_CSRF_PREFIXES.some(p => req.path.startsWith(p))) return next();
+
   // Skip CSRF for Bearer-authenticated requests (Authorization header prevents CSRF)
   const authHeader = req.headers.authorization;
   if (authHeader?.startsWith("Bearer ")) return next();
