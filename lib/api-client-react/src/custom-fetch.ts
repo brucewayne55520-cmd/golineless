@@ -415,7 +415,6 @@ export async function customFetch<T = unknown>(
 
   const requestInfo = { method, url: resolveUrl(input) };
 
-  // L6: Always include credentials so httpOnly auth cookies are sent automatically
   const response = await fetch(input, { ...init, method, headers });
 
   if (!response.ok) {
