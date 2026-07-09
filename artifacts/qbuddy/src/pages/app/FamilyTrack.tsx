@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { MapPin, Clock, CheckCircle2, Camera, Navigation, Shield, Wifi } from "lucide-react";
 import { useFamilyTrackByToken, type FamilyTrackResponseTask, type FamilyTrackResponseRunner } from "@workspace/api-client-react";
@@ -8,43 +8,113 @@ import { PayButton } from "@/components/PayButton";
 import { CATEGORY_NAMES, STATUS_LABELS, calculateQueueGap, estimateWaitTime, calculateQueueProgress } from "@/lib/utils";
 import { DARK, BLUE } from "@/lib/theme";
 
+// #25: Runner location map component for FamilyTrack
+function FamilyTrackingMap({ runner, task, familyToken }: { runner: FamilyTrackResponseRunner | null; task: FamilyTrackResponseTask; familyToken: string }) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [runnerPos, setRunnerPos] = useState<{ lat: number; lng: number } | null>(null);
+
+  // Listen for real-time runner location via socket
+  useEffect(() => {
+    let mounted = true;
+    let socket: ReturnType<typeof import("socket.io-client").io> | null = null;
+
+    (async () => {
+      try {
+        const { io } = await import("socket.io-client");
+        socket = io({ path: "/api/socket.io", transports: ["websocket", "polling"], auth: { token: familyToken } });
+        socket.on("connect", () => { socket?.emit("join_task", { taskId: task.id }); });
+        socket.on("runner_location", (data: { lat: number; lng: number }) => {
+          if (mounted && data.lat && data.lng) setRunnerPos({ lat: data.lat, lng: data.lng });
+        });
+      } catch { /* fallback to polling */ }
+    })();
+
+    return () => { mounted = false; socket?.disconnect(); };
+  }, [task.id, familyToken]);
+
+  useEffect(() => {
+    if (!containerRef.current) return;
+    let map: import("leaflet").Map;
+    let mounted = true;
+
+    (async () => {
+      const L = await import("leaflet");
+      await import("leaflet/dist/leaflet.css");
+      delete (L.Icon.Default.prototype as unknown as { _getIconUrl?: unknown })._getIconUrl;
+      L.Icon.Default.mergeOptions({
+        iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
+        iconRetinaUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
+        shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
+      });
+
+      const taskLat = task.taskLat ?? task.locationLat;
+      const taskLng = task.taskLng ?? task.locationLng;
+      const rLat = runnerPos?.lat ?? ((runner as unknown as Record<string, unknown>)?.currentLat ? Number((runner as unknown as Record<string, unknown>).currentLat) : null);
+      const rLng = runnerPos?.lng ?? ((runner as unknown as Record<string, unknown>)?.currentLng ? Number((runner as unknown as Record<string, unknown>).currentLng) : null);
+
+      const centerLat = rLat ?? (taskLat ? Number(taskLat) : 23.0225);
+      const centerLng = rLng ?? (taskLng ? Number(taskLng) : 72.5714);
+
+      if (!mounted) return;
+      map = L.map(containerRef.current!, { zoomControl: false }).setView([centerLat, centerLng], 14);
+      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { attribution: "© OSM" }).addTo(map);
+
+      // Task location marker
+      if (taskLat && taskLng) {
+        const taskIcon = L.divIcon({
+          html: `<div style="background:#3B82F6;width:24px;height:24px;border-radius:50%;border:3px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.3);display:flex;align-items:center;justify-content:center;"><div style="background:white;width:8px;height:8px;border-radius:50%;"></div></div>`,
+          className: "", iconSize: [24, 24],
+        });
+        L.marker([Number(taskLat), Number(taskLng)], { icon: taskIcon }).addTo(map).bindPopup("<b>Task Location</b>");
+      }
+
+      // Runner position marker (updates in real-time)
+      if (rLat && rLng) {
+        const runnerIcon = L.divIcon({
+          html: `<div style="background:#22C55E;width:22px;height:22px;border-radius:50%;border:3px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.3);"></div>`,
+          className: "", iconSize: [22, 22],
+        });
+        const rMarker = L.marker([rLat, rLng], { icon: runnerIcon }).addTo(map).bindPopup(`<b>${runner?.name ?? "Comrade"}</b><br>Currently here`);
+
+        // Fit bounds to show both markers
+        const bounds: [number, number][] = [[rLat, rLng]];
+        if (taskLat && taskLng) bounds.push([Number(taskLat), Number(taskLng)]);
+        if (bounds.length > 1) map.fitBounds(bounds, { padding: [50, 50] });
+
+        // Poll for runner location updates via API as fallback
+        const pollInterval = setInterval(async () => {
+          try {
+            const res = await fetch(`/api/family-track/${familyToken}`);
+            if (!res.ok) return;
+            const data = await res.json();
+            if ((data.runner as unknown as Record<string, unknown>)?.currentLat && (data.runner as unknown as Record<string, unknown>)?.currentLng) {
+              const newLat = Number((data.runner as unknown as Record<string, unknown>).currentLat);
+              const newLng = Number((data.runner as unknown as Record<string, unknown>).currentLng);
+              rMarker.setLatLng([newLat, newLng]);
+            }
+          } catch { /* ignore */ }
+        }, 10000);
+
+        return () => { clearInterval(pollInterval); map?.remove(); };
+      } else {
+        return () => { map?.remove(); };
+      }
+    })();
+
+    return () => { mounted = false; };
+  }, [runnerPos?.lat, runnerPos?.lng, task.taskLat, task.locationLat, task.taskLng, task.locationLng, task.id, runner?.name, familyToken]);
+
+  return <div ref={containerRef} className="w-full h-56 rounded-2xl overflow-hidden border border-gray-200" />;
+}
+
 interface Props { token: string; }
 
 const STATUS_ORDER = ["pending", "assigned", "on_the_way", "at_location", "in_progress", "completed"];
 
 export default function FamilyTrack({ token }: Props) {
   const { data, isLoading, isError, error } = useFamilyTrackByToken(token, { query: { queryKey: ["familyTrack", token], refetchInterval: 10000 } });
-  const socketRef = useRef<ReturnType<typeof import("socket.io-client").io> | null>(null);
-
-  // Fix #95: Connect to Socket.IO for real-time runner location + status updates
-  useEffect(() => {
-    if (!data?.task?.id) return;
-    const taskId = data.task.id;
-    let mounted = true;
-
-    (async () => {
-      try {
-        const { io } = await import("socket.io-client");
-        const socket = io({ path: "/api/socket.io", transports: ["websocket", "polling"], auth: { token: token } });
-        socketRef.current = socket;
-
-        socket.on("connect", () => {
-          if (!mounted) return;
-          socket.emit("join_task", { taskId });
-        });
-
-
-      } catch {
-        // Socket.IO not available — fallback to polling only (already configured via refetchInterval)
-      }
-    })();
-
-    return () => {
-      mounted = false;
-      socketRef.current?.disconnect();
-      socketRef.current = null;
-    };
-  }, [data?.task?.id]);
+  // #25: Socket connection handled by FamilyTrackingMap child component
+  // Parent only manages polling via useFamilyTrackByToken refetchInterval
 
   if (isLoading) return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50">
@@ -95,6 +165,8 @@ export default function FamilyTrack({ token }: Props) {
       </div>
 
       <div className="px-4 pt-4 space-y-4">
+        {/* #25: Interactive tracking map */}
+        <FamilyTrackingMap runner={runner} task={task} familyToken={token} />
         {/* Read-only status strip */}
         <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 flex items-center gap-3">
           <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: statusIdx >= 4 ? "#22C55E" : BLUE }} />
@@ -117,13 +189,14 @@ export default function FamilyTrack({ token }: Props) {
                 <p className="font-bold text-gray-900 text-base">{runner.name ?? "Comrade"}</p>
                 <div className="flex items-center gap-2 mt-0.5">
                   {runner.rating && <span className="text-xs flex items-center gap-1"><span className="text-yellow-400">★</span> {Number(runner.rating).toFixed(1)}</span>}
-                  <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium $                  {(runner.trustBadge === "elite" || (runner.trustScore ?? 0) >= 80) ? "bg-green-50 text-green-700" :
+                  <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${(runner.trustBadge === "elite" || (runner.trustScore ?? 0) >= 80) ? "bg-green-50 text-green-700" :
                     (runner.trustScore ?? 0) >= 60 ? "bg-amber-50 text-amber-700" : "bg-gray-50 text-gray-500"
                   }`}>
                     Trust {runner.trustScore ?? "—"}
                   </span>
                 </div>
-                {(runner.tasksCompleted ?? 0) > 0 && (                    <p className="text-[10px] text-gray-400 mt-0.5">{runner.tasksCompleted ?? 0} tasks completed</p>
+                {(runner.tasksCompleted ?? 0) > 0 && (
+                  <p className="text-[10px] text-gray-400 mt-0.5">{runner.tasksCompleted ?? 0} tasks completed</p>
                 )}
               </div>
             </div>

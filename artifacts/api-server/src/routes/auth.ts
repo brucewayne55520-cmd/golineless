@@ -83,7 +83,7 @@ router.post("/auth/send-otp", validateBody(phoneOtpRequestSchema), async (req, r
     const sent = await sendPhoneOtp(phone);
     if (!sent) { res.status(500).json({ error: "Failed to send OTP" }); return; }
     res.json({ message: "OTP sent", sent: true });
-  } catch (err) {
+  } catch (err: unknown) {
     logger.error({ err, phone, role }, "send-otp: failed");
     res.status(500).json({ error: "Failed to send OTP" });
   }
@@ -126,7 +126,7 @@ router.post("/auth/verify-otp", validateBody(phoneOtpVerifySchema), async (req, 
   const { passwordHash: _, otp: __, otpExpiresAt: ___, ...safeUser } = user;
   setAuthCookie(res, token);
   res.json({ token, role: "user", user: safeUser });
-  } catch (err) {
+  } catch (err: unknown) {
     logger.error({ err, phone, role }, "verify-otp: failed");
     res.status(500).json({ error: "Failed to verify OTP" });
   }
@@ -170,7 +170,7 @@ router.post("/auth/signup", validateBody(signupSchema), async (req, res): Promis
       setAuthCookie(res, token);
       res.json({ token, role: "user", user: safeUser });
     }
-  } catch (err) {
+  } catch (err: unknown) {
     logger.error({ err, email, role }, "signup: database error");
     res.status(500).json({ error: "Failed to create account. Please try again." });
   }
@@ -209,7 +209,7 @@ router.post("/auth/login", validateBody(loginSchema), async (req, res): Promise<
       setAuthCookie(res, token);
       res.json({ token, role: "user", user: safeUser });
     }
-  } catch (err) {
+  } catch (err: unknown) {
     logger.error({ err, email, role }, "login: database error");
     res.status(500).json({ error: "Login failed. Please try again." });
   }
@@ -294,6 +294,103 @@ router.post("/auth/reset-password", validateBody(resetPasswordSchema), async (re
   }).where(eq(table.id, record.id));
 
   res.json({ message: "Password reset successfully" });
+});
+
+// POST /auth/send-verification — send email verification link to logged-in user
+router.post("/auth/send-verification", async (req, res): Promise<void> => {
+  const { extractToken, getUserFromToken, getRunnerFromToken } = await import("../lib/auth");
+  const token = extractToken(req);
+  if (!token) { res.status(401).json({ error: "Unauthorized" }); return; }
+
+  try {
+    // Check both user and runner tables
+    const user = await getUserFromToken(token);
+    const runner = !user ? await getRunnerFromToken(token) : null;
+    if (!user && !runner) { res.status(401).json({ error: "Unauthorized" }); return; }
+
+    const table = user ? usersTable : runnersTable;
+    const record = user || runner!;
+    const email = record.email;
+    if (!email) {
+      res.status(400).json({ error: "No email address on file. Please update your profile first." });
+      return;
+    }
+    if ((record as Record<string, unknown>).emailVerified) {
+      res.status(400).json({ error: "Email is already verified" }); return;
+    }
+
+    // Generate verification token (valid 24 hours)
+    const verificationToken = generateToken();
+    const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
+    await db.update(table).set({
+      emailVerificationToken: verificationToken,
+      emailVerificationExpiresAt: expiresAt,
+    } as Record<string, unknown>).where(eq(table.id, record.id));
+
+    const verifyLink = `${process.env.FRONTEND_URL || "https://golineless.com"}/verify-email?token=${verificationToken}`;
+    const htmlContent = `
+      <h1>Verify Your Email</h1>
+      <p>Hi ${record.name || "there"},</p>
+      <p>Please click the link below to verify your email address:</p>
+      <a href="${verifyLink}" style="display:inline-block;padding:12px 24px;background:#2563eb;color:#fff;text-decoration:none;border-radius:8px;font-weight:bold;">Verify Email</a>
+      <p style="margin-top:16px;color:#666;">This link expires in 24 hours.</p>
+      <p style="color:#666;">If you didn't create this account, you can ignore this email.</p>
+    `;
+    await sendEmail({
+      to: email,
+      subject: "Verify Your Email - Go LineLess",
+      htmlContent,
+      textContent: `Verify your email: ${verifyLink}`,
+    });
+
+    res.json({ message: "Verification email sent" });
+  } catch (err: unknown) {
+    logger.error({ err }, "send-verification: failed");
+    res.status(500).json({ error: "Failed to send verification email" });
+  }
+});
+
+// POST /auth/verify-email — verify email with token
+router.post("/auth/verify-email", async (req, res): Promise<void> => {
+  const { token } = req.body;
+  if (!token) { res.status(400).json({ error: "Verification token required" }); return; }
+
+  try {
+    // Check users table
+    const [user] = await db.select().from(usersTable).where(eq(usersTable.emailVerificationToken, token));
+    if (user) {
+      if (user.emailVerificationExpiresAt && user.emailVerificationExpiresAt < new Date()) {
+        res.status(400).json({ error: "Verification token has expired. Please request a new one." }); return;
+      }
+      await db.update(usersTable).set({
+        emailVerified: true,
+        emailVerificationToken: null,
+        emailVerificationExpiresAt: null,
+      } as Record<string, unknown>).where(eq(usersTable.id, user.id));
+      res.json({ message: "Email verified successfully", role: "user" });
+      return;
+    }
+
+    // Check runners table
+    const [runner] = await db.select().from(runnersTable).where(eq(runnersTable.emailVerificationToken, token));
+    if (runner) {
+      if (runner.emailVerificationExpiresAt && runner.emailVerificationExpiresAt < new Date()) {
+        res.status(400).json({ error: "Verification token has expired. Please request a new one." }); return;
+      }
+      await db.update(runnersTable).set({
+        emailVerified: true,
+        emailVerificationToken: null,
+        emailVerificationExpiresAt: null,
+      } as Record<string, unknown>).where(eq(runnersTable.id, runner.id));
+      res.json({ message: "Email verified successfully", role: "runner" });
+      return;
+    }
+
+    res.status(400).json({ error: "Invalid verification token" });
+  } catch (err: unknown) {
+    logger.error({ err }, "verify-email: failed");
+    res.status(500).json({ error: "Failed to verify email" });
+  }
 });
 
 // POST /auth/neon-callback — Exchange a Neon Auth token (JWT or session verifier) for a GoLineLess session
@@ -392,7 +489,7 @@ router.post("/auth/neon-callback", async (req, res): Promise<void> => {
     } else {
       res.json({ token, role: "user", user: safeRecord });
     }
-  } catch (err) {
+  } catch (err: unknown) {
     logger.error({ err }, "neon-callback: authentication error");
     res.status(500).json({ error: "Authentication failed. Please try again." });
   }

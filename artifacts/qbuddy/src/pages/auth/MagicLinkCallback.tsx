@@ -67,13 +67,22 @@ export default function MagicLinkCallback() {
             <svg className="w-8 h-8 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
           </div>
           <h1 className="text-xl font-bold text-gray-900 mb-2">Link expired or invalid</h1>
-          <p className="text-gray-500 text-sm mb-4">Please request a new magic link.</p>
-          <button
-            onClick={() => navigate("/login")}
-            className="px-6 py-3 rounded-xl bg-blue-600 text-white font-bold text-sm hover:bg-blue-700 transition-all shadow-md"
-          >
-            Back to login
-          </button>
+          <p className="text-gray-500 text-sm mb-2">Magic links expire after a short time for security.</p>
+          <p className="text-gray-400 text-xs mb-4">Please request a new magic link from the login page.</p>
+          <div className="space-y-2">
+            <button
+              onClick={() => navigate("/login")}
+              className="w-full px-6 py-3 rounded-xl bg-blue-600 text-white font-bold text-sm hover:bg-blue-700 transition-all shadow-md"
+            >
+              Back to login
+            </button>
+            <button
+              onClick={() => navigate("/runner/login")}
+              className="w-full px-6 py-2.5 rounded-xl border border-gray-200 text-gray-600 font-semibold text-xs hover:bg-gray-50 transition-colors"
+            >
+              Runner login
+            </button>
+          </div>
         </div>
       </div>
     );

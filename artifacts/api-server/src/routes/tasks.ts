@@ -132,16 +132,16 @@ router.get("/tasks", async (req, res): Promise<void> => {
     .offset(Number(offset));
 
   // C3 FIX: Batch user/runner lookups to avoid N+1 queries
-  const userIds = [...new Set(tasks.map(t => t.userId).filter(Boolean) as number[])];
-  const runnerIds = [...new Set(tasks.map(t => t.runnerId).filter(Boolean) as number[])];
+  const userIds = [...new Set(tasks.map((t: typeof tasksTable.$inferSelect) => t.userId).filter(Boolean) as number[])];
+  const runnerIds = [...new Set(tasks.map((t: typeof tasksTable.$inferSelect) => t.runnerId).filter(Boolean) as number[])];
   const [users, runners] = await Promise.all([
     userIds.length > 0 ? db.select().from(usersTable).where(inArray(usersTable.id, userIds)) : Promise.resolve([]),
     runnerIds.length > 0 ? db.select().from(runnersTable).where(inArray(runnersTable.id, runnerIds)) : Promise.resolve([]),
   ]);
-  const userMap = new Map(users.map(u => [u.id, u]));
-  const runnerMap = new Map(runners.map(r => [r.id, r]));
+  const userMap = new Map(users.map((u: typeof usersTable.$inferSelect) => [u.id, u]));
+  const runnerMap = new Map(runners.map((r: typeof runnersTable.$inferSelect) => [r.id, r]));
 
-  const enriched = tasks.map((task) => {
+  const enriched = tasks.map((task: typeof tasksTable.$inferSelect) => {
     const user = task.userId ? userMap.get(task.userId) ?? null : null;
     const runner = task.runnerId ? runnerMap.get(task.runnerId) ?? null : null;
     const safeUser = user ? (({ otp, otpExpiresAt, ...u }) => u)(user) : null;
@@ -168,7 +168,7 @@ router.get("/tasks/available", requireRunner, async (req, res): Promise<void> =>
 
   // B6: Filter out tasks this runner has previously declined/dismissed
   // Use proofPhotos metadata or a simple heuristic: tasks where runner was notified but didn't accept within 5 minutes
-  const availableTasks = tasks.filter(task => {
+  const availableTasks = tasks.filter((task: typeof tasksTable.$inferSelect) => {
     // Exclude tasks where this runner already declined (tracked via fraudFlags)
     const flags = Array.isArray(task.fraudFlags) ? task.fraudFlags : [];
     const dismissed = flags.some((f: string) => {
@@ -179,13 +179,13 @@ router.get("/tasks/available", requireRunner, async (req, res): Promise<void> =>
 
   // C2 FIX: Batch user lookups to avoid N+1 queries
   const slicedTasks = availableTasks.slice(0, Number(limit));
-  const userIds = [...new Set(slicedTasks.map(t => t.userId).filter(Boolean) as number[])];
+  const userIds = [...new Set(slicedTasks.map((t: typeof tasksTable.$inferSelect) => t.userId).filter(Boolean) as number[])];
   const users = userIds.length > 0
     ? await db.select().from(usersTable).where(inArray(usersTable.id, userIds))
     : [];
-  const userMap = new Map(users.map(u => [u.id, u]));
+  const userMap = new Map(users.map((u: typeof usersTable.$inferSelect) => [u.id, u]));
 
-  const enriched = slicedTasks.map((task) => {
+  const enriched = slicedTasks.map((task: typeof tasksTable.$inferSelect) => {
     const user = task.userId ? userMap.get(task.userId) ?? null : null;
     const safeUser = user ? (({ otp, otpExpiresAt, phone, ...rest }) => rest)(user) : null;
     return { ...task, user: safeUser, runner: null };
@@ -306,7 +306,7 @@ router.post("/tasks", requireUser, validateBody(createTaskSchema), async (req, r
     // M2: Check configurable coupons from admin settings
     const [couponSettings] = await db.select({ activeCoupons: adminSettingsTable.activeCoupons }).from(adminSettingsTable).limit(1);
     const activeCoupons = couponSettings?.activeCoupons ?? ["GOLINELESS10"];
-    if (couponCode && activeCoupons.map(c => c.toUpperCase()).includes(couponCode.toUpperCase())) {
+    if (couponCode && activeCoupons.map((c: string) => c.toUpperCase()).includes(couponCode.toUpperCase())) {
       discountAmount = Math.round(revenue.price * 0.1);
       finalPrice -= discountAmount;
     }
@@ -515,11 +515,13 @@ router.patch("/tasks/:id/status", async (req, res): Promise<void> => {
 
   // Set timestamps based on status
   const statusTimestamps: Record<string, string> = {
-    started: "startedAt",
+    assigned: "acceptedAt",
+    on_the_way: "startedAt",
     reached_pickup: "reachedPickupAt",
     reached_task_location: "reachedTaskLocationAt",
+    at_location: "atLocationAt",
+    in_progress: "startedAt",
     completed: "completedAt",
-    assigned: "acceptedAt",
   };
   if (statusTimestamps[status]) {
     updates[statusTimestamps[status]] = now;
@@ -791,9 +793,9 @@ router.post("/tasks/:id/accept", requireRunner, async (req, res): Promise<void> 
     return;
   }
 
-  // Also check that no other runner is already assigned to this task
+  // Fetch full task row (including timeline) for the accept update
   const [currentTask] = await db
-    .select({ id: tasksTable.id, runnerId: tasksTable.runnerId, status: tasksTable.status })
+    .select({ id: tasksTable.id, runnerId: tasksTable.runnerId, status: tasksTable.status, taskTimeline: tasksTable.taskTimeline })
     .from(tasksTable)
     .where(eq(tasksTable.id, id));
   if (!currentTask || currentTask.status !== "pending") {
@@ -805,6 +807,10 @@ router.post("/tasks/:id/accept", requireRunner, async (req, res): Promise<void> 
     return;
   }
 
+  // CRITICAL FIX: Read existing timeline and APPEND (don't overwrite)
+  const existingTimeline: string[] = currentTask.taskTimeline ? [...currentTask.taskTimeline] : [];
+  existingTimeline.push(makeTimelineEntry("assigned", `${runner.name || "A Comrade"} accepted the task`, { runnerId: runner.id }));
+
   const [task] = await db
     .update(tasksTable)
     .set({
@@ -812,9 +818,7 @@ router.post("/tasks/:id/accept", requireRunner, async (req, res): Promise<void> 
       activeRunnerId: runner.id,
       status: "assigned",
       acceptedAt: now,
-      taskTimeline: [
-        makeTimelineEntry("assigned", `${runner.name || "A Comrade"} accepted the task`, { runnerId: runner.id }),
-      ],
+      taskTimeline: existingTimeline,
     })
     .where(and(eq(tasksTable.id, id), eq(tasksTable.status, "pending")))
     .returning();
@@ -1441,7 +1445,7 @@ router.post("/tasks/:id/review", requireUser, validateBody(reviewSchema), async 
 
   // Update runner rating
   const allReviews = await db.select().from(reviewsTable).where(eq(reviewsTable.runnerId, task.runnerId));
-  const avgRating = allReviews.reduce((s, r) => s + r.rating, 0) / allReviews.length;
+  const avgRating = allReviews.reduce((s: number, r: typeof reviewsTable.$inferSelect) => s + r.rating, 0) / allReviews.length;
   await db.update(runnersTable).set({ rating: avgRating.toFixed(2) }).where(eq(runnersTable.id, task.runnerId));
 
   // Recalculate trust score after review submitted

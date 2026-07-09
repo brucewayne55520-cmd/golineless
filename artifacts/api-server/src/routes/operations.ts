@@ -90,8 +90,8 @@ router.get("/admin/recruitment/funnel", requireAdmin, async (_req, res): Promise
     count: count(),
   }).from(recruitmentsTable).groupBy(recruitmentsTable.stage);
   const stages = ["applied", "interview_scheduled", "documents_submitted", "training_pending", "training_complete", "pilot_active", "suspended"];
-  const total = groups.reduce((s, g) => s + g.count, 0);
-  const funnel = stages.map(stage => ({
+  const total = groups.reduce((s: number, g: typeof groups[number]) => s + g.count, 0);
+  const funnel = stages.map((stage: string) => ({
     stage,
     count: groups.find(g => g.stage === stage)?.count ?? 0,
   }));
@@ -128,7 +128,7 @@ router.get("/admin/training/progress/:runnerId", requireAdmin, async (req, res):
   const runnerId = parseInt(Array.isArray(req.params.runnerId) ? req.params.runnerId[0] : req.params.runnerId, 10);
   const modules = await db.select().from(trainingModulesTable).orderBy(trainingModulesTable.order);
   const completed = await db.select().from(runnerTrainingTable).where(eq(runnerTrainingTable.runnerId, runnerId));
-  const progress = modules.map(m => ({
+  const progress = modules.map((m: typeof modules[number]) => ({
     ...m,
     completed: completed.some(c => c.moduleId === m.id && c.completed),
     score: completed.find(c => c.moduleId === m.id)?.score || null,
@@ -851,7 +851,7 @@ router.get("/admin/leaderboard", requireAdmin, async (req, res): Promise<void> =
     .orderBy(desc(runnersTable.trustScore))
     .limit(Number(limit));
 
-  const enriched = ranked.map(r => ({
+  const enriched = ranked.map((r: typeof ranked[number]) => ({
     id: r.id, name: r.name || "Comrade", phone: r.phone,
     trustScore: r.trustScore ?? 50, trustBadge: r.trustBadge ?? "improving",
     tasksCompleted: r.tasksCompleted ?? 0, tasksAccepted: r.tasksAccepted ?? 0,
@@ -1305,8 +1305,8 @@ router.get("/admin/training/overview", requireAdmin, async (_req, res): Promise<
   const trainedRunners = runnerStats.filter(r => r.completedCount > 0).length;
   const avgReadiness = totalRunners > 0 ? Math.round((trainedRunners / totalRunners) * 100) : 0;
 
-  const completionMap = new Map(moduleCompletions.map(m => [m.moduleId, m]));
-  const moduleStats = modules.map(m => {
+  const completionMap = new Map(moduleCompletions.map((m: typeof moduleCompletions[number]) => [m.moduleId, m]));
+  const moduleStats = modules.map((m: typeof modules[number]) => {
     const comp = completionMap.get(m.id);
     return {
       moduleId: m.id,
@@ -1318,7 +1318,7 @@ router.get("/admin/training/overview", requireAdmin, async (_req, res): Promise<
   });
 
   const topRunners = runnerStats
-    .map(r => ({ ...r, totalModules: modules.length, readiness: modules.length > 0 ? Math.round((r.completedCount / modules.length) * 100) : 0 }))
+    .map((r: typeof runnerStats[number]) => ({ ...r, totalModules: modules.length, readiness: modules.length > 0 ? Math.round((r.completedCount / modules.length) * 100) : 0 }))
     .sort((a, b) => b.readiness - a.readiness)
     .slice(0, 10);
 

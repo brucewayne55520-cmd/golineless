@@ -112,7 +112,7 @@ export default function RunnerReviewsPage() {
                 ? "text-gray-900 border-transparent"
                 : "text-white/60 border-white/10 bg-white/5"
             }`}
-            style={filterRating === null ? { background: BLUE_GRAD } : {}}
+            style={filterRating === null ? { background: BLUE_GRAD, color: DARK } : {}}
           >
             All ({reviews.length})
           </button>
@@ -128,7 +128,7 @@ export default function RunnerReviewsPage() {
                     ? "text-gray-900 border-transparent"
                     : "text-white/60 border-white/10 bg-white/5"
                 }`}
-                style={filterRating === r ? { background: BLUE_GRAD } : {}}
+                style={filterRating === r ? { background: BLUE_GRAD, color: DARK } : {}}
               >
                 {r}★ ({count})
               </button>

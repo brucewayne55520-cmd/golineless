@@ -148,12 +148,31 @@ function truncate(text: string, maxLength = 300): string {
   return text.length > maxLength ? `${text.slice(0, maxLength - 1)}…` : text;
 }
 
+// #34: Map HTTP status codes to friendly, user-facing messages
+const FRIENDLY_MESSAGES: Record<number, string> = {
+  400: "The information you provided couldn't be processed. Please check and try again.",
+  401: "Your session has expired. Please sign in again.",
+  403: "You don't have permission to do that.",
+  404: "The item you're looking for wasn't found.",
+  408: "The request took too long. Please check your connection and try again.",
+  409: "This conflicts with an existing operation. Please refresh and try again.",
+  422: "Some of the information provided isn't valid. Please review and correct it.",
+  429: "Too many requests. Please wait a moment and try again.",
+  500: "Something went wrong on our end. Please try again in a moment.",
+  502: "Our servers are temporarily unreachable. Please try again shortly.",
+  503: "The service is temporarily unavailable. Please try again in a few minutes.",
+  504: "The server took too long to respond. Please try again.",
+};
+
 function buildErrorMessage(response: Response, data: unknown): string {
-  const prefix = `HTTP ${response.status} ${response.statusText}`;
+  const status = response.status;
+  const friendly = FRIENDLY_MESSAGES[status];
+  const technicalPrefix = `HTTP ${status} ${response.statusText}`;
 
   if (typeof data === "string") {
     const text = data.trim();
-    return text ? `${prefix}: ${truncate(text)}` : prefix;
+    // Prefer backend detail message, fall back to friendly, then technical
+    return text ? (friendly ? `${friendly} (${text.slice(0, 120)})` : `${technicalPrefix}: ${truncate(text)}`) : (friendly || technicalPrefix);
   }
 
   const title = getStringField(data, "title");
@@ -163,12 +182,13 @@ function buildErrorMessage(response: Response, data: unknown): string {
     getStringField(data, "error_description") ??
     getStringField(data, "error");
 
-  if (title && detail) return `${prefix}: ${title} — ${detail}`;
-  if (detail) return `${prefix}: ${detail}`;
-  if (message) return `${prefix}: ${message}`;
-  if (title) return `${prefix}: ${title}`;
+  // Backend provides a specific message — use it with friendly context
+  const backendMsg = detail || message || title;
+  if (backendMsg) {
+    return friendly ? `${friendly} (${truncate(backendMsg, 100)})` : `${technicalPrefix}: ${backendMsg}`;
+  }
 
-  return prefix;
+  return friendly || technicalPrefix;
 }
 
 export class ApiError<T = unknown> extends Error {
@@ -394,6 +414,14 @@ export async function customFetch<T = unknown>(
   }
 
   const requestInfo = { method, url: resolveUrl(input) };
+
+  // CSRF: Read cookie and attach as header for double-submit pattern
+  if (typeof document !== "undefined") {
+    const csrfCookie = document.cookie.split(';').find(c => c.trim().startsWith('_csrf='));
+    if (csrfCookie) {
+      headers.set('x-csrf-token', csrfCookie.split('=').slice(1).join('='));
+    }
+  }
 
   // L6: Always include credentials so httpOnly auth cookies are sent automatically
   const response = await fetch(input, { ...init, method, headers, credentials: "include" });

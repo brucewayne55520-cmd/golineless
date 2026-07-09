@@ -55,6 +55,7 @@ export const tasksTable = pgTable("tasks", {
   startedAt: timestamp("started_at", { withTimezone: true }),
   reachedPickupAt: timestamp("reached_pickup_at", { withTimezone: true }),
   reachedTaskLocationAt: timestamp("reached_task_location_at", { withTimezone: true }),
+  atLocationAt: timestamp("at_location_at", { withTimezone: true }),
   taskTimeline: text("task_timeline").array().notNull().default([]),
   // Phase 6: Revenue Engine
   priorityLevel: text("priority_level").notNull().default("normal"),

@@ -14,7 +14,7 @@ const createSubscriptionSchema = z.object({
 // GET /subscriptions/plans
 router.get("/subscriptions/plans", async (_req, res): Promise<void> => {
   const plans = await db.select().from(subscriptionPlansTable).where(eq(subscriptionPlansTable.isActive, true));
-  res.json(plans.map(p => ({
+  res.json(plans.map((p: typeof subscriptionPlansTable.$inferSelect) => ({
     ...p,
     priceMonthly: Number(p.priceMonthly),
     priceYearly: Number(p.priceYearly),
@@ -101,7 +101,7 @@ router.get("/admin/subscriptions", requireAdmin, async (req, res): Promise<void>
   ]);
 
   res.json({
-    subscriptions: subs.map(s => ({ ...s, amount: Number(s.amount) })),
+    subscriptions: subs.map((s: typeof subscriptionsTable.$inferSelect) => ({ ...s, amount: Number(s.amount) })),
     total: Number(countResult[0]?.count ?? 0),
     page,
     limit,

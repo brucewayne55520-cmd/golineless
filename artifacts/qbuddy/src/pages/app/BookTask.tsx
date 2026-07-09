@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
@@ -83,6 +83,40 @@ export default function BookTask() {
   const [couponApplied, setCouponApplied] = useState(false);
   const [terms, setTerms] = useState(false);
   const [bookedTask, setBookedTask] = useState<import("@workspace/api-client-react").Task | null>(null);
+  // #11: Interactive map reference for the BookTask location step
+  const bookMapContainerRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const container = bookMapContainerRef.current;
+    if (!container || step !== 2) return;
+    let map: import("leaflet").Map;
+    const load = async () => {
+      const L = await import("leaflet");
+      await import("leaflet/dist/leaflet.css");
+      delete (L.Icon.Default.prototype as unknown as { _getIconUrl?: unknown })._getIconUrl;
+      L.Icon.Default.mergeOptions({
+        iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
+        iconRetinaUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
+        shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
+      });
+      map = L.map(container, { zoomControl: false }).setView([23.0225, 72.5714], 13);
+      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { attribution: "© OpenStreetMap" }).addTo(map);
+      // Ahmedabad pilot zone markers
+      const zones = [
+        { lat: 23.0225, lng: 72.5714, name: "Ahmedabad City Center" },
+        { lat: 23.0504, lng: 72.5301, name: "Navrangpura" },
+        { lat: 23.0469, lng: 72.5088, name: "Satellite" },
+        { lat: 23.0373, lng: 72.5337, name: "CG Road" },
+        { lat: 23.0064, lng: 72.5037, name: "Bopal" },
+      ];
+      const icon = L.divIcon({
+        html: `<div style="background:#3B82F6;width:20px;height:20px;border-radius:50%;border:3px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.3);"></div>`,
+        className: "", iconSize: [20, 20],
+      });
+      zones.forEach(z => L.marker([z.lat, z.lng], { icon }).addTo(map).bindPopup(`<b>${z.name}</b>`));
+    };
+    load().catch(() => {});
+    return () => { map?.remove(); };
+  }, [step]);
 
   const createTask = useCreateTask({
     request: {
@@ -126,8 +160,20 @@ export default function BookTask() {
   const displayTotal = backendPrice != null ? backendPrice.price : null;
   const displayRunnerEarning = backendPrice?.breakdown?.runnerEarning ?? null;
 
+  // #27: Dynamic coupon validation — read active coupons from admin settings API
+  const [activeCoupons, setActiveCoupons] = useState<string[]>([]);
+  useEffect(() => {
+    fetch("/api/admin/settings")
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { if (d?.activeCoupons?.length) setActiveCoupons(d.activeCoupons.map((c: string) => c.toUpperCase())); })
+      .catch(() => {});
+  }, []);
+
   const handleApplyCoupon = () => {
-    if (coupon.toUpperCase() === "GOLINELESS10") {
+    const code = coupon.toUpperCase().trim();
+    // #27: Check against dynamic active coupons, fall back to default
+    const validCoupons = activeCoupons.length > 0 ? activeCoupons : ["GOLINELESS10"];
+    if (validCoupons.includes(code)) {
       setCouponApplied(true);
       toast.success("Coupon applied — 10% off!");
     } else {
@@ -521,11 +567,11 @@ export default function BookTask() {
                 </div>
               </div>
 
-              <div className="bg-gray-50 border border-dashed border-gray-200 rounded-2xl h-32 flex items-center justify-center">
-                <div className="text-center text-gray-400">
-                  <MapPin size={24} className="mx-auto mb-1" style={{ color: DARK + "60" }} />
-                  <div className="text-sm font-medium text-gray-500">Ahmedabad, Gujarat</div>
-                  <div className="text-xs text-gray-400">Service area · Pilot zone</div>
+              <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                <div ref={bookMapContainerRef} className="w-full h-48" />
+                <div className="px-4 py-2 flex items-center gap-2 bg-gray-50 border-t border-gray-100">
+                  <MapPin size={12} className="text-gray-400" />
+                  <span className="text-xs text-gray-500">Ahmedabad, Gujarat — Service area · Pilot zone</span>
                 </div>
               </div>
 
@@ -572,8 +618,11 @@ export default function BookTask() {
                 <h3 className="font-bold text-gray-900 mb-3">Estimated Price</h3>
                 <p className="text-[10px] text-gray-400 mb-3">Final price confirmed after booking · May vary based on urgency &amp; priority</p>
                 {pricingPreview.isPending && (
-                  <div className="text-center py-2">
-                    <div className="inline-block w-4 h-4 border-2 border-t-transparent rounded-full animate-spin" style={{ borderColor: `${DARK}40`, borderTopColor: DARK }} />
+                  <div className="space-y-2.5 animate-pulse">
+                    <div className="flex justify-between"><div className="h-3 w-24 bg-gray-100 rounded" /><div className="h-3 w-12 bg-gray-100 rounded" /></div>
+                    <div className="flex justify-between"><div className="h-3 w-20 bg-gray-100 rounded" /><div className="h-3 w-10 bg-gray-100 rounded" /></div>
+                    <div className="flex justify-between"><div className="h-3 w-16 bg-gray-100 rounded" /><div className="h-3 w-10 bg-gray-100 rounded" /></div>
+                    <div className="border-t border-gray-100 pt-3 flex justify-between"><div className="h-5 w-16 bg-gray-100 rounded" /><div className="h-5 w-14 bg-gray-100 rounded" /></div>
                   </div>
                 )}
                 <div className="space-y-2.5 text-sm">

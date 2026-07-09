@@ -34,13 +34,13 @@ setInterval(() => {
     db.select({ status: tasksTable.status })
       .from(tasksTable)
       .where(eq(tasksTable.id, taskId))
-      .then(([task]) => {
+      .then(([task]: { status: string }[]) => {
         if (!task || task.status !== "pending") {
           for (const t of dispatch.timeouts) clearTimeout(t);
           activeDispatches.delete(taskId);
         }
       })
-      .catch((cleanupErr) => { logger.error({ err: cleanupErr, taskId }, "Dispatch cleanup DB error"); });
+      .catch((cleanupErr: unknown) => { logger.error({ err: cleanupErr, taskId }, "Dispatch cleanup DB error"); });
   }
 }, 5 * 60 * 1000);
 
@@ -112,7 +112,7 @@ async function findNearbyComrades(
     ));
 
   const withDistance = comrades
-    .map((c) => {
+    .map((c: NearbyRunner) => {
       const lat = c.currentLat ? Number(c.currentLat) : null;
       const lng = c.currentLng ? Number(c.currentLng) : null;
       const distanceKm = lat != null && lng != null
@@ -122,8 +122,8 @@ async function findNearbyComrades(
       const trustNorm = (c.trustScore ?? 50) / 100;
       return { runner: c, distanceKm, trustScore: trustNorm };
     })
-    .filter((c) => c.distanceKm <= maxRadiusKm)
-    .sort((a, b) => {
+    .filter((c: { runner: NearbyRunner; distanceKm: number; trustScore: number }) => c.distanceKm <= maxRadiusKm)
+    .sort((a: { runner: NearbyRunner; distanceKm: number; trustScore: number }, b: { runner: NearbyRunner; distanceKm: number; trustScore: number }) => {
       // Sort by composite score: distance (lower better) + trust (higher better)
       // Weight: distance 70%, trust 30% for initial sort
       const aNormDistance = a.distanceKm / maxRadiusKm;
@@ -203,7 +203,7 @@ export async function startSmartDispatch(taskId: number): Promise<{ wave: number
       .select({ id: runnersTable.id, name: runnersTable.name, phone: runnersTable.phone, currentLat: runnersTable.currentLat, currentLng: runnersTable.currentLng })
       .from(runnersTable)
       .where(and(eq(runnersTable.isOnline, true), eq(runnersTable.kycStatus, "verified")));
-    const mapResult = allOnline.map(r => ({ runner: r as NearbyRunner, distanceKm: 0 }));
+    const mapResult = allOnline.map((r: { id: number; name: string | null; phone: string | null; currentLat: string | null; currentLng: string | null }) => ({ runner: r as NearbyRunner, distanceKm: 0 }));
     const count = await notifyComrades(mapResult, task, "fallback_all", 0);
     return { wave: 1, comradesInRadius: count };
   }
@@ -262,7 +262,7 @@ export async function startSmartDispatch(taskId: number): Promise<{ wave: number
 
       if (newComrades.length > 0) {
         const count = await notifyComrades(newComrades, task, `wave_${wave + 1}`, newRadius);
-        newComrades.forEach(c => dispatch.totalNotified.add(c.runner.id));
+        newComrades.forEach((c: { runner: NearbyRunner; distanceKm: number; trustScore?: number }) => dispatch.totalNotified.add(c.runner.id));
         dispatch.batchIndex = wave;
 
         // Update metrics

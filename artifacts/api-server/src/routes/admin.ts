@@ -194,10 +194,10 @@ router.get("/admin/stats", requireAdmin, async (_req, res): Promise<void> => {
   }
 
   // Queue Intelligence Metrics — queueTaskRows is a small targeted query
-  const activeQueueTasks = result.queueTaskRows.filter(t =>
+  const activeQueueTasks = result.queueTaskRows.filter((t: { id: number; status: string; category: string; tokenNumber: string | null; currentToken: string | null }) =>
     ["assigned","on_the_way","at_location","in_progress","waiting_started"].includes(t.status) && t.currentToken
   );
-  const queueGaps = activeQueueTasks.map(t => {
+  const queueGaps = activeQueueTasks.map((t: { tokenNumber: string | null; currentToken: string | null }) => {
     const g = parseInt(t.tokenNumber || "0") - parseInt(t.currentToken || "0");
     return g > 0 ? g : 0;
   }).filter(g => !isNaN(g));
@@ -363,20 +363,18 @@ router.get("/admin/tasks", requireAdmin, async (req, res): Promise<void> => {
 
   // Fix #20: Batch user/runner lookups instead of N+1 individual queries
   const sliced = tasks.slice(0, Number(limit));
-  const userIds = [...new Set(sliced.filter(t => t.userId).map(t => t.userId!))];
-  const runnerIds = [...new Set(sliced.filter(t => t.runnerId).map(t => t.runnerId!))];
-  const [batchUsers, batchRunners] = await Promise.all([
-    userIds.length > 0 ? db.select().from(usersTable).where(inArray(usersTable.id, userIds)) : Promise.resolve([]),
-    runnerIds.length > 0 ? db.select().from(runnersTable).where(inArray(runnersTable.id, runnerIds)) : Promise.resolve([]),
-  ]);
-  const userMap = new Map(batchUsers.map(u => [u.id, u]));
-  const runnerMap = new Map(batchRunners.map(r => [r.id, r]));
+  const userIds = [...new Set(sliced.filter((t: typeof tasksTable.$inferSelect) => t.userId).map((t: typeof tasksTable.$inferSelect) => t.userId!))];
+  const runnerIds = [...new Set(sliced.filter((t: typeof tasksTable.$inferSelect) => t.runnerId).map((t: typeof tasksTable.$inferSelect) => t.runnerId!))];
+  const batchUsers = userIds.length > 0 ? await db.select().from(usersTable).where(inArray(usersTable.id, userIds)) : [];
+  const batchRunners = runnerIds.length > 0 ? await db.select().from(runnersTable).where(inArray(runnersTable.id, runnerIds)) : [];
+  const userMap = new Map(batchUsers.map((u: typeof usersTable.$inferSelect) => [u.id, u]));
+  const runnerMap = new Map(batchRunners.map((r: typeof runnersTable.$inferSelect) => [r.id, r]));
 
   const enriched = sliced.map(task => {
     const user = task.userId ? userMap.get(task.userId) ?? null : null;
     const runner = task.runnerId ? runnerMap.get(task.runnerId) ?? null : null;
-    const safeUser = user ? (({ otp, otpExpiresAt, ...u }) => u)(user) : null;
-    const safeRunner = runner ? (({ otp, otpExpiresAt, aadhaarNumber, ...r }) => r)(runner) : null;
+    const safeUser = user ? (({ otp: _o1, otpExpiresAt: _e1, ...u }) => u)(user as Record<string, unknown>) : null;
+    const safeRunner = runner ? (({ otp: _o2, otpExpiresAt: _e2, aadhaarNumber: _a1, ...r }) => r)(runner as Record<string, unknown>) : null;
     return { ...task, user: safeUser, runner: safeRunner };
   });
 
@@ -745,7 +743,7 @@ router.patch("/admin/users/:id/kyc", requireAdmin, async (req, res): Promise<voi
 // GET /admin/subscriptions
 router.get("/admin/subscriptions", requireAdmin, async (_req, res): Promise<void> => {
   const subs = await db.select().from(subscriptionsTable).orderBy(desc(subscriptionsTable.createdAt));
-  res.json(subs.map(s => ({ ...s, amount: Number(s.amount) })));
+  res.json(subs.map((s: typeof subscriptionsTable.$inferSelect) => ({ ...s, amount: Number(s.amount) })));
 });
 
 // GET /admin/analytics
@@ -787,8 +785,8 @@ router.get("/admin/analytics", requireAdmin, async (req, res): Promise<void> => 
   ]);
 
   // Build daily stats from SQL results
-  const dailyGmvMap = new Map(dailyGmv.map(r => [r.date, r.gmv]));
-  const dailyCountMap = new Map(dailyTaskCounts.map(r => [r.date, r.cnt]));
+  const dailyGmvMap = new Map(dailyGmv.map((r: { date: string; gmv: number }) => [r.date, r.gmv]));
+  const dailyCountMap = new Map(dailyTaskCounts.map((r: { date: string; cnt: number }) => [r.date, r.cnt]));
   const dailyStats = [];
   for (let i = numDays - 1; i >= 0; i--) {
     const d = new Date(); d.setDate(d.getDate() - i);
@@ -797,14 +795,14 @@ router.get("/admin/analytics", requireAdmin, async (req, res): Promise<void> => 
   }
 
   // Category breakdown from SQL
-  const categoryBreakdown = categoryStats.map(r => ({ category: r.category, tasks: r.cnt, revenue: r.revenue }));
+  const categoryBreakdown = categoryStats.map((r: typeof categoryStats[number]) => ({ category: r.category, tasks: r.cnt, revenue: r.revenue }));
 
   // Hourly distribution from SQL (fill missing hours with 0)
-  const hourMap = new Map(hourlyStats.map(r => [Number(r.hour), r.cnt]));
+  const hourMap = new Map(hourlyStats.map((r: typeof hourlyStats[number]) => [Number(r.hour), r.cnt]));
   const hourlyDistribution = Array.from({ length: 24 }, (_, h) => ({ hour: h, tasks: hourMap.get(h) || 0 }));
 
   // Runner performance from SQL (already enriched with rating subquery)
-  const runnerPerformance = runnerPerfRaw.map(r => ({
+  const runnerPerformance = runnerPerfRaw.map((r: typeof runnerPerfRaw[number]) => ({
     runnerId: r.runnerId, name: r.name ?? r.phone,
     tasks: r.tasks, earnings: r.earnings, rating: r.rating ? Number(r.rating).toFixed(1) : null,
   }));
@@ -814,8 +812,8 @@ router.get("/admin/analytics", requireAdmin, async (req, res): Promise<void> => 
   const userGrowth = dailyStats.map(d => ({ date: d.date, total: totalUsers })); // Approximate — full daily breakdown would need a subquery per day
 
   // MRR
-  const activeSubs = subs.filter(s => s.status === "active");
-  const mrrAmount = activeSubs.reduce((sum, s) => sum + Number(s.amount || 0), 0);
+  const activeSubs = subs.filter((s: typeof subs[number]) => s.status === "active");
+  const mrrAmount = activeSubs.reduce((sum: number, s: typeof subs[number]) => sum + Number(s.amount || 0), 0);
   const subscriptionMrr = dailyStats.map(d => ({ date: d.date, mrr: mrrAmount }));
 
   res.json({ dailyStats, categoryBreakdown, hourlyDistribution, runnerPerformance, userGrowth, subscriptionMrr });
@@ -1050,7 +1048,7 @@ router.get("/admin/reconciliation", requireAdmin, async (req, res): Promise<void
 
   const agg = completedAgg[0];
   const dailyBreakdown = dailyBreakdownRaw;
-  const runnerReconciliation = runnerAgg.filter(r => r.cashTasksCollected > 0).sort((a, b) => Number(b.cashCollected) - Number(a.cashCollected));
+  const runnerReconciliation = runnerAgg.filter((r: typeof runnerAgg[number]) => r.cashTasksCollected > 0).sort((a: typeof runnerAgg[number], b: typeof runnerAgg[number]) => Number(b.cashCollected) - Number(a.cashCollected));
 
   res.json({
     summary: {
@@ -1091,10 +1089,10 @@ router.get("/admin/payouts", requireAdmin, async (req, res): Promise<void> => {
   }
 
   // Build per-runner outstanding balances
-  const runnerBalances = allRunners.filter(r => r.kycStatus === "verified").map(r => {
+  const runnerBalances = allRunners.filter((r: typeof allRunners[number]) => r.kycStatus === "verified").map((r: typeof allRunners[number]) => {
     const rCompleted = allTasks.filter(t => t.runnerId === r.id);
     const unsettledTasks = rCompleted.filter(t => !settledTaskIds.has(t.id));
-    const outstandingAmount = unsettledTasks.reduce((s, t) => s + Number(t.runnerEarning || 0), 0);
+    const outstandingAmount = unsettledTasks.reduce((s: number, t: typeof unsettledTasks[number]) => s + Number(t.runnerEarning || 0), 0);
     const settledTasks = rCompleted.filter(t => settledTaskIds.has(t.id));
     const settledAmount = settledTasks.reduce((s, t) => s + Number(t.runnerEarning || 0), 0);
     const allPayouts = payouts.filter(p => p.runnerId === r.id && p.status === "settled");

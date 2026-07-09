@@ -3,8 +3,8 @@ import crypto from "crypto";
 import { encrypt, decrypt } from "../lib/crypto";
 import { uploadDataUrl } from "../lib/storage";
 import { db, runnersTable, tasksTable, runnerLocationsTable, usersTable, reviewsTable, runnerPayoutsTable, runnerSessionsTable } from "@workspace/db";
-import { eq, desc, and, gte, sql, inArray, or, count } from "drizzle-orm";
-import { requireRunner, requireAdmin, extractToken, getUserFromToken, getRunnerFromToken, resolveAdmin, verifyPassword } from "../lib/auth";
+import { eq, desc, and, gte, ne, sql, inArray, or, count } from "drizzle-orm";
+import { requireRunner, requireAdmin, extractToken, getUserFromToken, getRunnerFromToken, resolveAdmin, verifyPassword, hashPassword } from "../lib/auth";
 import { haversineKm } from "../lib/dispatch-engine";
 import { isValidCoordinate } from "../lib/gps-engine";
 import { logger } from "../lib/logger";
@@ -302,9 +302,9 @@ router.get("/runners/me/active-tasks", requireRunner, async (req, res): Promise<
       .orderBy(desc(tasksTable.createdAt))
       .limit(1);
 
-    const enriched = await Promise.all(tasks.map(async (task) => {
+    const enriched = await Promise.all(tasks.map(async (task: typeof tasksTable.$inferSelect) => {
       const [user] = task.userId ? await db.select().from(usersTable).where(eq(usersTable.id, task.userId)) : [null];
-      const safeUser = user ? (({ otp, otpExpiresAt, ...u }) => u)(user) : null;
+      const safeUser = user ? (({ otp: _o, otpExpiresAt: _e, ...u }: Record<string, unknown>) => u)(user as Record<string, unknown>) : null;
       return { ...task, user: safeUser };
     }));
 
@@ -406,7 +406,7 @@ router.get("/runners/nearby/:taskId", async (req, res): Promise<void> => {
       ))
       .limit(20);
 
-    const enriched = nearby.map(r => {
+    const enriched = nearby.map((r: { id: number; name: string | null; rating: string | null; trustScore: number | null; tasksCompleted: number | null; trustBadge: string | null; currentLat: string | null; currentLng: string | null; isOnline: boolean | null; kycStatus: string | null }) => {
       const lat = r.currentLat ? Number(r.currentLat) : null;
       const lng = r.currentLng ? Number(r.currentLng) : null;
       let distanceKm = null;
@@ -436,7 +436,7 @@ router.get("/runners/:id", async (req, res): Promise<void> => {
     const id = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id, 10);
     const [runner] = await db.select().from(runnersTable).where(eq(runnersTable.id, id));
     if (!runner) { res.status(404).json({ error: "Runner not found" }); return; }
-    const { otp, otpExpiresAt, aadhaarNumber, aadhaarFront, aadhaarBack, selfie, phone, bankAccount, bankIfsc, bankAccountHolder, emergencyContactName, emergencyContactPhone, emergencyContactRelation, email, ...safe } = runner;
+    const { otp: _otp, otpExpiresAt: _otpExp, aadhaarNumber: _aadhaar, aadhaarFront: _front, aadhaarBack: _back, selfie: _selfie, phone: _phone, bankAccount: _bank, bankIfsc: _ifsc, bankAccountHolder: _holder, emergencyContactName: _ecName, emergencyContactPhone: _ecPhone, emergencyContactRelation: _ecRel, email: _email, ...safe } = runner;
     res.json({
       id: safe.id,
       name: safe.name,
@@ -532,9 +532,9 @@ router.get("/runners/me/payouts", requireRunner, async (req, res): Promise<void>
       .where(eq(runnerPayoutsTable.runnerId, runner.id))
       .orderBy(desc(runnerPayoutsTable.createdAt));
 
-    const settledPayouts = payouts.filter(p => p.status === "settled");
-    const totalPaidOut = settledPayouts.reduce((s, p) => s + Number(p.amount || 0), 0);
-    const cancelledPayouts = payouts.filter(p => p.status === "cancelled");
+    const settledPayouts = payouts.filter((p: typeof runnerPayoutsTable.$inferSelect) => p.status === "settled");
+    const totalPaidOut = settledPayouts.reduce((s: number, p: typeof runnerPayoutsTable.$inferSelect) => s + Number(p.amount || 0), 0);
+    const cancelledPayouts = payouts.filter((p: typeof runnerPayoutsTable.$inferSelect) => p.status === "cancelled");
 
     res.json({
       payouts: payouts.map(p => ({
@@ -715,7 +715,7 @@ router.patch("/runners/me/specializations", requireRunner, async (req, res): Pro
     if (!Array.isArray(specializations)) {
       res.status(400).json({ error: "specializations must be an array of strings" }); return;
     }
-    const filteredSpecs = specializations.filter(s => typeof s === "string");
+    const filteredSpecs = specializations.filter((s: unknown) => typeof s === "string");
     await db.update(runnersTable).set({
       specializations: filteredSpecs,
     } as Record<string, unknown>).where(eq(runnersTable.id, runner.id));
@@ -743,6 +743,42 @@ router.post("/runners/me/gps-background", requireRunner, async (req, res): Promi
     logger.error({ err, runnerId: runner.id }, "POST /runners/me/gps-background failed");
     res.status(500).json({ error: "Failed to update GPS" });
   }
+});
+
+// POST /runners/me/change-password — change password for authenticated runner
+router.post("/runners/me/change-password", requireRunner, async (req, res): Promise<void> => {
+  const runner = req.runner;
+  if (!runner) { res.status(401).json({ error: "Unauthorized" }); return; }
+  const { currentPassword, newPassword } = req.body;
+
+  if (!currentPassword || !newPassword) {
+    res.status(400).json({ error: "Current password and new password are required" }); return;
+  }
+  if (newPassword.length < 6) {
+    res.status(400).json({ error: "New password must be at least 6 characters" }); return;
+  }
+  if (currentPassword === newPassword) {
+    res.status(400).json({ error: "New password must be different from current password" }); return;
+  }
+  if (!runner.passwordHash) {
+    res.status(400).json({ error: "No password set. Use OTP login instead." }); return;
+  }
+  if (!verifyPassword(currentPassword, runner.passwordHash)) {
+    res.status(401).json({ error: "Current password is incorrect" }); return;
+  }
+
+  const passwordHash = hashPassword(newPassword);
+  await db.update(runnersTable).set({ passwordHash } as Record<string, unknown>).where(eq(runnersTable.id, runner.id));
+
+  // Invalidate all other sessions
+  const token = extractToken(req);
+  if (token) {
+    await db.delete(runnerSessionsTable).where(
+      and(eq(runnerSessionsTable.runnerId, runner.id), ne(runnerSessionsTable.token, token))
+    ).catch(() => {});
+  }
+
+  res.json({ message: "Password changed successfully. Other sessions have been logged out." });
 });
 
 // POST /runners/delete-account — Runner requests account deletion (requires password confirmation)

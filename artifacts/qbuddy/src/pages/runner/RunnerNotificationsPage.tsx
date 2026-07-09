@@ -130,6 +130,9 @@ export default function RunnerNotificationsPage() {
             </div>
             <p className="text-white/40 font-semibold">No notifications yet</p>
             <p className="text-white/20 text-xs mt-1">Task updates, KYC status, and payout confirmations will appear here</p>
+            <button onClick={() => navigate("/runner/feed")} className="mt-4 px-4 py-2 rounded-xl text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 transition-colors">
+              Go to Tasks
+            </button>
           </div>
         ) : (
           <div className="space-y-2">

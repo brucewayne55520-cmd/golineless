@@ -1,7 +1,8 @@
+import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { motion } from "framer-motion";
-import { MapPin, Bell, PersonStanding, Shield, Smartphone, CheckCircle2, HeartHandshake, Camera, KeyRound, Star, Wallet, CreditCard } from "lucide-react";
-import { useListTasks, useListNotifications } from "@workspace/api-client-react";
+import { MapPin, Bell, PersonStanding, Shield, Smartphone, CheckCircle2, HeartHandshake, Camera, KeyRound, Star, Wallet, CreditCard, Sun, Moon } from "lucide-react";
+import { useListTasks, useListNotifications, useGetActiveTask } from "@workspace/api-client-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { UserBottomNav } from "@/components/BottomNav";
 import { CategoryIcon } from "@/components/CategoryIcon";
@@ -28,11 +29,45 @@ function getGreeting(name?: string | null) {
   return name ? `${prefix}, ${name.split(" ")[0]}` : prefix;
 }
 
+function getCityFromCoords(lat: number, lng: number): string {
+  // Reverse geocode approximation for Gujarat pilot zones
+  if (lat >= 22.9 && lat <= 23.2 && lng >= 72.4 && lng <= 72.7) return "Ahmedabad, GJ";
+  if (lat >= 23.0 && lat <= 23.3 && lng >= 72.5 && lng <= 72.85) return "Gandhinagar, GJ";
+  return "Gujarat, IN";
+}
+
 export default function UserHome() {
   const [, navigate] = useLocation();
   const { user } = useAuth();
+
+  // #39: Dynamic location from geolocation or profile
+  const [userCity, setUserCity] = useState(() => localStorage.getItem("golineless_user_city") || "");
+  useEffect(() => {
+    if (userCity) return;
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          const city = getCityFromCoords(pos.coords.latitude, pos.coords.longitude);
+          setUserCity(city);
+          localStorage.setItem("golineless_user_city", city);
+        },
+        () => { setUserCity("Ahmedabad, GJ"); localStorage.setItem("golineless_user_city", "Ahmedabad, GJ"); },
+        { timeout: 5000, maximumAge: 600000 }
+      );
+    } else {
+      setUserCity("Ahmedabad, GJ");
+    }
+  }, [userCity]);
+
+  // #24: Dark mode toggle for user-side app
+  const [dark, setDark] = useState(() => localStorage.getItem("golineless_user_theme") === "dark");
+  useEffect(() => {
+    document.documentElement.classList.toggle("dark", dark);
+    localStorage.setItem("golineless_user_theme", dark ? "dark" : "light");
+  }, [dark]);
   const { data: tasks, isLoading } = useListTasks({ limit: 3 });
   const { data: notifs, isLoading: notifsLoading } = useListNotifications();
+  const { data: activeTask } = useGetActiveTask({ query: { queryKey: ["activeTask"], refetchInterval: 30000, retry: false } });
   const unreadCount = notifs?.filter((n: Required<import("@workspace/api-client-react").Notification>) => !n.isRead).length ?? 0;
 
   const trustStrip = [
@@ -55,9 +90,17 @@ export default function UserHome() {
         <img src="/logo.jpg" alt="Go LineLess" className="h-8 w-auto" />
         <div className="flex items-center gap-1.5 bg-gray-50 border border-gray-100 rounded-full px-2.5 py-1">
           <MapPin size={11} className="text-blue-500" />
-          <span className="text-xs font-semibold text-gray-600">Ahmedabad, GJ</span>
+          <span className="text-xs font-semibold text-gray-600">{userCity || "Ahmedabad, GJ"}</span>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
+          {/* #24: Dark mode toggle */}
+          <button
+            onClick={() => setDark(d => !d)}
+            className="w-8 h-8 rounded-xl bg-gray-50 border border-gray-100 flex items-center justify-center hover:bg-gray-100 transition-colors"
+            aria-label={dark ? "Switch to light mode" : "Switch to dark mode"}
+          >
+            {dark ? <Sun size={14} className="text-gray-500" /> : <Moon size={14} className="text-gray-400" />}
+          </button>
           <button onClick={() => navigate("/app/notifications")} className="relative">
             <Bell size={20} className="text-gray-400" />
             {unreadCount > 0 && (
@@ -69,6 +112,35 @@ export default function UserHome() {
           </div>
         </div>
       </div>
+
+      {/* #12: Active task dashboard — persistent card showing running task */}
+      {activeTask && (
+        <div className="px-4 pt-4">
+          <motion.div
+            initial={{ opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0 }}
+            onClick={() => navigate(`/app/tasks/${activeTask.id}`)}
+            className="rounded-2xl p-4 bg-green-50 border-2 border-green-200 shadow-sm cursor-pointer hover:shadow-md transition-all"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-11 h-11 rounded-xl bg-green-100 flex items-center justify-center flex-shrink-0">
+                <div className="w-3 h-3 rounded-full bg-green-500 animate-pulse" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <p className="text-sm font-black text-green-800">Active Task in Progress</p>
+                  <StatusBadge status={activeTask.status ?? ""} showLive={true} />
+                </div>
+                <p className="text-xs text-green-600/70 mt-0.5 truncate">
+                  {activeTask.runner?.name ? `${activeTask.runner.name} · ` : ""}{activeTask.status?.replace(/_/g, " ")}
+                  {activeTask.locationArea ? ` · ${activeTask.locationArea}` : ""}
+                </p>
+              </div>
+              <span className="text-green-700 text-xs font-bold flex-shrink-0">Track →</span>
+            </div>
+          </motion.div>
+        </div>
+      )}
 
       {/* Hero card */}
       <div className="px-4 pt-4">
@@ -136,7 +208,7 @@ export default function UserHome() {
           </div>
         ) : null}
         <button
-          onClick={() => navigate("/app/profile")}
+          onClick={() => navigate("/app/notifications")}
           className="w-full mt-2 py-2.5 rounded-xl border border-gray-200 text-xs font-semibold text-gray-500 hover:bg-gray-50 transition-colors"
         >
           View All Notifications
@@ -191,7 +263,7 @@ export default function UserHome() {
             {howItWorks.map((s, i) => (
               <div key={s.label} className="flex-1 flex flex-col items-center text-center relative">
                 {i < howItWorks.length - 1 && (
-                  <div className="absolute top-4 left-[calc(50%+20px)] right-[-calc(50%-20px)] h-px bg-gray-200" />
+                  <div className="absolute top-4 left-[calc(50%+20px)] w-8 h-px bg-gray-200" />
                 )}
                 <div className="w-9 h-9 rounded-xl flex items-center justify-center mb-2 z-10 bg-blue-50 text-blue-600">
                   <s.Icon size={17} />

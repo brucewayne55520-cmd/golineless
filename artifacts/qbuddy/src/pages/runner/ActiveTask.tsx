@@ -2,12 +2,13 @@ import { useState, useEffect, useRef } from "react";
 import { useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
+import { useQueryClient } from "@tanstack/react-query";
 import confetti from "canvas-confetti";
 import { MapPin, Camera, KeyRound, Sparkles, Moon, Navigation, Clock, CheckCircle, Phone, MessageSquare, Timer, PauseCircle, PlayCircle, Banknote, AlertTriangle, WifiOff, Share2, type LucideIcon } from "lucide-react";
 import { useGetActiveTask, useGetRunnerMe, useUpdateTaskStatus, useVerifyTaskOtp, useStartWaiting, usePauseWaiting, useEndWaiting, useUpdateQueueProgress, useUploadProofPhoto, TaskStatusUpdateStatus, ProofPhotoInputProofType } from "@workspace/api-client-react";
 import { RunnerBottomNav } from "@/components/BottomNav";
 import { CategoryIcon } from "@/components/CategoryIcon";
-import { CATEGORY_NAMES, formatCurrency } from "@/lib/utils";
+import { CATEGORY_NAMES, formatCurrency, haversineDistance } from "@/lib/utils";
 import { DARK, DARK_GRAD, BLUE, BLUE_GRAD, DARK_MID } from "@/lib/theme";
 import { useGpsTracking } from "@/hooks/useGpsTracking";
 
@@ -124,6 +125,34 @@ export default function ActiveTask() {
     return () => { navigator.geolocation?.clearWatch(watchId); };
   }, []);
 
+  // #29: Geofence auto-status — detect when runner enters task radius
+  const [geofenceTriggered, setGeofenceTriggered] = useState(false);
+  useEffect(() => {
+    if (!navigator.geolocation || !task?.id) return;
+    if (task.status !== "on_the_way") return;
+    const targetLat = task.taskLat ?? task.locationLat;
+    const targetLng = task.taskLng ?? task.locationLng;
+    if (!targetLat || !targetLng) return;
+
+    let notified = false;
+    const watchId = navigator.geolocation.watchPosition(
+      (pos) => {
+        if (notified || geofenceTriggered) return;
+        const dist = haversineDistance(pos.coords.latitude, pos.coords.longitude, Number(targetLat), Number(targetLng));
+        // Within 500m radius — notify runner
+        if (dist <= 0.5) {
+          notified = true;
+          setGeofenceTriggered(true);
+          haptic([50, 30, 50, 30, 50]);
+          toast.success("📍 You're near the task location! Tap to mark arrival.", { duration: 8000 });
+        }
+      },
+      () => { /* swallow errors */ },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 5000 }
+    );
+    return () => { navigator.geolocation?.clearWatch(watchId); };
+  }, [task?.status, task?.taskLat, task?.locationLat, task?.taskLng, task?.locationLng, task?.id, geofenceTriggered]);
+
   // B4 FIX: Initialize waitingElapsed from server's waitingStartedAt on mount
   useEffect(() => {
     if (task?.status === "waiting_started" && task.waitingStartedAt && !waitingActive) {
@@ -193,16 +222,21 @@ export default function ActiveTask() {
 
   const formatTime = (s: number) => `${String(Math.floor(s / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`;
 
+  const queryClient = useQueryClient();
+
   const handleStatusUpdate = (status: TaskStatusUpdateStatus) => {
     if (!task) return;
     haptic(30);
     updateStatus.mutate({ id: task.id!, data: { status } }, {
       onSuccess: () => {
+        // CRITICAL FIX: Invalidate activeTask query so UI reflects new status immediately
+        queryClient.invalidateQueries({ queryKey: ["activeTask"] });
         const msgs: Record<string, string> = {
           on_the_way: "Marked as On the Way!",
           reached_pickup: "Reached pickup location!",
           reached_task_location: "Reached task location!",
           in_progress: "Task started!",
+          at_location: "Arrived at location!",
         };
         toast.success(msgs[status] || "Status updated!");
         if (status === "in_progress") setTimerActive(true);
@@ -317,6 +351,7 @@ export default function ActiveTask() {
         haptic([100, 50, 100]);
         setCompleted(true);
         setTimerActive(false);
+        queryClient.invalidateQueries({ queryKey: ["activeTask"] });
         confetti({ particleCount: 150, spread: 100, origin: { y: 0.5 }, colors: [DARK, BLUE, DARK_MID, "#22C55E"] });
         toast.success(`Task Complete! You earned ${formatCurrency(data.runnerEarning ?? task.runnerEarning)}`);
       },
@@ -535,8 +570,54 @@ export default function ActiveTask() {
           </div>
         )}
 
-        {/* Step 4: Reached Task Location */}
-        {(task.status === "reached_task_location" || (task.pickupRequired && task.status === "reached_pickup") || (!task.pickupRequired && task.status === "on_the_way")) && (
+        {/* Step 4a: No-pickup tasks — confirm arrival at task location (from on_the_way) */}
+        {(!task.pickupRequired && task.status === "on_the_way") && (
+          <div className="bg-white/8 border border-white/10 rounded-2xl p-4">
+            <div className="flex items-center gap-2 mb-3">
+              <MapPin size={16} className="text-green-400" />
+              <h3 className="text-white font-semibold text-sm">Arrived at Task Location {uploadedPhotos["reached_task_location"] && "✓"}</h3>
+            </div>
+            <p className="text-white/50 text-xs mb-3">Upload location proof, then start the task</p>
+            <div className="flex gap-2">
+              <button
+                onClick={() => handlePhotoUpload("reached_task_location")}
+                className="flex-1 py-3 rounded-xl border border-green-500/30 text-green-400 font-semibold text-sm flex items-center justify-center gap-2"
+              >
+                <Camera size={14} /> {uploadedPhotos["reached_task_location"] ? "Re-upload Proof" : "Upload Proof"}
+              </button>
+              {uploadedPhotos["reached_task_location"] && (
+                <button
+                  onClick={async () => {
+                    // Two-step atomic transition: on_the_way → reached_task_location → in_progress
+                    // Uses mutateAsync with await to prevent race conditions
+                    haptic(30);
+                    try {
+                      await updateStatus.mutateAsync({ id: task.id!, data: { status: "reached_task_location" } });
+                      queryClient.invalidateQueries({ queryKey: ["activeTask"] });
+                      await updateStatus.mutateAsync({ id: task.id!, data: { status: "in_progress" } });
+                      queryClient.invalidateQueries({ queryKey: ["activeTask"] });
+                      setTimerActive(true);
+                      toast.success("Task started!");
+                    } catch {
+                      toast.error("Failed to start task");
+                    }
+                  }}
+                  disabled={updateStatus.isPending}
+                  className="flex-1 py-3 rounded-xl text-gray-900 font-bold text-sm"
+                  style={{ background: BLUE_GRAD }}
+                >
+                  Start Task →
+                </button>
+              )}
+            </div>
+            {uploadedPhotos["reached_task_location"] && (
+              <img src={uploadedPhotos["reached_task_location"]} alt="Location proof" className="mt-3 w-full h-28 object-cover rounded-xl" />
+            )}
+          </div>
+        )}
+
+        {/* Step 4b: Pickup tasks — confirm arrival at task location (from reached_pickup) */}
+        {(task.pickupRequired && task.status === "reached_pickup") && (
           <div className="bg-white/8 border border-white/10 rounded-2xl p-4">
             <div className="flex items-center gap-2 mb-3">
               <MapPin size={16} className="text-green-400" />
@@ -552,7 +633,7 @@ export default function ActiveTask() {
               </button>
               {uploadedPhotos["reached_task_location"] && (
                 <button
-                  onClick={() => handleStatusUpdate(!task.pickupRequired && task.status === "on_the_way" ? "reached_task_location" : "in_progress")}
+                  onClick={() => handleStatusUpdate("in_progress")}
                   disabled={updateStatus.isPending}
                   className="flex-1 py-3 rounded-xl text-gray-900 font-bold text-sm"
                   style={{ background: BLUE_GRAD }}
@@ -567,8 +648,27 @@ export default function ActiveTask() {
           </div>
         )}
 
+        {/* Step 4c: Already at task location (reached_task_location status) — show confirmation */}
+        {(task.status === "reached_task_location") && (
+          <div className="bg-white/8 border border-white/10 rounded-2xl p-4">
+            <div className="flex items-center gap-2 mb-3">
+              <MapPin size={16} className="text-green-400" />
+              <h3 className="text-white font-semibold text-sm">Arrived at Task Location ✓</h3>
+            </div>
+            <p className="text-white/50 text-xs mb-3">Ready to begin the task</p>
+            <button
+              onClick={() => handleStatusUpdate("in_progress")}
+              disabled={updateStatus.isPending}
+              className="w-full py-3.5 rounded-xl text-gray-900 font-bold flex items-center justify-center gap-2"
+              style={{ background: BLUE_GRAD }}
+            >
+              Start Task →
+            </button>
+          </div>
+        )}
+
         {/* Waiting Timer Section */}
-        {(task.status === "at_location" || task.status === "in_progress" || task.status === "waiting_started") && (
+        {(task.status === "in_progress" || task.status === "waiting_started") && (
           <div className="bg-white/8 border border-white/10 rounded-2xl p-4">
             <div className="flex items-center gap-2 mb-3">
               <Timer size={16} className="text-white/50" />
@@ -643,7 +743,7 @@ export default function ActiveTask() {
         )}
 
         {/* Queue Intelligence Section */}
-        {(task.status === "at_location" || task.status === "in_progress" || task.status === "waiting_started") && (
+        {(task.status === "in_progress" || task.status === "waiting_started") && (
           <div className="bg-white/8 border border-white/10 rounded-2xl p-4">
             <div className="flex items-center gap-2 mb-3">
               <MapPin size={16} className="text-white/50" />
@@ -744,7 +844,7 @@ export default function ActiveTask() {
         )}
 
         {/* Step 5: Start Working */}
-        {(task.status === "at_location" || task.status === "in_progress" || task.status === "waiting_started") && (
+        {(task.status === "in_progress" || task.status === "waiting_started") && (
           <div className="bg-white/8 border border-white/10 rounded-2xl p-4">
             <div className="flex items-center gap-2 mb-3">
               <Clock size={16} className="text-blue-400" />
@@ -811,7 +911,7 @@ export default function ActiveTask() {
         )}
 
         {/* Step 5.5: Cash Payment Confirmation (offline mode) */}
-        {(task.status === "in_progress" || task.status === "at_location" || task.status === "waiting_started") && task.paymentMethod === "cash" && (
+        {(task.status === "in_progress" || task.status === "waiting_started") && task.paymentMethod === "cash" && (
           <div className="bg-white/8 border border-white/10 rounded-2xl p-4">
             <div className="flex items-center gap-2 mb-3">
               <Banknote size={16} className="text-green-400" />

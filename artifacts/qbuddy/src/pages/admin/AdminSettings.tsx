@@ -10,9 +10,23 @@ export default function AdminSettings() {
   const updateSettings = useUpdateAdminSettings();
   const [form, setForm] = useState<AdminSettings | null>(null);
 
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+
   useEffect(() => {
     if (settings) setForm(settings);
   }, [settings]);
+
+  // m10: Warn before navigating away with unsaved changes
+  useEffect(() => {
+    const handler = (e: BeforeUnloadEvent) => {
+      if (hasUnsavedChanges) {
+        e.preventDefault();
+        e.returnValue = "";
+      }
+    };
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
+  }, [hasUnsavedChanges]);
 
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
 
@@ -40,8 +54,8 @@ export default function AdminSettings() {
     if (!form) return;
     if (!validateForm()) { toast.error("Please fix validation errors"); return; }
     updateSettings.mutate({ data: form as import("@workspace/api-client-react").AdminSettingsUpdate }, {
-      onSuccess: () => { toast.success("Settings saved!"); refetch(); },
-      onError: () => toast.error("Failed to save"),
+      onSuccess: () => { toast.success("Settings saved!"); refetch(); setHasUnsavedChanges(false); },
+      onError: () => toast.error("Failed to save — changes not applied"),
     });
   };
 
@@ -49,6 +63,7 @@ export default function AdminSettings() {
     // Clear per-field error on edit
     setFormErrors(prev => { const next = { ...prev }; delete next[key]; return next; });
     setForm((prev: AdminSettings | null) => ({ ...prev, [key]: val }));
+    setHasUnsavedChanges(true);
   };
 
   return (
@@ -179,12 +194,15 @@ export default function AdminSettings() {
 
             <button
               onClick={handleSave}
-              disabled={updateSettings.isPending}
-              className="w-full py-4 rounded-2xl text-gray-900 font-bold text-lg gl-transition hover:gl-shadow-xl active:scale-[0.98]"
-              style={{ background: BLUE_GRAD }}
+              disabled={updateSettings.isPending || !hasUnsavedChanges}
+              className="w-full py-4 rounded-2xl text-gray-900 font-bold text-lg gl-transition hover:gl-shadow-xl active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed"
+              style={{ background: hasUnsavedChanges ? BLUE_GRAD : "#D1D5DB" }}
             >
-              {updateSettings.isPending ? "Saving..." : "Save Settings"}
+              {updateSettings.isPending ? "Saving..." : hasUnsavedChanges ? "Save Settings" : "No Changes"}
             </button>
+            {hasUnsavedChanges && (
+              <p className="text-center text-xs text-amber-600 mt-2 font-medium">⚠ You have unsaved changes</p>
+            )}
           </div>
         )}
       </main>

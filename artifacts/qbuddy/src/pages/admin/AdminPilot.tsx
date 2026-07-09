@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
 import AdminSidebar from "@/components/AdminSidebar";
@@ -13,12 +14,21 @@ export default function AdminPilot() {
 
   const updatePilotModeMutation = useUpdatePilotMode();
 
+  const [confirmPilotToggle, setConfirmPilotToggle] = useState(false);
+  const pendingPilotMode = !pilotMode?.pilotMode;
+
   const togglePilotMode = () => {
     const newMode = !pilotMode?.pilotMode;
     updatePilotModeMutation.mutate({ data: { pilotMode: newMode } as PilotModeUpdate }, {
       onError: () => toast.error("Failed to toggle pilot mode"),
       onSettled: () => { refetchDashboard(); refetchPilotMode(); refetchKpi(); },
     });
+    setConfirmPilotToggle(false);
+  };
+
+  const handlePilotToggleClick = () => {
+    // m9: Show confirmation dialog before toggling pilot mode
+    setConfirmPilotToggle(true);
   };
 
   if (isLoading) return (
@@ -61,7 +71,7 @@ export default function AdminPilot() {
             </div>
             {/* Pilot Mode Toggle */}
             {pilotMode !== null && (
-              <button onClick={togglePilotMode}
+              <button onClick={handlePilotToggleClick}
                 className={`flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-bold border transition-all ${pilotMode?.pilotMode ? "bg-green-500/20 text-green-400 border-green-500/30" : "bg-white/5 text-white/40 border-white/10"}`}
               >
                 <ToggleLeft size={14} />
@@ -190,6 +200,40 @@ export default function AdminPilot() {
           )}
         </div>
       </main>
+
+      {/* m9: Pilot mode toggle confirmation dialog */}
+      {confirmPilotToggle && (
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center backdrop-blur-sm">
+          <div className="bg-white rounded-2xl p-6 max-w-sm mx-4 shadow-2xl">
+            <div className="w-12 h-12 rounded-full bg-amber-100 flex items-center justify-center mx-auto mb-4">
+              <ToggleLeft size={22} className="text-amber-600" />
+            </div>
+            <h3 className="font-black text-gray-900 text-lg text-center mb-2">
+              {pendingPilotMode ? "Enable Pilot Mode?" : "Disable Pilot Mode?"}
+            </h3>
+            <p className="text-gray-500 text-sm text-center mb-6 leading-relaxed">
+              {pendingPilotMode
+                ? "This will activate the pilot launch for all users and runners in the service area. Real dispatches and payments will begin."
+                : "This will pause all dispatching and put the app back into maintenance mode. Existing tasks will still be active."}
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setConfirmPilotToggle(false)}
+                className="flex-1 py-3 rounded-xl border border-gray-200 text-gray-600 font-semibold text-sm hover:bg-gray-50 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={togglePilotMode}
+                disabled={updatePilotModeMutation.isPending}
+                className={`flex-1 py-3 rounded-xl font-bold text-sm text-white transition-colors ${pendingPilotMode ? "bg-green-600 hover:bg-green-700" : "bg-red-600 hover:bg-red-700"}`}
+              >
+                {updatePilotModeMutation.isPending ? "Toggling..." : pendingPilotMode ? "Enable" : "Disable"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

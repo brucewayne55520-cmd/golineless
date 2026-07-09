@@ -45,9 +45,31 @@ export default function SeniorCare() {
   const [billing, setBilling] = useState<"monthly" | "yearly">("monthly");
   const { data: plans, isLoading } = useListSubscriptionPlans();
 
-  // [OFFLINE MODE] Subscription activation — requires admin approval during pilot
-  const handleSubscribe = (_planId: string) => {
-    toast.info("Subscription requests require admin approval during our pilot phase. Please contact support@golineless.in or ask your admin to activate.", { duration: 8000 });
+  const [subscribedPlanId, setSubscribedPlanId] = useState<string | null>(null);
+  const [subscribing, setSubscribing] = useState(false);
+
+  const handleSubscribe = async (planId: string) => {
+    setSubscribing(true);
+    setSubscribedPlanId(planId);
+    try {
+      const token = localStorage.getItem("golineless_user_token") || "";
+      const res = await fetch("/api/subscriptions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ planId, billing: billing }),
+      });
+      if (res.ok) {
+        toast.success("Subscription activated! Welcome to Senior Care.", { duration: 5000 });
+      } else {
+        const data = await res.json().catch(() => ({}));
+        toast.info(data.detail || data.error || "Subscription requests require admin approval during our pilot phase. Please contact support@golineless.in.", { duration: 8000 });
+      }
+    } catch {
+      toast.info("Subscription requests require admin approval during our pilot phase. Please contact support@golineless.in.", { duration: 8000 });
+    } finally {
+      setSubscribing(false);
+      setSubscribedPlanId(null);
+    }
   };
 
   return (
@@ -186,12 +208,13 @@ export default function SeniorCare() {
                 )}
                 <button
                   onClick={() => handleSubscribe(plan.id)}
-                  className="w-full py-3.5 rounded-xl font-black text-sm shadow-sm hover:shadow-md transition-all"
+                  disabled={subscribing && subscribedPlanId === plan.id}
+                  className="w-full py-3.5 rounded-xl font-black text-sm shadow-sm hover:shadow-md transition-all disabled:opacity-60"
                   style={plan.isPopular
                     ? { background: BLUE_GRAD, color: DARK }
                     : { background: DARK_GRAD, color: "white" }}
                 >
-                  {"Get Started →"}
+                  {subscribing && subscribedPlanId === plan.id ? "Processing..." : "Get Started →"}
                 </button>
               </div>
             </motion.div>

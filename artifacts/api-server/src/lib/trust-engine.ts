@@ -161,7 +161,8 @@ export async function updateRunnerMetrics(runnerId: number): Promise<void> {
       if (e.status === "assigned" && !entry.accepted) entry.accepted = new Date(e.eventTimestamp);
       if (e.status === "completed" && !entry.completed) entry.completed = new Date(e.eventTimestamp);
     }
-    for (const [, { accepted, completed }] of byTask) {
+    for (const [, entry] of byTask) {
+      const { accepted, completed } = entry;
       if (accepted && completed) {
         const durationHours = (completed.getTime() - accepted.getTime()) / 3600000;
         if (durationHours > 3) lateArrivals++;

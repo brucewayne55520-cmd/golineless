@@ -37,6 +37,10 @@ export const runnersTable = pgTable("runners", {
   otpExpiresAt: timestamp("otp_expires_at", { withTimezone: true }),
   passwordResetToken: text("password_reset_token"),
   passwordResetExpiresAt: timestamp("password_reset_expires_at", { withTimezone: true }),
+  // Email verification
+  emailVerified: boolean("email_verified").notNull().default(false),
+  emailVerificationToken: text("email_verification_token"),
+  emailVerificationExpiresAt: timestamp("email_verification_expires_at", { withTimezone: true }),
   // Phase 6.1: Dispatch Readiness & Onboarding
   onboardingStep: integer("onboarding_step").notNull().default(0),
   onboardingCompleted: boolean("onboarding_completed").notNull().default(false),

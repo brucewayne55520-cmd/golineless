@@ -1,7 +1,7 @@
 import { Router, type IRouter } from "express";
 import { db, usersTable, tasksTable, userSessionsTable } from "@workspace/db";
-import { eq, sql } from "drizzle-orm";
-import { requireUser, extractToken, getUserFromToken } from "../lib/auth";
+import { eq, and, ne, sql } from "drizzle-orm";
+import { requireUser, extractToken, getUserFromToken, verifyPassword, hashPassword } from "../lib/auth";
 import { logger } from "../lib/logger";
 import crypto from "crypto";
 import { encrypt, decrypt } from "../lib/crypto";
@@ -167,6 +167,44 @@ router.get("/users/me/stats", requireUser, async (req, res): Promise<void> => {
   const hoursSaved = totalTasks * 2.5; // avg 2.5 hrs saved per task
   const valueSaved = Number(stats?.valueSaved ?? 0);
   res.json({ totalTasks, hoursSaved, valueSaved });
+});
+
+// POST /users/me/change-password — change password for authenticated user
+router.post("/users/me/change-password", requireUser, async (req, res): Promise<void> => {
+  const user = req.user;
+  if (!user) { res.status(401).json({ error: "Unauthorized" }); return; }
+  const { currentPassword, newPassword } = req.body;
+
+  if (!currentPassword || !newPassword) {
+    res.status(400).json({ error: "Current password and new password are required" }); return;
+  }
+  if (newPassword.length < 6) {
+    res.status(400).json({ error: "New password must be at least 6 characters" }); return;
+  }
+  if (currentPassword === newPassword) {
+    res.status(400).json({ error: "New password must be different from current password" }); return;
+  }
+
+  // Verify current password
+  if (!user.passwordHash) {
+    res.status(400).json({ error: "No password set. Use email/password login instead of OTP." }); return;
+  }
+  if (!verifyPassword(currentPassword, user.passwordHash)) {
+    res.status(401).json({ error: "Current password is incorrect" }); return;
+  }
+
+  const passwordHash = hashPassword(newPassword);
+  await db.update(usersTable).set({ passwordHash } as Record<string, unknown>).where(eq(usersTable.id, user.id));
+
+  // Invalidate all other sessions (session rotation)
+  const token = extractToken(req);
+  if (token) {
+    await db.delete(userSessionsTable).where(
+      and(eq(userSessionsTable.userId, user.id), ne(userSessionsTable.token, token))
+    ).catch(() => {});
+  }
+
+  res.json({ message: "Password changed successfully. Other sessions have been logged out." });
 });
 
 // POST /users/delete-account — User requests account deletion (soft-delete)

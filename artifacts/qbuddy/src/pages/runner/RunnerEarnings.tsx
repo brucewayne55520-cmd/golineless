@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
+import { useLocation } from "wouter";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
 import { CheckCircle2, Star, ClipboardList, TrendingUp, Clock, XCircle, Wallet, Filter } from "lucide-react";
@@ -13,6 +14,7 @@ import { EmptyState } from "@/components/EmptyState";
 const BG = "#080E1E";
 
 export default function RunnerEarnings() {
+  const [, navigate] = useLocation();
   const { data: earnings } = useGetRunnerEarnings();
   const { data: daily } = useGetRunnerDailyEarnings();
   const { data: tasks } = useListTasks({ role: "runner", status: "completed" } );
@@ -28,7 +30,15 @@ export default function RunnerEarnings() {
   const [payoutAmount, setPayoutAmount] = useState("");
 
   // H5: Payout request with custom amount input
+  const MIN_PAYOUT = 500; // Minimum payout amount in Rs
   const handleRequestPayout = async () => {
+    if (payoutAmount.trim()) {
+      const amt = Number(payoutAmount);
+      if (isNaN(amt) || amt < MIN_PAYOUT) {
+        toast.error(`Minimum payout amount is Rs ${MIN_PAYOUT}`);
+        return;
+      }
+    }
     setRequestingPayout(true);
     try {
       const body: Record<string, unknown> = {};
@@ -47,8 +57,6 @@ export default function RunnerEarnings() {
     } catch { toast.error("Network error"); }
     setRequestingPayout(false);
   };
-
-  // H10: Type for payouts data (defined at module scope to avoid recreation per render)
 
   const e = earnings!;
   const dailyData = (daily ?? [])!;
@@ -212,6 +220,11 @@ export default function RunnerEarnings() {
               <YAxis tick={{ fontSize: 9, fill: "rgba(255,255,255,0.4)" }} />
               <Tooltip
                 contentStyle={{ background: DARK, border: "1px solid rgba(255,255,255,0.1)", borderRadius: 12, color: "white", fontSize: 12 }}
+                labelFormatter={(label: string) => {
+                  const parts = label.split('-');
+                  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+                  return parts.length === 3 ? `${months[parseInt(parts[1])-1]} ${parseInt(parts[2])}, ${parts[0]}` : label;
+                }}
                 formatter={(v: number) => [formatCurrency(v), "Earned"]}
               />
               <Bar dataKey="amount" fill={BLUE} radius={[4, 4, 0, 0]} />
@@ -307,12 +320,15 @@ export default function RunnerEarnings() {
         ) : (
           <div className="space-y-2">
             {filteredTasks.slice(0, 20).map((task: Task) => (
-              <div key={task.id} className="bg-white/8 border border-white/10 rounded-xl px-4 py-3 flex items-center justify-between">
+              <div key={task.id} onClick={() => navigate(`/app/tasks/${task.id}`)} className="bg-white/8 border border-white/10 rounded-xl px-4 py-3 flex items-center justify-between cursor-pointer hover:bg-white/12 transition-colors">
                 <div>
                   <p className="text-white font-medium text-sm">{CATEGORY_NAMES[task.category] ?? task.category}</p>
                   <p className="text-white/40 text-xs">{task.completedAt ? new Date(task.completedAt).toLocaleDateString("en-IN") : ""}</p>
                 </div>
-                <span className="font-bold" style={{ color: BLUE }}>{formatCurrency(task.runnerEarning ?? 0)}</span>
+                <div className="text-right">
+                  <span className="font-bold" style={{ color: BLUE }}>{formatCurrency(task.runnerEarning ?? 0)}</span>
+                  <p className="text-white/30 text-[9px]">View details →</p>
+                </div>
               </div>
             ))}
           </div>

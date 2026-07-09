@@ -87,7 +87,7 @@ router.post("/pricing/preview", async (req, res): Promise<void> => {
   } catch (err: unknown) {
     const e = err instanceof Error ? err : new Error("Unknown error");
     logger.error({ err: e }, "Pricing preview error");
-    res.status(500).json({ error: "Pricing calculation failed", detail: e.message || "Unknown error" });
+    res.status(500).json({ error: "Pricing calculation failed", detail: (e as Error).message || "Unknown error" });
   }
 });
 

@@ -1,182 +1,201 @@
-# Comprehensive Codebase Audit — Final Report
+# Go LineLess — Comprehensive Codebase Audit Report
 
-**Date:** July 1, 2026
-**Method:** Line-by-line reading of all .ts/.tsx source files. No markdown/text files were were used as reference.
-**Typecheck:** ✅ Backend (api-server) and Frontend (qbuddy) both pass with zero errors.
-
----
-
-## Fix Status Summary
-
-| ID | Issue | Severity | Status |
-|----|-------|----------|--------|
-| C1 | No cancel button on TaskDetail | Critical | ✅ FIXED |
-| C2 | No cancel button on MyTasks | Critical | ✅ FIXED |
-| C3 | UserHome notification bell empty onClick | Critical | ✅ FIXED |
-| C4 | RunnerProfile broken external links | Critical | ✅ FIXED |
-| C5 | RunnerNotificationsPage/RunnerReviewsPage exist | Critical | ✅ VERIFIED |
-| C6 | Admin sidebar logout (already exists) | Critical | ✅ VERIFIED |
-| H4 | Admin task PATCH lacks status validation | High | ✅ FIXED |
-| H5 | Operations-center loads all runners/recruits into memory | High | ✅ FIXED |
-| H7 | Readiness-report loads all 8 tables into memory | High | ✅ FIXED |
-| H8 | Training-overview loads all progress/runners into memory | High | ✅ FIXED |
-| H10 | Runner delete-account dynamic import | High | ✅ FIXED |
-| H11 | BookTask has no priority level selector | High | ✅ FIXED |
-| H12 | RunnerProfile Performance Stats link wrong | High | ✅ FIXED |
-| M4 | UserProfile phone change not handled | Medium | ✅ FIXED |
-| M8 | RunnerEarnings CSV headers misleading | Medium | ✅ FIXED |
-| M11 | RunnerProfile On Time stat display wrong | Medium | ✅ FIXED |
-| M14 | BookTask no scheduledDate validation | Medium | ✅ FIXED |
-| S3 | No user delete-account endpoint | Security | ✅ FIXED |
+**Date:** July 9, 2026  
+**Scope:** Full-stack (api-server, qbuddy frontend, lib/db, lib/api-client-react)  
+**Auditor:** Buffy (automated audit)
 
 ---
 
-## Deep Audit Round 2 — Uncovered Files (Backend Lib + Routes + Frontend + DB)
+## Executive Summary
 
-| ID | Issue | Severity | Status |
-|----|-------|----------|--------|
-| DA1 | auto-finalize fraud detection queries wrong `newStatus` ("pending" vs "cash_pending") | High | ✅ FIXED |
-| DA2 | sms.ts logs OTP to console in production (security leak) | High | ✅ FIXED |
-| DA3 | dispatch-engine.ts dead code (`innerRadius` unused) | Low | ✅ FIXED |
-| DA4 | Landing.tsx copyright year outdated (2025→2026) | Low | ✅ FIXED |
-| DA5 | Landing.tsx footer links not clickable | Medium | ✅ FIXED |
-| DA6 | FamilyTrack.tsx empty socket catch block | Low | ✅ FIXED |
-| DA7 | NotificationsPage.tsx back button navigates to `/` instead of `/app/home` | Medium | ✅ FIXED |
-| DA8 | ResetPassword.tsx always navigates to `/login` regardless of role | Medium | ✅ FIXED |
-| DA9 | BottomNav.tsx RunnerBottomNav fetches on every location change | Medium | ✅ FIXED |
-| DA10 | reviews.ts no index on (taskId, userId) | Medium | ✅ FIXED |
-| DA11 | photo-processor.ts race condition in registerHash (check-then-update) | High | ✅ FIXED |
-| DA12 | payments.ts dynamic import without type annotation | Low | ✅ FIXED |
-| DA13 | google-auth.ts `as Record<string, unknown>` type cast bypass | Medium | ✅ FIXED |
+| Severity | Count | Description |
+|----------|-------|-------------|
+| 🔴 Critical | 3 | Security or data-loss risks |
+| 🟠 Major | 12 | Missing features, broken flows, significant UX gaps |
+| 🟡 Minor | 15 | Polish items, edge cases, optimization opportunities |
+| **Total** | **30** | |
 
 ---
 
-## Deep Audit Round 3 — Backend Route + Lib Cleanup
+## 🔴 CRITICAL ISSUES (3)
 
-| ID | Issue | Severity | Status |
-|----|-------|----------|--------|
-| DA14 | notifications.ts read-all silently succeeds without auth | Medium | ✅ FIXED |
-| DA15 | subscriptions.ts GET /admin/subscriptions loads ALL rows into memory | High | ✅ FIXED |
-| DA16 | error-handler.ts double type cast bypass for req.id | Low | ✅ FIXED |
-| DA17 | sentry.ts getSentryErrorHandler crashes if Sentry Handlers API changes | Low | ✅ FIXED |
-| DA18 | neon-auth.ts parseSessionResponse uses unsafe `as string` casts without validation | Medium | ✅ FIXED |
-| DA19 | kyc-enhancements.ts bulk endpoint accepts non-number IDs without validation | Medium | ✅ FIXED |
+### C1. Admin Sidebar has no route for `/admin/areas` but links to it
+- **File:** `AdminSidebar.tsx` line 41: `{ path: "/admin/areas", icon: MapPin, label: "Areas" }`
+- **File:** `App.tsx` line 162: `<Route path="/admin/areas"><AdminProtectedRoute><AdminAreaPerformance /></AdminProtectedRoute></Route>`
+- **Status:** ✅ Actually has a route — false alarm. Route exists.
 
----
+### C2. Email verification tokens are stored but no actual email sending is implemented
+- **Files:** `auth.ts` endpoints `POST /auth/send-verification` and `POST /auth/verify-email`
+- **Problem:** The `send-verification` endpoint generates a token and stores it in DB, but `res.json({ message: "Verification email sent" })` returns success **without actually sending any email**. Users will think they received an email but nothing was sent.
+- **Impact:** Email verification feature is non-functional. Users cannot verify their email.
+- **Fix:** Integrate an email provider (Resend, SendGrid, etc.) or at minimum return a note that email sending is not yet implemented.
 
-## Deep Audit Round 4 — 9 Previously Deferred Items (All Fixed)
-
-| ID | Issue | Severity | Status |
-|----|-------|----------|--------|
-| H1 | OTP auto-creates accounts | High | ✅ FIXED |
-| H2 | Runner signup lacks phone | High | ✅ FIXED |
-| H3 | Runner phone verification skipped | High | ✅ VERIFIED (send-otp/verify-otp endpoints exist) |
-| M2 | Hardcoded coupon code | Medium | ✅ FIXED |
-| M5 | KYC bank fields mismatch | Medium | ✅ FIXED |
-| M9 | Family tracking strips phone | Medium | ✅ FIXED |
-| F1 | Razorpay disabled | Medium | ✅ FIXED |
-| F6 | Heatmap hardcoded areas | Medium | ✅ FIXED |
-| S2 | Runner soft-delete | Security | ✅ FIXED |
+### C3. `catch(() => {})` silently swallows errors in ~40 locations
+- **Files:** `ActiveTask.tsx`, `RunnerFeed.tsx`, `RunnerPlaybook.tsx`, `RunnerNotificationsPage.tsx`, `NotificationsPage.tsx`, `FamilyTrack.tsx`, `BookTask.tsx`, `AdminDashboard.tsx`, `AdminHeatmap.tsx`, `App.tsx`, and more
+- **Problem:** Error details are completely discarded. When things fail (socket init, localStorage, API calls), there's no user feedback and no logging. Debugging production issues will be very difficult.
+- **Impact:** Silent failures degrade UX and make debugging nearly impossible.
+- **Fix:** At minimum, log to console.error or a monitoring service. For user-facing operations, show toast.error.
 
 ---
 
-## Deep Audit Round 4 — Changes Applied
+## 🟠 MAJOR ISSUES (12)
 
-### H1: OTP auto-create accounts toggle
-**Files:** `admin-settings.ts`, `auth.ts`
-- Added `autoCreateAccounts` boolean column to admin_settings (default: true)
-- `POST /auth/send-otp` and `POST /auth/verify-otp` now check `adminSettingsTable.autoCreateAccounts`
-- When disabled, returns 404 "Account not found. Please sign up first." for unknown phones
+### M1. `BookTask.tsx` — No loading skeleton while pricing loads
+- **File:** `BookTask.tsx`
+- **Problem:** When `pricingPreview.isPending` is true, the price area shows nothing (line 639: `pricingPreview.isPending ? null : (...)`). The user sees the total disappear and reappear on each change.
+- **Fix:** Show a skeleton/spinner in the price summary area while pricing is loading.
 
-### H2: Runner signup phone collection
-**File:** `RunnerLogin.tsx`
-- Runner signup form includes `phone` field with `required={isSigningUp}`
+### M2. `ChangePassword.tsx` — Uses dark theme styling but lives in user app (light theme)
+- **File:** `ChangePassword.tsx`
+- **Problem:** The page uses `bg-[#0a0f1e]`, `text-white`, `border-white/10` — dark theme colors. But `UserProfile.tsx` uses `bg-gray-50` (light theme). This creates a jarring visual inconsistency when navigating from profile to change password.
+- **Fix:** Restyle to match the user-side light theme, or use `DARK_GRAD` consistently.
 
-### H3: Phone verification flow
-**Files:** `auth.ts`, `RunnerLogin.tsx`
-- `POST /auth/send-otp` and `POST /auth/verify-otp` endpoints already exist and work
-- Phone OTP flow is functional for both users and runners
+### M3. `VerifyEmail.tsx` — Same dark theme mismatch as M2
+- **File:** `VerifyEmail.tsx`
+- **Problem:** Uses `bg-[#0a0f1e]` dark theme while user app is light theme.
+- **Fix:** Same as M2 — restyle to light theme.
 
-### M2: Configurable coupon codes
-**Files:** `admin-settings.ts`, `pricing.ts`, `tasks.ts`
-- Added `activeCoupons` text[] column to admin_settings (default: ["GOLINELESS10"])
-- `POST /pricing/preview` and `POST /tasks` now read coupons from admin settings
-- Fallback to hardcoded default if settings row doesn't exist
+### M4. `RunnerFeed.tsx` — No pull-to-refresh or manual refresh button
+- **File:** `RunnerFeed.tsx`
+- **Problem:** Runners cannot manually refresh the task feed. If the WebSocket disconnects and reconnects, stale tasks may persist. No pull-to-refresh gesture support.
+- **Fix:** Add a refresh button or pull-to-refresh gesture.
 
-### M5: KYC bank fields in PATCH /runners/me
-**File:** `runners.ts`
-- `PATCH /runners/me` now accepts `bankAccount`, `bankIfsc`, `bankAccountHolder` fields
-- Bank details saved alongside other profile fields
+### M5. `MyTasks.tsx` — "Load More" button doesn't show total count
+- **File:** `MyTasks.tsx`
+- **Problem:** The pagination shows "Load More" but doesn't indicate how many tasks total exist or how many more are available. Users don't know if there's more to load.
+- **Fix:** Show "Load More (23 more)" or "Showing 10 of 23 tasks".
 
-### M9: Runner phone in family tracking
-**File:** `tasks.ts`
-- `GET /family/track/:token` now includes masked runner phone (first 5 chars + "****")
-- Family sees partial phone for contact without exposing full PII
+### M6. `ActiveTask.tsx` — Queue progress has no confirmation dialog for advancing
+- **File:** `ActiveTask.tsx`
+- **Problem:** The queue progress button advances the token counter immediately. No confirmation that the runner is actually at the correct position. Accidental taps could skip queue positions.
+- **Fix:** Add a confirmation modal before advancing queue position.
 
-### F1: Razorpay payment integration
-**File:** `tasks.ts`
-- Razorpay order creation now guarded by env var check (`RAZORPAY_KEY_ID` + `RAZORPAY_KEY_SECRET`)
-- Falls back to cash mode if keys not configured or order creation fails
+### M7. `RunnerEarnings.tsx` — Payout request has no minimum amount validation
+- **File:** `RunnerEarnings.tsx`
+- **Problem:** The payout request form doesn't show a minimum amount or validate against one. Runners could request ₹1 payouts that cost more to process than their value.
+- **Fix:** Add minimum payout amount (e.g., ₹500) and show it in the UI.
 
-### F6: Configurable heatmap/pilot zones
-**Files:** `admin-settings.ts`, `operations.ts`, `tasks.ts`
-- Added `pilotZones` text[] column to admin_settings (default: Ahmedabad areas)
-- Heatmap endpoint reads areas from admin settings instead of hardcoded constant
-- Pilot config endpoint returns configurable zones
-- Area-performance endpoint uses configurable areas
-- Task creation validation reads pilot zones from admin settings
-- Fixed critical bug: tasks.ts settings select now includes `pilotZones` column
+### M8. `AdminDashboard.tsx` — Real-time stats via socket have no reconnection UI
+- **File:** `AdminDashboard.tsx`
+- **Problem:** When the admin socket disconnects, there's no visual indicator. The dashboard may show stale data without the admin realizing.
+- **Fix:** Show a "Reconnecting..." banner or stale data indicator.
 
-### S2: Proper runner soft-delete
-**File:** `runners.ts`
-- Runner delete-account anonymizes ALL PII: name, email, phone, avatar, city, area, fullName, aadhaarNumber, aadhaarFront, aadhaarBack, selfie, bankAccount, bankIfsc, bankAccountHolder, emergencyContactName, emergencyContactPhone, emergencyContactRelation, passwordHash
-- Sets isOnline: false, dispatchAllowed: false, kycStatus: "none"
-- Invalidates all runner sessions
-- Fixed dynamic import to static import for runnerSessionsTable
+### M9. No global error boundary around route transitions
+- **File:** `App.tsx`
+- **Problem:** `ErrorBoundary` wraps the router, but lazy-loaded route chunks that fail to load (network error) will show a blank screen. There's no retry mechanism for failed chunk loads.
+- **Fix:** Add a retry button in the Suspense fallback or a chunk load error handler.
 
-### reviews.ts: Unique constraint
-**File:** `lib/db/src/schema/reviews.ts`
-- Changed `index` to `uniqueIndex` on (taskId, userId) to prevent duplicate reviews
-- Added proper `uniqueIndex` import from drizzle-orm/pg-core
+### M10. `TaskDetail.tsx` — Family tracking link sharing uses `navigator.share` without fallback
+- **File:** `TaskDetail.tsx` line ~400
+- **Problem:** `navigator.clipboard.writeText(shareUrl).catch(() => {})` silently fails. On desktop browsers without clipboard API, sharing silently fails.
+- **Fix:** Show a toast with the link text as fallback when clipboard API is unavailable.
 
----
+### M11. `RunnerProfile.tsx` — KYC form validation for bank details is permissive
+- **File:** `RunnerProfile.tsx`
+- **Problem:** Bank account number and IFSC code fields accept any input without format validation. IFSC should be exactly 11 chars alphanumeric. Bank account should be 9-18 digits.
+- **Fix:** Add regex validation before submission.
 
-## DB Schema Changes (Round 4)
-
-### admin_settings table
-```sql
--- New columns added:
-ALTER TABLE admin_settings ADD COLUMN auto_create_accounts BOOLEAN NOT NULL DEFAULT true;
-ALTER TABLE admin_settings ADD COLUMN pilot_zones TEXT[] NOT NULL DEFAULT ARRAY['Juhapura','Sarkhej','Prahladnagar','Makarba','Paldi','Vasna','Jamalpur','Kalupur'];
-ALTER TABLE admin_settings ADD COLUMN active_coupons TEXT[] NOT NULL DEFAULT ARRAY['GOLINELESS10'];
-```
-
-### reviews table
-```sql
--- New unique index (requires migration):
-CREATE UNIQUE INDEX idx_reviews_task_user ON reviews (task_id, user_id);
-```
+### M12. `RunnerNotificationsPage.tsx` — No mark-all-as-read button
+- **File:** `RunnerNotificationsPage.tsx`
+- **Problem:** Runners must tap each notification individually to mark as read. The backend supports `POST /notifications/read-all` but it's not exposed in the UI.
+- **Fix:** Add a "Mark all as read" button in the header.
 
 ---
 
-## Issues Not Fixed (Intentional or Deferred)
+## 🟡 MINOR ISSUES (15)
 
-No items remain in the deferred list. All 9 previously deferred items have been resolved.
+### m1. `UserProfile.tsx` — Edit profile modal doesn't show "saving" state
+- The "Save Changes" button has no loading indicator during the PATCH request.
+
+### m2. `AccountDeletion.tsx` — Success overlay auto-redirects in 2.5s
+- Users may not read the success message before being redirected. Add a manual "Continue" button.
+
+### m3. `RunnerFeed.tsx` — Task cards don't show distance to pickup
+- Runners see task description but not distance from their current location to the task pickup point.
+
+### m4. `SeniorCare.tsx` — No search/filter for senior care tasks
+- The list shows all senior care tasks but has no way to filter by status or date.
+
+### m5. `NotificationsPage.tsx` — No empty state illustration
+- When there are no notifications, the page is blank instead of showing a friendly empty state.
+
+### m6. `HelpSupport.tsx` (user) — FAQ answers are hardcoded
+- The help page has static FAQ content that isn't configurable from admin settings.
+
+### m7. `RunnerHelpSupport.tsx` — Same hardcoded FAQ issue as m6
+
+### m8. `AdminAreaPerformance.tsx` — No area-level drill-down
+- Shows area stats but clicking an area doesn't show detailed per-area analytics.
+
+### m9. `AdminPilot.tsx` — Pilot mode toggle has no confirmation
+- Toggling pilot mode on/off is instant with no confirmation dialog for this critical setting.
+
+### m10. `AdminSettings.tsx` — Settings changes don't show unsaved changes warning
+- If an admin navigates away after modifying settings, changes are lost without warning.
+
+### m11. `AdminIncidents.tsx` — No severity filter
+- Incidents list has no filter by severity level (low/medium/high/critical).
+
+### m12. `BottomNav.tsx` — User nav "Senior" tab doesn't indicate new features
+- No badge or dot indicator when new senior care features are available.
+
+### m13. `RunnerOnboarding.tsx` — No progress persistence
+- If a runner closes the app mid-onboarding, all progress is lost and they restart from step 1.
+
+### m14. `MagicLinkCallback.tsx` — No error display for failed magic links
+- If the magic link is expired or invalid, the error state shows generic text without explaining why.
+
+### m15. `App.tsx` — Admin login page is defined inline in App.tsx
+- The `AdminLoginPage` component is defined at the bottom of App.tsx (~50 lines) instead of in its own file like other login pages.
 
 ---
 
-## Files Modified (Complete List)
+## ✅ WHAT'S WORKING WELL
 
-### Backend (api-server)
-- `src/routes/auth.ts` — OTP auto-create check
-- `src/routes/runners.ts` — Bank fields, soft-delete, static import
-- `src/routes/tasks.ts` — Family tracking phone, Razorpay guard, pilot zones
-- `src/routes/pricing.ts` — Configurable coupons
-- `src/routes/operations.ts` — Configurable heatmap/pilot zones
+| Area | Status |
+|------|--------|
+| **Routing completeness** | ✅ All 50+ routes have matching pages. All `navigate()` calls point to registered routes. |
+| **BottomNav (User)** | ✅ Home, Tasks, Senior, Profile — all routes exist and work. |
+| **BottomNav (Runner)** | ✅ Tasks, Active, Earnings, Profile — all routes exist and work. |
+| **AdminSidebar** | ✅ All 22 navigation items have matching routes and pages. |
+| **Auth flows** | ✅ Login, Signup, OTP, Magic Link, Forgot/Reset Password, Admin Login — all functional. |
+| **Task lifecycle** | ✅ Create → Assign → On Way → At Location → In Progress → Complete with OTP verification. |
+| **Payment flow** | ✅ Razorpay integration, UPI QR, cash confirmation, retry payment — complete. |
+| **KYC system** | ✅ User KYC (Aadhaar) + Runner KYC (Aadhaar + Bank + Emergency) with admin review. |
+| **Admin panel** | ✅ 20+ admin pages covering dashboard, tasks, runners, users, analytics, recruitment, training, quality, support, incidents, heatmap, pilot, operations, leaderboard, areas, founder report, audit log, settings. |
+| **Empty states** | ✅ `EmptyState` component used consistently in MyTasks, RunnerFeed, RunnerEarnings, SeniorCare, RunnerReviews. |
+| **Error handling** | ✅ Most pages have toast.error for API failures. TaskDetail has comprehensive error states. |
+| **Security** | ✅ Rate limiting on auth/OTP/booking/dispatch. CSRF double-submit. Password hashing. Session rotation. |
+| **Type safety** | ✅ qbuddy, api-client-react, lib/db all typecheck clean (0 errors). |
 
-### Frontend (qbuddy)
-- `src/pages/auth/RunnerLogin.tsx` — Phone field in signup
+---
 
-### Database (lib/db)
-- `src/schema/admin-settings.ts` — 3 new columns
-- `src/schema/reviews.ts` — uniqueIndex import fix
+## 📊 CODEBASE STATS
+
+| Metric | Count |
+|--------|-------|
+| Frontend pages (lazy-loaded) | 53 |
+| Admin pages | 22 |
+| User pages | 16 |
+| Runner pages | 11 |
+| Auth pages | 7 |
+| Backend route files | 12 |
+| Backend API endpoints | ~149 |
+| React components | ~40+ |
+| Database tables | ~20 |
+| Admin sidebar nav items | 22 |
+| User bottom nav items | 4 |
+| Runner bottom nav items | 4 |
+
+---
+
+## RECOMMENDED PRIORITY ORDER
+
+1. **Fix C2** — Email verification is non-functional (either integrate email or disable the feature)
+2. **Fix C3** — Add logging to silent catch blocks
+3. **Fix M2/M3** — ChangePassword and VerifyEmail theme mismatch (high visibility UX issue)
+4. **Fix M1** — BookTask loading skeleton for price
+5. **Fix M7** — Payout minimum amount validation
+6. **Fix M5** — Show task count in MyTasks pagination
+7. **Fix M12** — Add "Mark all as read" to runner notifications
+8. **Address remaining minor issues** as time permits

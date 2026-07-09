@@ -1,14 +1,12 @@
 import { useLocation } from "wouter";
 import { motion } from "framer-motion";
+import { ArrowLeft, CreditCard, CheckCircle2, AlertCircle, Phone, MessageSquare } from "lucide-react";
 import { toast } from "sonner";
-import { ArrowLeft, CreditCard, CheckCircle2, AlertCircle } from "lucide-react";
 import { useGetTask } from "@workspace/api-client-react";
 import { CategoryIcon } from "@/components/CategoryIcon";
 import { StatusBadge } from "@/components/StatusBadge";
 import { CATEGORY_NAMES, formatCurrency } from "@/lib/utils";
-import { DARK, DARK_GRAD, DARK_MID } from "@/lib/theme";
-
-
+import { DARK, DARK_GRAD } from "@/lib/theme";
 
 interface Props {
   id: string;
@@ -16,79 +14,15 @@ interface Props {
 
 export default function PayRetry({ id }: Props) {
   const [, navigate] = useLocation();
-
-
   const taskId = Number(id);
+  const { data: task, isLoading, isError } = useGetTask(taskId, { query: { queryKey: ["task", taskId], retry: 1 } });
 
-  const { data: task, isLoading, isError } = useGetTask(taskId, {
-    query: { queryKey: ["task", taskId], retry: 1 },
-  });
-
-
-
-  // Determine if payment is applicable
   const t = task;
   const taskPrice = t?.price ?? 0;
   const isPaid = t?.paymentStatus === "paid";
   const isCompleted = t?.status === "completed";
   const isCancelled = t?.status === "cancelled";
-
-
-  // [OFFLINE MODE] Cash tasks don't need online payment — user pays Comrade directly
-  // handlePay is only used for online payment re-enablement below
-
-  // [OFFLINE MODE] Original Razorpay payment handler — uncomment to re-enable
-  // const handlePayOnline = async () => {
-  //   setPaymentStatus("creating_order");
-  //   setLastError("");
-  //   createPaymentOrder.mutate(
-  //     { data: { taskId } },
-  //     {
-  //       onSuccess: async (paymentOrder: PaymentOrderResponse) => {
-  //         if (paymentOrder?.mock) {
-  //           setPaymentStatus("success");
-  //           setResultModal("success");
-  //           confetti({ particleCount: 120, spread: 80, origin: { y: 0.6 }, colors: [DARK, BLUE, DARK_MID] });
-  //           return;
-  //         }
-  //         if (!paymentOrder?.orderId || !paymentOrder?.keyId) {
-  //           setPaymentStatus("failed");
-  //           setLastError("Failed to create payment order. Please try again.");
-  //           setResultModal("failed");
-  //           return;
-  //         }
-  //         setPaymentStatus("checkout_open");
-  //         const result = await openRazorpayCheckout({
-  //           orderId: paymentOrder.orderId,
-  //           amount: paymentOrder.amount ?? 0,
-  //           currency: paymentOrder.currency || "INR",
-  //           keyId: paymentOrder.keyId,
-  //           description: `${t?.category || "Task"} payment`,
-  //           phone: localStorage.getItem("golineless_user_phone") || undefined,
-  //         });
-  //         if (result.status === "success") {
-  //           setPaymentStatus("success");
-  //           setResultModal("success");
-  //           confetti({ particleCount: 120, spread: 80, origin: { y: 0.6 }, colors: [DARK, BLUE, DARK_MID] });
-  //         } else if (result.status === "failed") {
-  //           setPaymentStatus("failed");
-  //           setLastError(result.error.description);
-  //           setResultModal("failed");
-  //         } else {
-  //           setPaymentStatus("dismissed");
-  //         }
-  //       },
-  //       onError: (err) => {
-  //         setPaymentStatus("failed");
-  //         const msg = err?.data?.detail || err?.data?.error || err?.message || "Failed to create payment order";
-  //         setLastError(msg);
-  //         setResultModal("failed");
-  //       },
-  //     },
-  //   );
-  // };
-
-
+  const totalDue = taskPrice + Number(t?.waitingChargeAmount || 0);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -127,11 +61,7 @@ export default function PayRetry({ id }: Props) {
             </div>
             <h2 className="text-lg font-black text-gray-900 mb-1">Task not found</h2>
             <p className="text-sm text-gray-500 mb-6">This task doesn't exist or you don't have access to it.</p>
-            <button
-              onClick={() => navigate("/app/tasks")}
-              className="w-full py-3 rounded-2xl text-white font-bold"
-              style={{ background: DARK_GRAD }}
-            >
+            <button onClick={() => navigate("/app/tasks")} className="w-full py-3 rounded-2xl text-white font-bold" style={{ background: DARK_GRAD }}>
               Go to My Tasks
             </button>
           </div>
@@ -143,19 +73,11 @@ export default function PayRetry({ id }: Props) {
             <div className="w-14 h-14 rounded-full bg-green-50 flex items-center justify-center mx-auto mb-4">
               <CheckCircle2 size={28} className="text-green-500" />
             </div>
-            <h2 className="text-lg font-black text-gray-900 mb-1">
-              {isPaid ? "Already Paid" : "Task Completed"}
-            </h2>
+            <h2 className="text-lg font-black text-gray-900 mb-1">{isPaid ? "Already Paid" : "Task Completed"}</h2>
             <p className="text-sm text-gray-500 mb-6">
-              {isPaid
-                ? "This task has already been paid for. No further action needed."
-                : "This task has been completed. Payment was handled during completion."}
+              {isPaid ? "This task has already been paid for. No further action needed." : "This task has been completed. Payment was handled during completion."}
             </p>
-            <button
-              onClick={() => navigate(`/app/tasks/${taskId}`)}
-              className="w-full py-3 rounded-2xl text-white font-bold"
-              style={{ background: DARK_GRAD }}
-            >
+            <button onClick={() => navigate(`/app/tasks/${taskId}`)} className="w-full py-3 rounded-2xl text-white font-bold" style={{ background: DARK_GRAD }}>
               View Task Details
             </button>
           </div>
@@ -169,23 +91,15 @@ export default function PayRetry({ id }: Props) {
             </div>
             <h2 className="text-lg font-black text-gray-900 mb-1">Task Cancelled</h2>
             <p className="text-sm text-gray-500 mb-6">This task has been cancelled. Payment is not required.</p>
-            <button
-              onClick={() => navigate("/app/tasks")}
-              className="w-full py-3 rounded-2xl text-white font-bold"
-              style={{ background: DARK_GRAD }}
-            >
+            <button onClick={() => navigate("/app/tasks")} className="w-full py-3 rounded-2xl text-white font-bold" style={{ background: DARK_GRAD }}>
               Go to My Tasks
             </button>
           </div>
         )}
 
-        {/* Payment card — active */}
+        {/* Payment card — active (cash on completion) */}
         {t && !isLoading && !isPaid && !isCompleted && !isCancelled && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="space-y-4"
-          >
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
             {/* Task Summary */}
             <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
               <div className="flex items-center gap-3 mb-4 pb-4 border-b border-gray-100">
@@ -200,18 +114,26 @@ export default function PayRetry({ id }: Props) {
                   </div>
                 </div>
               </div>
-
-              {t.description && (
-                <p className="text-sm text-gray-600 mb-3 line-clamp-2">{t.description}</p>
-              )}
-
-              <div className="flex items-center justify-between pt-2">
-                <span className="text-gray-500 text-sm">Task Price</span>
-                <span className="font-bold text-lg" style={{ color: DARK }}>{formatCurrency(taskPrice)}</span>
+              {t.description && <p className="text-sm text-gray-600 mb-3 line-clamp-2">{t.description}</p>}
+              <div className="space-y-1.5 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Task Price</span>
+                  <span className="text-gray-700">{formatCurrency(taskPrice)}</span>
+                </div>
+                {(Number(t.waitingChargeAmount) || 0) > 0 && (
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Waiting Charges ({t.totalWaitingMinutes} min)</span>
+                    <span className="text-amber-600">+{formatCurrency(t.waitingChargeAmount)}</span>
+                  </div>
+                )}
+                <div className="flex justify-between pt-2 border-t border-gray-100">
+                  <span className="font-bold text-gray-900">Total Due</span>
+                  <span className="font-black text-lg" style={{ color: DARK }}>{formatCurrency(totalDue)}</span>
+                </div>
               </div>
             </div>
 
-            {/* [OFFLINE MODE] Cash payment — no online payment needed */}
+            {/* Cash payment info */}
             <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
               <h3 className="font-bold text-gray-900 mb-4 flex items-center gap-2">
                 <CreditCard size={18} /> Payment Method
@@ -229,23 +151,46 @@ export default function PayRetry({ id }: Props) {
               </div>
             </div>
 
-            {/* Info card for cash tasks */}
+            {/* Info card */}
             <div className="bg-amber-50/60 rounded-2xl p-4 border border-amber-100">
               <div className="flex items-start gap-3">
                 <AlertCircle size={18} className="text-amber-600 flex-shrink-0 mt-0.5" />
                 <div>
                   <p className="text-sm font-bold text-amber-700">No online payment needed</p>
                   <p className="text-xs text-amber-600 mt-1 leading-relaxed">
-                    You'll pay <strong>{formatCurrency(taskPrice)}</strong> directly to your Comrade in cash when the task is completed. No online payment is required.
+                    You'll pay <strong>{formatCurrency(totalDue)}</strong> directly to your Comrade in cash when the task is completed.
+                    {t.runner && ` ${t.runner.name || "Your Comrade"} will collect the payment.`}
                   </p>
                 </div>
               </div>
             </div>
+
+            {/* Contact Comrade */}
+            {t.runner && (
+              <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
+                <p className="text-xs text-gray-500 mb-3">Need to discuss payment with your Comrade?</p>
+                <div className="flex gap-2">
+                  {t.runner.phone && (
+                    <a href={`tel:${t.runner.phone}`} className="flex-1 py-2.5 rounded-xl border border-green-200 bg-green-50 text-green-600 font-semibold text-sm flex items-center justify-center gap-2 hover:bg-green-100 transition-colors">
+                      <Phone size={14} /> Call
+                    </a>
+                  )}
+                  {t.runner.phone && (
+                    <a href={`https://wa.me/${t.runner.phone.replace(/\D/g, "")}`} target="_blank" rel="noreferrer" className="flex-1 py-2.5 rounded-xl border border-green-200 bg-green-50 text-green-600 font-semibold text-sm flex items-center justify-center gap-2 hover:bg-green-100 transition-colors">
+                      <MessageSquare size={14} /> WhatsApp
+                    </a>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* View task */}
+            <button onClick={() => navigate(`/app/tasks/${taskId}`)} className="w-full py-3.5 rounded-2xl text-white font-bold shadow-md" style={{ background: DARK_GRAD }}>
+              View Task Details →
+            </button>
           </motion.div>
         )}
       </div>
-
-      {/* [OFFLINE MODE] No result modal needed — cash tasks don't have online payment flow */}
     </div>
   );
 }

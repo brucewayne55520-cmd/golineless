@@ -12,7 +12,6 @@ import { BLUE, BLUE_GRAD } from "@/lib/theme";
 const BG = "#080E1E";
 
 const STEPS = [
-  { label: "Phone", icon: Phone, desc: "Verify your number" },
   { label: "Name", icon: User, desc: "Tell us your name" },
   { label: "Location", icon: MapPin, desc: "Enable GPS" },
   { label: "Bank", icon: CreditCard, desc: "Add bank details" },
@@ -40,11 +39,28 @@ export default function RunnerOnboarding() {
   const [onlineLoading, setOnlineLoading] = useState(false);
   const [completed, setCompleted] = useState(false);
 
-  // Initialize step from existing onboarding progress
+  // m13: Initialize step from localStorage first, then override from server if available
+  useEffect(() => {
+    // Restore from localStorage (survives page reload)
+    try {
+      const saved = localStorage.getItem("golineless_onboarding_draft");
+      if (saved) {
+        const draft = JSON.parse(saved);
+        if (draft.step != null) setStep(draft.step);
+        if (draft.name) setName(draft.name);
+        if (draft.bankAccount) setBankAccount(draft.bankAccount);
+        if (draft.bankIfsc) setBankIfsc(draft.bankIfsc);
+        if (draft.bankHolder) setBankHolder(draft.bankHolder);
+        if (draft.selfie) setSelfie(draft.selfie);
+      }
+    } catch { /* ignore malformed localStorage */ }
+  }, []);
+
+  // Sync from server data (overrides localStorage)
   useEffect(() => {
     const r = runner as import("@workspace/api-client-react").Runner & { onboardingStep?: number; bankAccount?: string; bankIfsc?: string; bankAccountHolder?: string; selfie?: string };
     if (r) {
-      setStep(r.onboardingStep ?? 0);
+      setStep(Math.min(r.onboardingStep ?? 0, STEPS.length - 1));
       setName(r.name || r.fullName || "");
       setBankAccount(r.bankAccount || "");
       setBankIfsc(r.bankIfsc || "");
@@ -52,6 +68,19 @@ export default function RunnerOnboarding() {
       setSelfie(r.selfie || null);
     }
   }, [runner]);
+
+  // m13: Persist draft to localStorage whenever form changes
+  useEffect(() => {
+    if (step > 0 && !completed) {
+      const draft = { step, name, bankAccount, bankIfsc, bankHolder, selfie };
+      try { localStorage.setItem("golineless_onboarding_draft", JSON.stringify(draft)); } catch { /* quota exceeded */ }
+    }
+  }, [step, name, bankAccount, bankIfsc, bankHolder, selfie, completed]);
+
+  // Clear draft when onboarding completes
+  useEffect(() => {
+    if (completed) { try { localStorage.removeItem("golineless_onboarding_draft"); } catch { /* noop */ } }
+  }, [completed]);
 
   const saveStep = async (stepNum: number, extra: Record<string, string | boolean | number | undefined> = {}) => {
     setSaving(true);
@@ -69,33 +98,28 @@ export default function RunnerOnboarding() {
 
   const handleNext = async () => {
     if (step === 0) {
-      // Phone already verified via login
-      await saveStep(1);
-      setStep(1);
-    } else if (step === 1) {
       if (!name.trim()) { toast.error("Please enter your name"); return; }
-      const ok = await saveStep(2, { name: name.trim(), fullName: name.trim() });
+      const ok = await saveStep(1, { name: name.trim(), fullName: name.trim() });
+      if (ok) setStep(1);
+    } else if (step === 1) {
+      const ok = await saveStep(2, { gpsStatus: gpsStatus, lat: gpsCoords?.lat, lng: gpsCoords?.lng });
       if (ok) setStep(2);
     } else if (step === 2) {
-      // GPS check happens inline, just proceed
-      const ok = await saveStep(3, { gpsStatus: gpsStatus, lat: gpsCoords?.lat, lng: gpsCoords?.lng });
-      if (ok) setStep(3);
-    } else if (step === 3) {
       if (!bankAccount.trim() || !bankIfsc.trim() || !bankHolder.trim()) {
         toast.error("Please fill all bank details");
         return;
       }
-      const ok = await saveStep(4, {
+      const ok = await saveStep(3, {
         bankAccount: bankAccount.trim(),
         bankIfsc: bankIfsc.trim().toUpperCase(),
         bankAccountHolder: bankHolder.trim(),
       });
+      if (ok) setStep(3);
+    } else if (step === 3) {
+      if (!selfie) { toast.error("Please take a selfie"); return; }
+      const ok = await saveStep(4, { selfie });
       if (ok) setStep(4);
     } else if (step === 4) {
-      if (!selfie) { toast.error("Please take a selfie"); return; }
-      const ok = await saveStep(5, { selfie });
-      if (ok) setStep(5);
-    } else if (step === 5) {
       // Save onboarding completion FIRST, then toggle online
       setOnlineLoading(true);
       try {
@@ -144,7 +168,7 @@ export default function RunnerOnboarding() {
 
   // Auto-check GPS on step 2 entrance — M9 FIX: include checkGps in deps
   useEffect(() => {
-    if (step === 2 && gpsStatus === "checking") {
+    if (step === 1 && gpsStatus === "checking") {
       const timer = setTimeout(checkGps, 500);
       return () => clearTimeout(timer);
     }
@@ -237,21 +261,6 @@ export default function RunnerOnboarding() {
             transition={{ duration: 0.25 }}
           >
             {step === 0 && (
-              <div className="text-center py-12">
-                <div className="w-20 h-20 rounded-2xl bg-white/10 flex items-center justify-center mx-auto mb-5">
-                  <Smartphone size={36} className="text-blue-600" />
-                </div>
-                <h2 className="text-white font-black text-xl mb-2">Phone Verified ✓</h2>
-                <p className="text-white/50 text-sm mb-6">{runner?.phone || "Your number is verified"}</p>
-                <div className="bg-green-500/15 border border-green-500/30 rounded-xl p-3 inline-flex items-center gap-2">
-                  <CheckCircle2 size={16} className="text-green-400" />
-                  <span className="text-green-400 text-sm font-semibold">Number confirmed</span>
-                </div>
-                <p className="text-white/30 text-xs mt-6">Let's set up your Comrade profile</p>
-              </div>
-            )}
-
-            {step === 1 && (
               <div className="py-6">
                 <div className="bg-white/8 border border-white/15 rounded-2xl p-5 mb-5">
                   <div className="w-12 h-12 rounded-xl bg-blue-600/20 flex items-center justify-center mb-3">
@@ -277,7 +286,7 @@ export default function RunnerOnboarding() {
               </div>
             )}
 
-            {step === 2 && (
+            {step === 1 && (
               <div className="py-6">
                 <div className="bg-white/8 border border-white/15 rounded-2xl p-5 mb-5">
                   <div className="w-12 h-12 rounded-xl bg-blue-500/20 flex items-center justify-center mb-3">
@@ -338,7 +347,7 @@ export default function RunnerOnboarding() {
               </div>
             )}
 
-            {step === 3 && (
+            {step === 2 && (
               <div className="py-6">
                 <div className="bg-white/8 border border-white/15 rounded-2xl p-5 mb-5">
                   <div className="w-12 h-12 rounded-xl bg-emerald-500/20 flex items-center justify-center mb-3">
@@ -396,7 +405,7 @@ export default function RunnerOnboarding() {
               </div>
             )}
 
-            {step === 4 && (
+            {step === 3 && (
               <div className="py-6">
                 <div className="bg-white/8 border border-white/15 rounded-2xl p-5 mb-5">
                   <div className="w-12 h-12 rounded-xl bg-pink-500/20 flex items-center justify-center mb-3">
@@ -434,7 +443,7 @@ export default function RunnerOnboarding() {
               </div>
             )}
 
-            {step === 5 && (
+            {step === 4 && (
               <div className="text-center py-6">
                 <div className="bg-white/8 border border-white/15 rounded-2xl p-6 mb-5">
                   <div className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg" style={{ background: BLUE_GRAD }}>

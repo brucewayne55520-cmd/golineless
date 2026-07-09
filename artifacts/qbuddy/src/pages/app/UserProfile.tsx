@@ -69,9 +69,11 @@ export default function UserProfile() {
   const [otpCode, setOtpCode] = useState("");
   const [otpLoading, setOtpLoading] = useState(false);
   const [profileError, setProfileError] = useState<string | null>(null);
+  const [profileSaving, setProfileSaving] = useState(false);
 
   const saveProfile = async () => {
     setProfileError(null);
+    setProfileSaving(true);
     try {
       const res = await fetch("/api/users/me", {
         method: "PATCH",
@@ -92,6 +94,8 @@ export default function UserProfile() {
       }
     } catch {
       setProfileError("Network error. Please try again.");
+    } finally {
+      setProfileSaving(false);
     }
   };
 
@@ -180,6 +184,8 @@ export default function UserProfile() {
     { Icon: Bell, label: "Notifications", action: () => navigate("/app/notifications"), badge: unreadCount > 0 ? unreadCount : undefined },
     { Icon: Globe, label: "Language", action: () => setShowLanguage(true) },
     { Icon: HelpCircle, label: "Help & Support", action: () => navigate("/app/help") },
+    { Icon: Lock, label: "Change Password", action: () => navigate("/app/change-password") },
+    { Icon: Mail, label: "Verify Email", action: () => navigate("/app/verify-email") },
     { Icon: Lock, label: "Privacy Policy", action: () => navigate("/app/privacy") },
     { Icon: FileText, label: "Terms of Service", action: () => navigate("/app/terms") },
     { Icon: Info, label: "About Go LineLess", action: () => navigate("/app/about") },
@@ -270,7 +276,10 @@ export default function UserProfile() {
           ))}
         </div>
 
-        <button onClick={handleLogout} className="w-full py-3.5 rounded-2xl text-red-500 font-bold border-2 border-red-100 hover:bg-red-50 transition-colors">
+        <button onClick={() => navigate("/app/delete-account")} className="w-full py-3.5 rounded-2xl text-red-500 font-bold border-2 border-red-100 hover:bg-red-50 transition-colors">
+          Delete Account
+        </button>
+        <button onClick={handleLogout} className="w-full py-3.5 rounded-2xl text-gray-500 font-bold border border-gray-200 hover:bg-gray-50 transition-colors">
           Logout
         </button>
       </div>
@@ -329,7 +338,14 @@ export default function UserProfile() {
                 </div>
               </div>
             ) : (
-              <button onClick={saveProfile} className="w-full py-3.5 rounded-2xl text-white font-bold mt-4" style={{ background: DARK_GRAD }}>Save Changes</button>
+              <button onClick={saveProfile} disabled={profileSaving} className="w-full py-3.5 rounded-2xl text-white font-bold mt-4 transition-all disabled:opacity-60" style={{ background: DARK_GRAD }}>
+                {profileSaving ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    Saving...
+                  </span>
+                ) : "Save Changes"}
+              </button>
             )}
           </div>
         </div>

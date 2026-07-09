@@ -77,6 +77,9 @@ CREATE TABLE IF NOT EXISTS users (
   otp_expires_at TIMESTAMPTZ,
   password_reset_token TEXT,
   password_reset_expires_at TIMESTAMPTZ,
+  email_verified BOOLEAN NOT NULL DEFAULT FALSE,
+  email_verification_token TEXT,
+  email_verification_expires_at TIMESTAMPTZ,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -138,6 +141,9 @@ CREATE TABLE IF NOT EXISTS runners (
   otp_expires_at TIMESTAMPTZ,
   password_reset_token TEXT,
   password_reset_expires_at TIMESTAMPTZ,
+  email_verified BOOLEAN NOT NULL DEFAULT FALSE,
+  email_verification_token TEXT,
+  email_verification_expires_at TIMESTAMPTZ,
   onboarding_step INTEGER NOT NULL DEFAULT 0,
   onboarding_completed BOOLEAN NOT NULL DEFAULT FALSE,
   dispatch_allowed BOOLEAN NOT NULL DEFAULT FALSE,
@@ -370,9 +376,10 @@ CREATE TABLE IF NOT EXISTS reviews (
   updated_at TIMESTAMPTZ
 );
 
--- Reviews indexes (performance)
+-- Reviews indexes (performance + uniqueness)
 CREATE INDEX IF NOT EXISTS idx_reviews_task_id ON reviews(task_id);
 CREATE INDEX IF NOT EXISTS idx_reviews_user_id ON reviews(user_id);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_reviews_task_user ON reviews(task_id, user_id);
 CREATE INDEX IF NOT EXISTS idx_reviews_runner_id ON reviews(runner_id);
 CREATE INDEX IF NOT EXISTS idx_reviews_rating ON reviews(rating);
 
@@ -443,6 +450,9 @@ CREATE TABLE IF NOT EXISTS admin_settings (
   upi_id TEXT NOT NULL DEFAULT 'golineless@upi',
   upi_payee_name TEXT NOT NULL DEFAULT 'Go LineLess',
   available_specializations TEXT[] NOT NULL DEFAULT '{hospital,senior,bank,documentation,emergency,female}',
+  auto_create_accounts BOOLEAN NOT NULL DEFAULT TRUE,
+  pilot_zones TEXT[] NOT NULL DEFAULT '{Juhapura,Sarkhej,Prahladnagar,Makarba,Paldi,Vasna,Jamalpur,Kalupur}',
+  active_coupons TEXT[] NOT NULL DEFAULT '{GOLINELESS10}',
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 

@@ -46,6 +46,8 @@ const AdminAuditLog = lazy(() => import("@/pages/admin/AdminAuditLog"));
 const NotificationsPage = lazy(() => import("@/pages/app/NotificationsPage"));
 const RunnerNotificationsPage = lazy(() => import("@/pages/runner/RunnerNotificationsPage"));
 const RunnerReviewsPage = lazy(() => import("@/pages/runner/RunnerReviewsPage"));
+const RunnerHelpSupport = lazy(() => import("@/pages/runner/RunnerHelpSupport"));
+const RunnerTermsOfService = lazy(() => import("@/pages/runner/RunnerTermsOfService"));
 const NotFound = lazy(() => import("@/pages/not-found"));
 const PrivacyPolicy = lazy(() => import("@/pages/app/PrivacyPolicy"));
 const TermsOfService = lazy(() => import("@/pages/app/TermsOfService"));
@@ -53,6 +55,9 @@ const HelpSupport = lazy(() => import("@/pages/app/HelpSupport"));
 const About = lazy(() => import("@/pages/app/About"));
 const FamilyTrack = lazy(() => import("@/pages/app/FamilyTrack"));
 const PayRetry = lazy(() => import("@/pages/app/PayRetry"));
+const AccountDeletion = lazy(() => import("@/pages/app/AccountDeletion"));
+const ChangePassword = lazy(() => import("@/pages/app/ChangePassword"));
+const VerifyEmail = lazy(() => import("@/pages/app/VerifyEmail"));
 const Signup = lazy(() => import("@/pages/auth/Signup"));
 const MagicLinkCallback = lazy(() => import("@/pages/auth/MagicLinkCallback"));
 const ForgotPassword = lazy(() => import("@/pages/auth/ForgotPassword"));
@@ -116,6 +121,9 @@ function Router() {
       <Route path="/app/terms" component={TermsOfService} />
       <Route path="/app/help" component={HelpSupport} />
       <Route path="/app/about" component={About} />
+      <Route path="/app/delete-account"><ProtectedRoute><AccountDeletion /></ProtectedRoute></Route>
+      <Route path="/app/change-password"><ProtectedRoute><ChangePassword /></ProtectedRoute></Route>
+      <Route path="/app/verify-email"><ProtectedRoute><VerifyEmail /></ProtectedRoute></Route>
 
       <Route path="/runner/feed"><RunnerProtectedRoute><RunnerFeed /></RunnerProtectedRoute></Route>
       <Route path="/runner/active"><RunnerProtectedRoute><ActiveTask /></RunnerProtectedRoute></Route>
@@ -125,6 +133,11 @@ function Router() {
       <Route path="/runner/onboarding"><RunnerProtectedRoute><RunnerOnboarding /></RunnerProtectedRoute></Route>
       <Route path="/runner/playbook"><RunnerProtectedRoute><RunnerPlaybook /></RunnerProtectedRoute></Route>
       <Route path="/runner/reviews"><RunnerProtectedRoute><RunnerReviewsPage /></RunnerProtectedRoute></Route>
+      <Route path="/runner/help"><RunnerProtectedRoute><RunnerHelpSupport /></RunnerProtectedRoute></Route>
+      <Route path="/runner/terms"><RunnerProtectedRoute><RunnerTermsOfService /></RunnerProtectedRoute></Route>
+      <Route path="/runner/delete-account"><RunnerProtectedRoute><AccountDeletion /></RunnerProtectedRoute></Route>
+      <Route path="/runner/change-password"><RunnerProtectedRoute><ChangePassword /></RunnerProtectedRoute></Route>
+      <Route path="/runner/verify-email"><RunnerProtectedRoute><VerifyEmail /></RunnerProtectedRoute></Route>
 
       <Route path="/admin/login" component={AdminLoginPage} />
       <Route path="/admin"><AdminProtectedRoute><AdminDashboard /></AdminProtectedRoute></Route>

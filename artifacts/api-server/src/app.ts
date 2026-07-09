@@ -107,6 +107,48 @@ app.use(cors({
   credentials: true,
 }));
 app.use(cookieParser());
+
+// --- CSRF Token Cookie (double-submit pattern) ---
+// Browsers automatically send cookies on same-origin requests. We set a non-httOnly
+// CSRF token cookie and require it as a header on state-changing requests. This
+// blocks simple cross-origin form submissions (no CORS preflight) from forging
+// state-changing requests.
+const CSRF_COOKIE_NAME = "_csrf";
+const CSRF_HEADER_NAME = "x-csrf-token";
+app.use((req: Request, res: Response, next) => {
+  // On any GET/HEAD/OPTIONS request, ensure a CSRF cookie exists
+  if (req.method === "GET" || req.method === "HEAD" || req.method === "OPTIONS") {
+    if (!req.cookies?.[CSRF_COOKIE_NAME]) {
+      const csrfToken = crypto.randomBytes(32).toString("hex");
+      res.cookie(CSRF_COOKIE_NAME, csrfToken, {
+        httpOnly: false, // Must be readable by JavaScript
+        secure: process.env.NODE_ENV === "production",
+        sameSite: process.env.NODE_ENV === "production" ? "strict" : "lax",
+        path: "/",
+        maxAge: 24 * 60 * 60 * 1000, // 24 hours
+      });
+    }
+    return next();
+  }
+
+  // For state-changing methods, validate CSRF token
+  const cookieToken = req.cookies?.[CSRF_COOKIE_NAME];
+  const headerToken = req.headers[CSRF_HEADER_NAME] as string | undefined;
+
+  // Skip CSRF for webhook endpoints (Razorpay sends its own signatures)
+  if (req.path === "/api/payments/webhook") return next();
+
+  // Skip CSRF for Bearer-authenticated requests (Authorization header prevents CSRF)
+  const authHeader = req.headers.authorization;
+  if (authHeader?.startsWith("Bearer ")) return next();
+
+  if (!cookieToken || !headerToken || cookieToken !== headerToken) {
+    res.status(403).json({ error: "CSRF token missing or invalid" });
+    return;
+  }
+  next();
+});
+
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 
@@ -190,6 +232,16 @@ app.use("/api/runners/me/gps-background", gpsBgLimiter);
 // H11: Rate limiting on admin API routes
 const adminLimiter = getRateLimit(60, 1, "ADMIN");
 app.use("/api/admin", adminLimiter);
+
+// Rate limit login to prevent brute-force attacks
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: Number(process.env["RATE_LIMIT_LOGIN"] ?? 10), // 10 attempts per 15 min per IP
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Too many login attempts. Please try again in 15 minutes." },
+});
+app.post("/api/auth/login", loginLimiter);
 
 // Rate limit signup to prevent mass account creation
 const signupLimiter = rateLimit({

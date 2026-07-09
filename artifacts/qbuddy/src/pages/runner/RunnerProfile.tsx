@@ -124,10 +124,12 @@ export default function RunnerProfile() {
 
   const menuItems: { Icon: LucideIcon; label: string; sub: string; onClick?: () => void }[] = [
     { Icon: Star, label: "My Reviews", sub: "See what clients say", onClick: () => navigate("/runner/reviews") },
-    { Icon: TrendingUp, label: "Performance Stats", sub: "Completion rate, avg response", onClick: () => navigate("/runner/profile") },
-    { Icon: HelpCircle, label: "Help & Support", sub: "FAQs, contact us", onClick: () => toast.info("Help & Support coming soon") },
-    { Icon: FileText, label: "Terms of Service", sub: "Runner agreement", onClick: () => toast.info("Terms of Service coming soon") },
-    { Icon: Lock, label: "Privacy Policy", sub: "Your data rights", onClick: () => toast.info("Privacy Policy coming soon") },
+    { Icon: TrendingUp, label: "Performance Stats", sub: "Completion rate, avg response", onClick: () => navigate("/runner/earnings") },
+    { Icon: HelpCircle, label: "Help & Support", sub: "FAQs, contact us", onClick: () => navigate("/runner/help") },
+    { Icon: FileText, label: "Terms of Service", sub: "Runner agreement", onClick: () => navigate("/runner/terms") },
+    { Icon: Lock, label: "Change Password", sub: "Update your password", onClick: () => navigate("/runner/change-password") },
+    { Icon: Shield, label: "Verify Email", sub: "Confirm your email address", onClick: () => navigate("/runner/verify-email") },
+    { Icon: Lock, label: "Privacy Policy", sub: "Your data rights", onClick: () => navigate("/app/privacy") },
   ];
 
   const stats: { Icon: LucideIcon; val: string | number; label: string; color: string; bg: string }[] = [
@@ -209,6 +211,22 @@ export default function RunnerProfile() {
               <p className="text-white/50 text-xs font-mono mt-0.5">ID: {(runner as typeof runner & { uniqueId?: string }).uniqueId}</p>
             )}
             <p className="text-white/40 text-sm">{runner?.phone}</p>
+            {/* #47: Last Active timestamp */}
+            {(runner as unknown as { lastActiveAt?: string })?.lastActiveAt && (
+              <p className="text-white/30 text-[10px] mt-0.5">
+                Last active {(() => {
+                  const d = new Date((runner as unknown as { lastActiveAt: string }).lastActiveAt);
+                  const diffMs = Date.now() - d.getTime();
+                  const mins = Math.floor(diffMs / 60000);
+                  if (mins < 1) return "just now";
+                  if (mins < 60) return `${mins}m ago`;
+                  const hrs = Math.floor(mins / 60);
+                  if (hrs < 24) return `${hrs}h ago`;
+                  const days = Math.floor(hrs / 24);
+                  return `${days}d ago`;
+                })()}
+              </p>
+            )}
             {rating > 0 && (
               <div className="flex items-center gap-3 mt-1">
                 <div className="flex items-center gap-1">
@@ -402,8 +420,11 @@ export default function RunnerProfile() {
         ))}
       </div>
 
-      <div className="mx-4 mt-3">
-        <button onClick={handleLogout} className="w-full py-3.5 rounded-2xl font-bold border border-red-400/20 text-red-400 hover:bg-red-400/10 transition-colors text-sm">
+      <div className="mx-4 mt-3 space-y-2">
+        <button onClick={() => navigate("/runner/delete-account")} className="w-full py-3.5 rounded-2xl font-bold border border-red-400/20 text-red-400 hover:bg-red-400/10 transition-colors text-sm">
+          Delete Account
+        </button>
+        <button onClick={handleLogout} className="w-full py-3.5 rounded-2xl font-bold border border-white/10 text-white/60 hover:bg-white/5 transition-colors text-sm">
           Sign Out
         </button>
       </div>
@@ -438,9 +459,18 @@ export default function RunnerProfile() {
                 ))}
               </div>
 
-              <div className="mb-5 p-3 bg-white/10 rounded-xl">
-                <p className="text-white font-bold text-sm">{KYC_STEPS[kycStep].label}</p>
-                <p className="text-white/50 text-xs mt-0.5">{KYC_STEPS[kycStep].desc}</p>
+              {/* #41: Overall KYC progress indicator */}
+              <div className="mb-3 p-3 bg-white/10 rounded-xl flex items-center gap-3">
+                <div className="flex-1">
+                  <div className="flex items-center justify-between mb-1">
+                    <p className="text-white font-bold text-sm">{KYC_STEPS[kycStep].label}</p>
+                    <span className="text-white/40 text-[10px] font-semibold">{Math.round(((kycStep + 1) / KYC_STEPS.length) * 100)}%</span>
+                  </div>
+                  <p className="text-white/50 text-xs">{KYC_STEPS[kycStep].desc}</p>
+                </div>
+                <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{ background: `${BLUE}20` }}>
+                  <span className="text-xs font-black" style={{ color: BLUE }}>{kycStep + 1}/{KYC_STEPS.length}</span>
+                </div>
               </div>
 
               <div className="space-y-4">
@@ -594,7 +624,18 @@ export default function RunnerProfile() {
 
                 {kycStep < KYC_STEPS.length - 1 ? (
                   <button
-                    onClick={() => setKycStep(s => s + 1)}
+                    onClick={() => {
+                      // m7: Validate bank details before advancing to step 4
+                      if (kycStep === 3) {
+                        if (form.bankAccount && typeof form.bankAccount === "string" && !/^\d{9,18}$/.test(form.bankAccount)) {
+                          toast.error("Bank account must be 9-18 digits"); return;
+                        }
+                        if (form.bankIfsc && typeof form.bankIfsc === "string" && !/^[A-Z]{4}0[A-Z0-9]{6}$/.test(form.bankIfsc)) {
+                          toast.error("Invalid IFSC code (e.g. SBIN0001234)"); return;
+                        }
+                      }
+                      setKycStep(s => s + 1);
+                    }}
                     className="w-full py-4 rounded-2xl text-gray-900 font-black mt-2 text-base"
                     style={{ background: BLUE_GRAD }}
                   >
@@ -604,10 +645,15 @@ export default function RunnerProfile() {
                   <button
                     onClick={handleSubmitKyc}
                     disabled={submitKyc.isPending}
-                    className="w-full py-4 rounded-2xl text-gray-900 font-black mt-2 text-base"
-                    style={{ background: BLUE_GRAD }}
+                    className="w-full py-4 rounded-2xl text-gray-900 font-black mt-2 text-base flex items-center justify-center gap-2"
+                    style={{ background: submitKyc.isPending ? "rgba(255,255,255,0.2)" : BLUE_GRAD }}
                   >
-                    {submitKyc.isPending ? "Submitting..." : "Submit for Verification"}
+                    {submitKyc.isPending ? (
+                      <>
+                        <div className="w-4 h-4 border-2 border-gray-900 border-t-transparent rounded-full animate-spin" />
+                        Submitting...
+                      </>
+                    ) : "Submit for Verification"}
                   </button>
                 )}
 

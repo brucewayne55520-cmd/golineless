@@ -2,14 +2,15 @@ import { useState, useEffect, useRef } from "react";
 import { useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
-import { ArrowLeft, Star, Phone, MessageSquare, CheckCircle2, Camera, Clock, Navigation, Share2, UserPlus, Crosshair, AlertTriangle, FileText, Smartphone, XCircle } from "lucide-react";
+import { ArrowLeft, Star, Phone, MessageSquare, CheckCircle2, Camera, Clock, Navigation, Share2, UserPlus, Crosshair, AlertTriangle, FileText, Smartphone, XCircle, MapPin, Calendar, RefreshCw } from "lucide-react";
 import { useGetTask, useSubmitReview, useGetRunnerLocation, useGenerateFamilyTrackingLink, useSubmitCustomerFeedback } from "@workspace/api-client-react";
 import { UserBottomNav } from "@/components/BottomNav";
 import { CategoryIcon } from "@/components/CategoryIcon";
 import { StatusBadge } from "@/components/StatusBadge";
 import { PaymentBadge } from "@/components/PaymentBadge";
 import { PayButton } from "@/components/PayButton";
-import { CATEGORY_NAMES, STATUS_LABELS, formatCurrency, calculateQueueGap, estimateWaitTime, calculateQueueProgress } from "@/lib/utils";
+import { RescheduleModal } from "@/components/RescheduleModal";
+import { CATEGORY_NAMES, STATUS_LABELS, formatCurrency, calculateQueueGap, estimateWaitTime, calculateQueueProgress, haversineDistance } from "@/lib/utils";
 import { DARK, DARK_GRAD, BLUE, SURFACE_DIM } from "@/lib/theme";
 interface Props { id: string; }
 
@@ -170,6 +171,11 @@ export default function TaskDetail({ id }: Props) {
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [cancelReason, setCancelReason] = useState("");
   const [cancelLoading, setCancelLoading] = useState(false);
+  // #15: Reschedule state
+  const [showRescheduleModal, setShowRescheduleModal] = useState(false);
+  const [newDate, setNewDate] = useState("");
+  const [newTime, setNewTime] = useState("");
+  const [rescheduleLoading, setRescheduleLoading] = useState(false);
 
   // (#19) Dispute countdown timer
   const [disputeCountdown, setDisputeCountdown] = useState("");
@@ -184,6 +190,19 @@ export default function TaskDetail({ id }: Props) {
       const token = localStorage.getItem("golineless_user_token") || localStorage.getItem("golineless_runner_token") || "";
       const sock = io(window.location.origin, { path: "/api/socket.io", auth: { token } });
       sock.emit("join_task", { taskId: Number(id) });
+      // CRITICAL: Listen for ALL real-time status changes so user sees updates instantly
+      sock.on("task_status_changed", (data: Record<string, unknown>) => {
+        if (data.taskId === Number(id)) {
+          refetch();
+          // Show toast for key status changes
+          const status = data.status as string | undefined;
+          if (status === "assigned") toast.success("A Comrade has been assigned!", { duration: 5000 });
+          else if (status === "on_the_way") toast("Your Comrade is on the way!", { duration: 3000 });
+          else if (status === "completed") toast.success("Your task has been completed!", { duration: 5000 });
+          else if (status === "cancelled") toast.error("Task has been cancelled.", { duration: 5000 });
+        }
+      });
+      // Listen for queue updates from runner
       sock.on("queue_updated", (data: Record<string, unknown>) => {
         if (data.taskId === Number(id)) {
           refetch();
@@ -198,6 +217,12 @@ export default function TaskDetail({ id }: Props) {
             `Cash payment confirmed by ${runnerName}` + (amount ? ` · ${formatCurrency(amount)}` : ""),
             { duration: 5000 }
           );
+          refetch();
+        }
+      });
+      // Listen for new proof photos uploaded by runner
+      sock.on("new_proof_photo", (data: Record<string, unknown>) => {
+        if (data.taskId === Number(id)) {
           refetch();
         }
       });
@@ -339,6 +364,32 @@ export default function TaskDetail({ id }: Props) {
     }
   };
 
+  // #15: Handle task rescheduling
+  const handleReschedule = async () => {
+    if (!newDate || !newTime) { toast.error("Please select date and time"); return; }
+    setRescheduleLoading(true);
+    try {
+      const token = localStorage.getItem("golineless_user_token") || "";
+      const res = await fetch(`/api/tasks/${id}/reschedule`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ scheduledDate: newDate, scheduledTime: newTime }),
+      });
+      if (res.ok) {
+        toast.success("Task rescheduled successfully");
+        setShowRescheduleModal(false);
+        refetch();
+      } else {
+        const err = await res.json();
+        toast.error(err.error || "Failed to reschedule. Task may already be accepted.");
+      }
+    } catch {
+      toast.error("Failed to reschedule task");
+    } finally {
+      setRescheduleLoading(false);
+    }
+  };
+
   const handleFamilyTracking = async () => {
     if (!familyName.trim() || !familyPhone.trim()) { toast.error("Please enter name and phone"); return; }
     generateTrackingLink.mutate({ id: Number(id), data: { familyContactName: familyName, familyContactPhone: familyPhone } }, {
@@ -346,8 +397,15 @@ export default function TaskDetail({ id }: Props) {
         const token = data.familyTrackingToken ?? "";
         setFamilyToken(token);
         const shareUrl = `${window.location.origin}/family/track/${token}`;
-        navigator.clipboard.writeText(shareUrl).catch(() => {});
-        toast.success("Tracking link copied! Share it with family.");
+        // M10: Clipboard fallback for desktop browsers
+        if (navigator.clipboard) {
+          navigator.clipboard.writeText(shareUrl).catch(() => {
+            toast.info(`Share this link: ${shareUrl}`);
+          });
+        } else {
+          toast.info(`Share this link: ${shareUrl}`);
+        }
+        toast.success("Tracking link created! Share it with family.");
       },
       onError: () => toast.error("Failed to create tracking link"),
     });
@@ -392,6 +450,15 @@ export default function TaskDetail({ id }: Props) {
   const proofPhotos: string[] = t.proofPhotos || [];
   const hasActiveRunner = t.runner && ["assigned","on_the_way","at_location","in_progress","waiting_started"].includes(t.status);
 
+  // #16: Runner ETA calculation based on GPS distance
+  let runnerDistanceKm: number | null = null;
+  let runnerETA = "";
+  if (runnerLoc && t.locationLat && t.locationLng) {
+    runnerDistanceKm = Math.round(haversineDistance(runnerLoc.lat, runnerLoc.lng, Number(t.locationLat), Number(t.locationLng)) * 10) / 10;
+    // Estimate ETA: ~3 min per km in city traffic
+    const etaMinutes = Math.max(3, Math.round(runnerDistanceKm * 3));
+    runnerETA = etaMinutes < 60 ? `${etaMinutes} min` : `${Math.floor(etaMinutes / 60)}h ${etaMinutes % 60}m`;
+  }
   // Estimated completion time
   let eta = "";
   if (t.estimatedDurationMinutes && t.acceptedAt) {
@@ -534,11 +601,22 @@ export default function TaskDetail({ id }: Props) {
           </div>
           {/* C1+C2: Cancel button for user's own pending/assigned tasks */}
         {t.status !== "completed" && t.status !== "cancelled" && (
-          <div className="mt-3">
+          <div className="mt-3 space-y-2">
             <button onClick={() => setShowCancelModal(true)}
               className="w-full py-2.5 rounded-xl border border-red-200 text-red-500 font-semibold text-sm flex items-center justify-center gap-2 hover:bg-red-50 transition-colors">
               <XCircle size={14} /> Cancel Task
             </button>
+            {/* #15: Reschedule button — only for pending tasks (before runner acceptance) */}
+            {t.status === "pending" && (
+              <button onClick={() => {
+                setNewDate(t.scheduledAt ? new Date(t.scheduledAt).toISOString().split("T")[0] : "");
+                setNewTime(t.scheduledAt ? new Date(t.scheduledAt).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: false }) : "10:00");
+                setShowRescheduleModal(true);
+              }}
+                className="w-full py-2.5 rounded-xl border border-blue-200 text-blue-600 font-semibold text-sm flex items-center justify-center gap-2 hover:bg-blue-50 transition-colors">
+                <RefreshCw size={14} /> Reschedule Task
+              </button>
+            )}
           </div>
         )}
 
@@ -582,8 +660,15 @@ export default function TaskDetail({ id }: Props) {
           )}
         </div>
 
-        {/* Live Status + ETA Row */}
+        {/* #16: Runner ETA + Live Status Row */}
         <div className="grid grid-cols-2 gap-3">
+          {runnerDistanceKm != null && t.status === "on_the_way" && (
+            <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
+              <p className="text-[10px] font-semibold text-gray-400 uppercase mb-1 flex items-center gap-1"><MapPin size={10} /> Runner ETA</p>
+              <p className="text-lg font-black" style={{ color: DARK }}>{runnerETA}</p>
+              <p className="text-[10px] text-gray-400">{runnerDistanceKm} km away</p>
+            </div>
+          )}
           {eta && (
             <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
               <p className="text-[10px] font-semibold text-gray-400 uppercase mb-1">Est. Completion</p>
@@ -897,6 +982,22 @@ export default function TaskDetail({ id }: Props) {
               </div>
             </motion.div>
           </>
+        )}
+      </AnimatePresence>
+
+      {/* Reschedule Modal */}
+      <AnimatePresence>
+        {showRescheduleModal && (
+          <RescheduleModal
+            open={showRescheduleModal}
+            onClose={() => setShowRescheduleModal(false)}
+            onConfirm={handleReschedule}
+            newDate={newDate}
+            newTime={newTime}
+            onDateChange={setNewDate}
+            onTimeChange={setNewTime}
+            loading={rescheduleLoading}
+          />
         )}
       </AnimatePresence>
 

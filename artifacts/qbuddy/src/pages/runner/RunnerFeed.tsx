@@ -1,28 +1,19 @@
 import { useState, useMemo, useCallback, useRef, useEffect } from "react";
 import { useLocation } from "wouter";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
-import { MapPin, Calendar, Search, CheckCircle, Clock, Zap, Shield, Star, TrendingUp, Navigation, Timer, Wifi, Camera, CreditCard, User, Loader2, ChevronDown, RotateCw, X, Briefcase } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
+import { MapPin, Calendar, Search, CheckCircle, Clock, Zap, Shield, Star, TrendingUp, Navigation, Timer, Wifi, Camera, CreditCard, User, Loader2, ChevronDown, RotateCw, X, Briefcase, XCircle, Map, WifiOff } from "lucide-react";
 import { useListAvailableTasks, useAcceptTask, useGetRunnerMe, useToggleOnlineStatus, useGetRunnerReadiness, useGetRunnerEarnings, useGetActiveTask } from "@workspace/api-client-react";
 import type { Task, Runner } from "@workspace/api-client-react";
 import { RunnerBottomNav } from "@/components/BottomNav";
 import { CategoryIcon } from "@/components/CategoryIcon";
-import { CATEGORY_NAMES, formatCurrency } from "@/lib/utils";
+import { CATEGORY_NAMES, formatCurrency, haversineDistance } from "@/lib/utils";
 import { BLUE, BLUE_GRAD } from "@/lib/theme";
 import { EmptyState } from "@/components/EmptyState";
 import { useGpsTracking } from "@/hooks/useGpsTracking";
 
 const BG = "#080E1E";
-
-// Shared haversine distance calculator (km)
-function haversineDistance(lat1: number, lng1: number, lat2: number, lng2: number): number {
-  const toRad = (d: number) => (d * Math.PI) / 180;
-  const R = 6371;
-  const dLat = toRad(lat2 - lat1);
-  const dLng = toRad(lng2 - lng1);
-  const a = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
-  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-}
 
 function ReadinessBanner({ runner }: { runner: Runner }) {
   const { data: score, isLoading, isError } = useGetRunnerReadiness();
@@ -100,7 +91,59 @@ function getTrustLevel(tasks: number, rating: number): { label: string; color: s
   return { label: "New Comrade", color: "#9CA3AF", icon: "○" };
 }
 
-function TaskCard({ task, onAccept, acceptingId, expanded, detail, loadingDetail, onToggleExpand, distance }: { task: Task; onAccept: (id: number) => void; acceptingId: number | null; expanded?: boolean; detail?: Task | null; loadingDetail?: boolean; onToggleExpand?: () => void; distance?: number | null }) {
+function RunnerTaskMap({ tasks, runner, getTaskDistance }: { tasks: Task[]; runner: Runner | undefined; getTaskDistance: (task: Task) => number | null }) {
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!containerRef.current || tasks.length === 0) return;
+    let map: import("leaflet").Map;
+    const load = async () => {
+      const L = await import("leaflet");
+      await import("leaflet/dist/leaflet.css");
+      delete (L.Icon.Default.prototype as unknown as { _getIconUrl?: unknown })._getIconUrl;
+      L.Icon.Default.mergeOptions({
+        iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
+        iconRetinaUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
+        shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
+      });
+
+      const runnerLat = runner?.currentLat ? Number(runner.currentLat) : 23.0225;
+      const runnerLng = runner?.currentLng ? Number(runner.currentLng) : 72.5714;
+      map = L.map(containerRef.current!, { zoomControl: false }).setView([runnerLat, runnerLng], 13);
+      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { attribution: "© OSM" }).addTo(map);
+
+      // Runner position marker
+      const runnerIcon = L.divIcon({
+        html: `<div style="background:#22C55E;width:20px;height:20px;border-radius:50%;border:3px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.3);"></div>`,
+        className: "", iconSize: [20, 20],
+      });
+      L.marker([runnerLat, runnerLng], { icon: runnerIcon }).addTo(map).bindPopup("<b>You</b>");
+
+      // Task markers
+      const taskIcon = L.divIcon({
+        html: `<div style="background:#3B82F6;width:18px;height:18px;border-radius:50%;border:2px solid white;box-shadow:0 2px 6px rgba(0,0,0,0.3);display:flex;align-items:center;justify-content:center;color:white;font-size:8px;font-weight:bold;">T</div>`,
+        className: "", iconSize: [18, 18],
+      });
+      const bounds: [number, number][] = [[runnerLat, runnerLng]];
+      tasks.forEach((task) => {
+        const lat = task.locationLat ? Number(task.locationLat) : null;
+        const lng = task.locationLng ? Number(task.locationLng) : null;
+        if (lat == null || lng == null) return;
+        bounds.push([lat, lng]);
+        const dist = getTaskDistance(task);
+        L.marker([lat, lng], { icon: taskIcon }).addTo(map)
+          .bindPopup(`<b>${CATEGORY_NAMES[task.category] ?? task.category}</b><br>${formatCurrency(Number(task.price ?? 0) * 0.7)} payout${dist != null ? `<br>${dist} km away` : ""}`);
+      });
+      if (bounds.length > 1) map.fitBounds(bounds, { padding: [40, 40] });
+    };
+    load().catch(() => {});
+    return () => { map?.remove(); };
+  }, [tasks, runner]);
+
+  return <div ref={containerRef} className="w-full h-64 rounded-2xl overflow-hidden border border-white/10" />;
+}
+
+function TaskCard({ task, onAccept, onDecline, acceptingId, expanded, detail, loadingDetail, onToggleExpand, distance }: { task: Task; onAccept: (id: number) => void; onDecline: (taskId: number) => void; acceptingId: number | null; expanded?: boolean; detail?: Task | null; loadingDetail?: boolean; onToggleExpand?: () => void; distance?: number | null }) {
   const runnerCut = Math.round(Number(task.price ?? 0) * 0.7);
 
   return (
@@ -134,6 +177,7 @@ function TaskCard({ task, onAccept, acceptingId, expanded, detail, loadingDetail
         {task.locationArea && (
           <p className="text-white/60 text-xs flex items-center gap-1 mb-1.5">
             <MapPin size={10} /> {task.locationArea}, {task.locationCity ?? "Ahmedabad"}
+            {distance != null && <span className="text-blue-400 font-bold">· {distance} km</span>}
           </p>
         )}
         {!task.locationArea && !task.locationLat && (
@@ -227,6 +271,13 @@ function TaskCard({ task, onAccept, acceptingId, expanded, detail, loadingDetail
         {/* Actions */}
         <div className="flex gap-2.5">
           <button
+            onClick={() => onDecline(task.id)}
+            className="py-2.5 px-4 rounded-xl text-white/40 text-sm font-semibold flex items-center justify-center gap-1.5 border border-white/10 hover:bg-white/5 hover:text-red-400 hover:border-red-500/30 transition-all"
+          >
+            <XCircle size={14} />
+            Not Interested
+          </button>
+          <button
             onClick={() => onAccept(task.id)}
             disabled={acceptingId === task.id}
             className="flex-1 py-2.5 rounded-xl text-gray-900 text-sm font-black flex items-center justify-center gap-1.5 transition-all hover:shadow-lg disabled:opacity-60"
@@ -254,8 +305,13 @@ export default function RunnerFeed() {
     },
   });
   const [accepting, setAccepting] = useState<number | null>(null);
+  const decliningRef = useRef<boolean>(false);
+  // #21: Map view toggle
+  const [viewMode, setViewMode] = useState<"list" | "map">("list");
   // E5+L1: Socket ref for real-time dispatch notifications
   const socketRef = useRef<ReturnType<typeof import("socket.io-client").io> | null>(null);
+  // #32: Socket connection status for offline indicator banner
+  const [socketConnected, setSocketConnected] = useState(true);
 
   // Debounced refetch to avoid excessive API calls when many tasks dispatched rapidly
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -273,7 +329,9 @@ export default function RunnerFeed() {
           reconnectionAttempts: 10,
           // L3: Heartbeat handled server-side via pingInterval/pingTimeout
         });
-        sock.on("connect_error", () => { /* L12: swallow socket init errors */ });
+        sock.on("connect", () => setSocketConnected(true));
+        sock.on("disconnect", () => setSocketConnected(false));
+        sock.on("connect_error", () => setSocketConnected(false));
         // E5: Listen for new task broadcasts dispatched to this runner
         sock.on("new_task_broadcast", () => {
           // L7: Vibrate device on new task notification
@@ -378,25 +436,86 @@ export default function RunnerFeed() {
   const paginatedTasks = allTasks.slice(0, (page + 1) * PAGE_SIZE);
   const hasMore = allTasks.length > (page + 1) * PAGE_SIZE;
 
+  // #46: Confirmation dialog for offline toggle
+  const [confirmOffline, setConfirmOffline] = useState(false);
+
   const handleToggle = () => {
+    // #46: If going offline, show confirmation dialog first
+    if (isOnline && !confirmOffline) {
+      setConfirmOffline(true);
+      return;
+    }
+    setConfirmOffline(false);
     toggleOnline.mutate({ data: { isOnline: !isOnline } }, {
       onSuccess: () => { refetchRunner(); },
       onError: () => toast.error("Failed to toggle status"),
     });
   };
 
+  const queryClient = useQueryClient();
+
   const handleAccept = (taskId: number) => {
     setAccepting(taskId);
     acceptTask.mutate({ id: Number(taskId) }, {
       onSuccess: () => {
         toast.success("Task accepted! Let's go!");
-        // C8+M7 FIX: Invalidate queries so active task loads immediately
+        // CRITICAL FIX: Invalidate activeTask query so ActiveTask page shows data immediately
+        queryClient.invalidateQueries({ queryKey: ["activeTask"] });
         refetch();
         navigate("/runner/active");
       },
       onError: () => { toast.error("Failed to accept task"); setAccepting(null); },
     });
   };
+
+  // #33: Decline reason picker state
+  const [declineReason, setDeclineReason] = useState<string | null>(null);
+  const [declineTaskId, setDeclineTaskId] = useState<number | null>(null);
+
+  // #17 + #33: Decline/dismiss a task with reason picker
+  const handleDecline = useCallback(async (taskId: number) => {
+    if (decliningRef.current) return; // debounce guard
+    // #33: Show reason picker first
+    setDeclineTaskId(taskId);
+    setDeclineReason(null);
+  }, []);
+
+  const submitDecline = useCallback(async (reason: string) => {
+    const taskId = declineTaskId;
+    if (!taskId || decliningRef.current) return;
+    decliningRef.current = true;
+    try {
+      const token = localStorage.getItem("golineless_runner_token") || "";
+      const res = await fetch(`/api/tasks/${taskId}/dismiss`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ reason }),
+      });
+      if (res.ok) {
+        toast.success("Task dismissed. You won't see it again.");
+        refetch();
+      } else {
+        toast.info("Task skipped");
+        refetch();
+      }
+    } catch {
+      toast.info("Task skipped");
+    } finally {
+      decliningRef.current = false;
+      setDeclineTaskId(null);
+      setDeclineReason(null);
+    }
+  }, [declineTaskId, refetch]);
+
+  // #33: Decline reason options
+  const DECLINE_REASONS = [
+    { value: "too_far", label: "Too far away", icon: "📍" },
+    { value: "not_interested", label: "Not my type of work", icon: "🤷" },
+    { value: "time_conflict", label: "Time conflict", icon: "⏰" },
+    { value: "unclear_instructions", label: "Instructions unclear", icon: "❓" },
+    { value: "low_payout", label: "Payout too low", icon: "💰" },
+    { value: "safety_concern", label: "Safety concern", icon: "🛡️" },
+  ];
 
   return (
     <div className="min-h-screen pb-20" style={{ background: BG }}>
@@ -475,19 +594,42 @@ export default function RunnerFeed() {
         </div>
       )}
 
-      {/* H9: Active task banner */}
+      {/* #32: Offline indicator banner */}
+      {!socketConnected && isOnline && (
+        <div className="mx-4 mt-3 bg-amber-500/15 border border-amber-500/30 rounded-xl px-4 py-2.5 flex items-center gap-2">
+          <WifiOff size={14} className="text-amber-400 flex-shrink-0" />
+          <span className="text-amber-400 text-xs font-semibold">Connection lost. Reconnecting to dispatch...</span>
+        </div>
+      )}
+
+      {/* H9 + #31: Active task banner enhanced with category icon, status, ETA */}
       {activeTask && (
         <div className="mx-4 mt-4">
           <button
             onClick={() => navigate("/runner/active")}
             className="w-full bg-green-500/15 border border-green-500/30 rounded-2xl px-4 py-3 flex items-center gap-3 hover:bg-green-500/20 transition-colors"
           >
-            <div className="w-10 h-10 rounded-xl bg-green-500/20 flex items-center justify-center flex-shrink-0">
-              <Briefcase size={18} className="text-green-400" />
+            <div className="w-11 h-11 rounded-xl bg-green-500/20 flex items-center justify-center flex-shrink-0">
+              <CategoryIcon category={activeTask.category} size={20} />
             </div>
             <div className="flex-1 text-left">
-              <p className="text-green-400 font-bold text-sm">Active Task in Progress</p>
-              <p className="text-green-400/60 text-xs">Task #{activeTask.id} · {activeTask.status?.replace(/_/g, " ")}</p>
+              <div className="flex items-center gap-2">
+                <p className="text-green-400 font-bold text-sm">{CATEGORY_NAMES[activeTask.category] || "Active Task"}</p>
+                <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-green-500/20 text-green-300">
+                  {activeTask.status?.replace(/_/g, " ")}
+                </span>
+              </div>
+              <p className="text-green-400/60 text-xs">
+                Task #{activeTask.id}{activeTask.locationArea ? ` · ${activeTask.locationArea}` : ""}
+                {activeTask.locationLat && activeTask.locationLng && (
+                  <>
+                    {(() => {
+                      const dist = getTaskDistance(activeTask);
+                      return dist != null ? <> · ~{dist} km away</> : null;
+                    })()}
+                  </>
+                )}
+              </p>
             </div>
             <span className="text-green-400 text-xs font-bold">→ Go</span>
           </button>
@@ -500,12 +642,18 @@ export default function RunnerFeed() {
           <div>
             <h1 className="text-lg font-black text-white">Available Tasks</h1>
             {isOnline && (
-              <p className="text-white/40 text-xs mt-0.5">Showing real-time dispatch near you</p>
+              <p className="text-white/40 text-xs mt-0.5">{allTasks.length} task{allTasks.length !== 1 ? "s" : ""} near you</p>
             )}
           </div>
-          <button onClick={() => refetch()} className="w-8 h-8 rounded-xl bg-white/8 border border-white/10 flex items-center justify-center">
-            <Search size={14} className="text-white/50" />
-          </button>
+          <div className="flex items-center gap-1.5">
+            {/* #21: Map/List toggle */}
+            <button onClick={() => setViewMode(v => v === "list" ? "map" : "list")} className="w-8 h-8 rounded-xl bg-white/8 border border-white/10 flex items-center justify-center" title="Toggle map view">
+              {viewMode === "list" ? <Map size={14} className="text-white/50" /> : <Search size={14} className="text-white/50" />}
+            </button>
+            <button onClick={() => refetch()} className="w-8 h-8 rounded-xl bg-white/8 border border-white/10 flex items-center justify-center">
+              <Search size={14} className="text-white/50" />
+            </button>
+          </div>
         </div>
 
         {/* M4: Pull-to-refresh indicator + refresh button */}
@@ -513,6 +661,13 @@ export default function RunnerFeed() {
           <div className="flex items-center justify-center gap-2 py-2 mb-2">
             <RotateCw size={12} className="animate-spin text-blue-600" />
             <span className="text-white/40 text-[10px]">Refreshing...</span>
+          </div>
+        )}
+
+        {/* #21: Map view for available tasks */}
+        {viewMode === "map" && !isLoading && allTasks.length > 0 && (
+          <div className="mb-4">
+            <RunnerTaskMap tasks={allTasks} runner={runner} getTaskDistance={getTaskDistance} />
           </div>
         )}
 
@@ -550,6 +705,7 @@ export default function RunnerFeed() {
                 key={task.id}
                 task={task}
                 onAccept={handleAccept}
+                onDecline={handleDecline}
                 acceptingId={accepting}
                 expanded={expandedTaskId === task.id}
                 detail={expandedTaskId === task.id ? expandedTaskDetail : null}
@@ -577,6 +733,102 @@ export default function RunnerFeed() {
           <span className="text-green-400 text-xs font-semibold">KYC Verified · Trusted Comrade</span>
         </div>
       )}
+
+      {/* #46: Offline confirmation dialog */}
+      <AnimatePresence>
+        {confirmOffline && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center backdrop-blur-sm"
+            onClick={() => setConfirmOffline(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              transition={{ type: "spring", stiffness: 300, damping: 25 }}
+              className="w-80 bg-[#111827] rounded-2xl p-6 text-center border border-white/10"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="w-12 h-12 rounded-full bg-amber-500/20 flex items-center justify-center mx-auto mb-3">
+                <WifiOff size={22} className="text-amber-400" />
+              </div>
+              <h3 className="text-white font-black text-base mb-1">Go Offline?</h3>
+              <p className="text-white/50 text-xs mb-5 leading-relaxed">
+                You won't receive new task dispatches while offline. You can go back online anytime.
+              </p>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setConfirmOffline(false)}
+                  className="flex-1 py-2.5 rounded-xl border border-white/20 text-white/60 text-sm font-semibold hover:bg-white/5 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleToggle}
+                  className="flex-1 py-2.5 rounded-xl bg-amber-500/20 border border-amber-500/30 text-amber-400 text-sm font-bold hover:bg-amber-500/30 transition-colors"
+                >
+                  Yes, Go Offline
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* #33: Decline reason picker modal */}
+      <AnimatePresence>
+        {declineTaskId && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/60 z-50 flex items-end justify-center backdrop-blur-sm"
+            onClick={() => { setDeclineTaskId(null); setDeclineReason(null); }}
+          >
+            <motion.div
+              initial={{ y: "100%" }}
+              animate={{ y: 0 }}
+              exit={{ y: "100%" }}
+              transition={{ type: "spring", stiffness: 200, damping: 25 }}
+              className="w-full max-w-md bg-[#111827] rounded-t-3xl p-6 pb-8"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-white font-black text-base">Why are you declining?</h3>
+                <button
+                  onClick={() => { setDeclineTaskId(null); setDeclineReason(null); }}
+                  className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-white/40 hover:text-white/60"
+                >
+                  <X size={16} />
+                </button>
+              </div>
+              <p className="text-white/40 text-xs mb-4">This helps us improve dispatch matching. Your answer is anonymous.</p>
+              <div className="space-y-2">
+                {DECLINE_REASONS.map((r) => (
+                  <button
+                    key={r.value}
+                    onClick={() => submitDecline(r.value)}
+                    className="w-full flex items-center gap-3 p-3.5 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 hover:border-white/20 transition-all text-left"
+                  >
+                    <span className="text-lg">{r.icon}</span>
+                    <span className="text-white text-sm font-semibold">{r.label}</span>
+                  </button>
+                ))}
+                <button
+                  onClick={() => submitDecline("other")}
+                  className="w-full flex items-center gap-3 p-3.5 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 hover:border-white/20 transition-all text-left text-white/40"
+                >
+                  <span className="text-lg">💬</span>
+                  <span className="text-sm font-semibold">Other reason</span>
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <RunnerBottomNav />
     </div>

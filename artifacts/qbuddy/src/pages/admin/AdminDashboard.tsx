@@ -27,19 +27,22 @@ import CashReconciliationPanel from "./CashReconciliationPanel";
 import PayoutSettlementPanel from "./PayoutSettlementPanel";
 import ActivityFeed from "./ActivityFeed";
 import { DARK } from "@/lib/theme";
-import { useEffect, useRef, useCallback } from "react";
+import { useEffect, useRef, useCallback, useState } from "react";
 import { toast } from "sonner";
 
-// H8: Real-time admin notifications via Socket.IO
-function useAdminSocket(refetchStats: () => void) {
+// H8: Real-time admin notifications via Socket.IO — returns connection status
+function useAdminSocket(refetchStats: () => void): { connected: boolean } {
   const socketRef = useRef<unknown>(null);
+  const [connected, setConnected] = useState(true);
   useEffect(() => {
     const init = async () => {
       try {
         const { io } = await import("socket.io-client");
         const authToken = localStorage.getItem("golineless_admin_token") || localStorage.getItem("golineless_runner_token") || localStorage.getItem("golineless_user_token") || "";
-        const sock = io(window.location.origin, { path: "/api/socket.io", auth: { token: authToken }, reconnection: true, reconnectionDelay: 2000, reconnectionAttempts: 5 });
-        sock.on("connect_error", () => { /* swallow */ });
+        const sock = io(window.location.origin, { path: "/api/socket.io", auth: { token: authToken }, reconnection: true, reconnectionDelay: 2000, reconnectionAttempts: 10 });
+        sock.on("connect", () => setConnected(true));
+        sock.on("disconnect", () => setConnected(false));
+        sock.on("connect_error", () => setConnected(false));
         sock.emit("join_admin_map");
         sock.on("task_status_changed", (data: { taskId?: number; status?: string }) => {
           toast.info(`Task #${data.taskId ?? "?"} → ${(data.status ?? "?").replace(/_/g, " ")}`);
@@ -63,6 +66,7 @@ function useAdminSocket(refetchStats: () => void) {
     init();
     return () => { (socketRef.current as { disconnect?: () => void })?.disconnect?.(); };
   }, [refetchStats]);
+  return { connected };
 }
 
 // L4: Keyboard shortcuts
@@ -91,7 +95,7 @@ export default function AdminDashboard() {
   const { data: stats, isLoading, refetch: refetchStats } = useGetAdminStats({ query: { queryKey: ["adminStats"], refetchInterval: 10000 } });
   // H8 FIX: Stable callback to prevent socket reconnection loop
   const refetchAll = useCallback(() => { refetchStats(); }, [refetchStats]);
-  useAdminSocket(refetchAll);
+  const { connected: socketConnected } = useAdminSocket(refetchAll);
   const { data: activity } = useGetAdminActivity({ query: { queryKey: ["adminActivity"], refetchInterval: 5000 } });
 
   // H1 FIX: Use customFetch instead of raw fetch for KYC metrics
@@ -188,6 +192,15 @@ export default function AdminDashboard() {
         </div>
 
         <div className="p-6">
+          {/* Socket disconnect banner */}
+          {!socketConnected && (
+            <div className="flex gap-3 mb-5">
+              <div className="flex items-center gap-2.5 bg-[#FFFBEB] border border-[#FDE68A] rounded-xl px-4 py-2.5">
+                <Activity size={14} className="text-[#D97706] animate-pulse" />
+                <span className="text-[#B45309] text-xs font-bold">Real-time connection lost — reconnecting...</span>
+              </div>
+            </div>
+          )}
           {/* Alert banners */}
           {s && (s.kycPending > 0 || s.stuckTasks > 0 || s.newReviews > 0) && (
             <div className="flex gap-3 mb-5 flex-wrap">
