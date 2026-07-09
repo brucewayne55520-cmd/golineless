@@ -415,14 +415,6 @@ export async function customFetch<T = unknown>(
 
   const requestInfo = { method, url: resolveUrl(input) };
 
-  // CSRF: Read cookie and attach as header for double-submit pattern
-  if (typeof document !== "undefined") {
-    const csrfCookie = document.cookie.split(';').find(c => c.trim().startsWith('_csrf='));
-    if (csrfCookie) {
-      headers.set('x-csrf-token', csrfCookie.split('=').slice(1).join('='));
-    }
-  }
-
   // L6: Always include credentials so httpOnly auth cookies are sent automatically
   const response = await fetch(input, { ...init, method, headers, credentials: "include" });
 

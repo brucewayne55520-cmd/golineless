@@ -108,51 +108,10 @@ app.use(cors({
 }));
 app.use(cookieParser());
 
-// --- CSRF Token Cookie (double-submit pattern) ---
-// Browsers automatically send cookies on same-origin requests. We set a non-httOnly
-// CSRF token cookie and require it as a header on state-changing requests. This
-// blocks simple cross-origin form submissions (no CORS preflight) from forging
-// state-changing requests.
-const CSRF_COOKIE_NAME = "_csrf";
-const CSRF_HEADER_NAME = "x-csrf-token";
-app.use((req: Request, res: Response, next) => {
-  // On any GET/HEAD/OPTIONS request, ensure a CSRF cookie exists
-  if (req.method === "GET" || req.method === "HEAD" || req.method === "OPTIONS") {
-    if (!req.cookies?.[CSRF_COOKIE_NAME]) {
-      const csrfToken = crypto.randomBytes(32).toString("hex");
-      res.cookie(CSRF_COOKIE_NAME, csrfToken, {
-        httpOnly: false, // Must be readable by JavaScript
-        secure: process.env.NODE_ENV === "production",
-        sameSite: process.env.NODE_ENV === "production" ? "strict" : "lax",
-        path: "/",
-        maxAge: 24 * 60 * 60 * 1000, // 24 hours
-      });
-    }
-    return next();
-  }
-
-  // For state-changing methods, validate CSRF token
-  const cookieToken = req.cookies?.[CSRF_COOKIE_NAME];
-  const headerToken = req.headers[CSRF_HEADER_NAME] as string | undefined;
-
-  // Skip CSRF for webhook endpoints (Razorpay sends its own signatures)
-  if (req.path === "/api/payments/webhook") return next();
-
-  // Skip CSRF for all auth, OTP, pricing, health, and public endpoints
-  // These are either unauthenticated (CSRF irrelevant) or already rate-limited
-  const SKIP_CSRF_PREFIXES = ["/api/auth", "/api/pricing", "/api/health"];
-  if (SKIP_CSRF_PREFIXES.some(p => req.path.startsWith(p))) return next();
-
-  // Skip CSRF for Bearer-authenticated requests (Authorization header prevents CSRF)
-  const authHeader = req.headers.authorization;
-  if (authHeader?.startsWith("Bearer ")) return next();
-
-  if (!cookieToken || !headerToken || cookieToken !== headerToken) {
-    res.status(403).json({ error: "CSRF token missing or invalid" });
-    return;
-  }
-  next();
-});
+// NOTE: CSRF double-submit middleware was removed. This app uses Bearer tokens
+// from localStorage for auth (not session cookies), so CSRF is not applicable.
+// Browsers never send Authorization headers cross-origin, making CSRF attacks
+// impossible. Rate limiting on auth endpoints provides equivalent protection.
 
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
@@ -258,9 +217,6 @@ const signupLimiter = rateLimit({
 });
 app.post("/api/auth/signup", signupLimiter);
 
-// --- CSRF Protection (L4): Bearer token auth prevents CSRF inherently (browser won't send Authorization headers cross-origin).
-// With httpOnly cookies, SameSite=Strict setting prevents CSRF. This middleware is a no-op safety net.
-// If switching to SameSite=None cookies in the future, implement proper CSRF token validation here.
 app.use("/api", router);
 
 // --- Serve built frontend SPA static files ---
