@@ -2,7 +2,7 @@ import { Router, type IRouter } from "express";
 import crypto from "crypto";
 import { db, usersTable, runnersTable, userSessionsTable, runnerSessionsTable, adminsTable, adminSessionsTable, paymentAuditLogTable, adminSettingsTable, z } from "@workspace/db";
 import { eq, and, ne } from "drizzle-orm";
-import { generateToken, verifyPassword, extractToken, hashPassword, setAuthCookie, clearAuthCookie, requireAdmin } from "../lib/auth";
+import { generateToken, verifyPassword, extractToken, hashPassword, requireAdmin } from "../lib/auth";
 import { validateNeonToken, exchangeSessionVerifier, type NeonAuthUser } from "../lib/neon-auth";
 
 import { sendEmail } from "../lib/email";
@@ -57,7 +57,6 @@ router.post("/auth/logout", async (req, res): Promise<void> => {
     await db.delete(userSessionsTable).where(eq(userSessionsTable.token, token)).catch(() => {});
     await db.delete(runnerSessionsTable).where(eq(runnerSessionsTable.token, token)).catch(() => {});
   }
-  clearAuthCookie(res);
   res.json({ message: "Logged out" });
 });
 
@@ -112,7 +111,6 @@ router.post("/auth/verify-otp", validateBody(phoneOtpVerifySchema), async (req, 
     }
     await db.insert(runnerSessionsTable).values({ runnerId: runner.id, token, expiresAt });
     const { passwordHash: _, otp: __, otpExpiresAt: ___, ...safeRunner } = runner;
-    setAuthCookie(res, token);
     res.json({ token, role: "runner", runner: safeRunner });
     return;
   }
@@ -124,7 +122,6 @@ router.post("/auth/verify-otp", validateBody(phoneOtpVerifySchema), async (req, 
   }
   await db.insert(userSessionsTable).values({ userId: user.id, token, expiresAt });
   const { passwordHash: _, otp: __, otpExpiresAt: ___, ...safeUser } = user;
-  setAuthCookie(res, token);
   res.json({ token, role: "user", user: safeUser });
   } catch (err: unknown) {
     logger.error({ err, phone, role }, "verify-otp: failed");
@@ -162,12 +159,10 @@ router.post("/auth/signup", validateBody(signupSchema), async (req, res): Promis
     if (role === "runner") {
       await db.insert(runnerSessionsTable).values({ runnerId: record.id, token, expiresAt });
       const { passwordHash: _, otp: __, otpExpiresAt: ___, ...safeRunner } = record;
-      setAuthCookie(res, token);
       res.json({ token, role: "runner", runner: safeRunner });
     } else {
       await db.insert(userSessionsTable).values({ userId: record.id, token, expiresAt });
       const { passwordHash: _, otp: __, otpExpiresAt: ___, ...safeUser } = record;
-      setAuthCookie(res, token);
       res.json({ token, role: "user", user: safeUser });
     }
   } catch (err: unknown) {
@@ -201,12 +196,10 @@ router.post("/auth/login", validateBody(loginSchema), async (req, res): Promise<
     if (role === "runner") {
       await db.insert(runnerSessionsTable).values({ runnerId: record.id, token, expiresAt });
       const { passwordHash: _, otp: __, otpExpiresAt: ___, ...safeRunner } = record;
-      setAuthCookie(res, token);
       res.json({ token, role: "runner", runner: safeRunner });
     } else {
       await db.insert(userSessionsTable).values({ userId: record.id, token, expiresAt });
       const { passwordHash: _, otp: __, otpExpiresAt: ___, ...safeUser } = record;
-      setAuthCookie(res, token);
       res.json({ token, role: "user", user: safeUser });
     }
   } catch (err: unknown) {
@@ -613,7 +606,6 @@ router.post("/auth/rotate-session", async (req, res): Promise<void> => {
     const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
     await db.delete(userSessionsTable).where(eq(userSessionsTable.token, token)).catch(() => {});
     await db.insert(userSessionsTable).values({ userId: userSession.userId, token: newToken, expiresAt });
-    setAuthCookie(res, newToken);
     res.json({ message: "Session rotated", token: newToken });
     return;
   }
@@ -631,7 +623,6 @@ router.post("/auth/rotate-session", async (req, res): Promise<void> => {
     const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
     await db.delete(runnerSessionsTable).where(eq(runnerSessionsTable.token, token)).catch(() => {});
     await db.insert(runnerSessionsTable).values({ runnerId: runnerSession.runnerId, token: newToken, expiresAt });
-    setAuthCookie(res, newToken);
     res.json({ message: "Session rotated", token: newToken });
     return;
   }

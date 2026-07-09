@@ -3,7 +3,6 @@ import path from "path";
 import { fileURLToPath } from "url";
 import fs from "fs";
 import crypto from "crypto";
-import cookieParser from "cookie-parser";
 
 // Derive __dirname at runtime from import.meta.url (works correctly in esbuild-bundled ESM)
 const __filename = fileURLToPath(import.meta.url);
@@ -106,7 +105,6 @@ app.use(cors({
   },
   credentials: true,
 }));
-app.use(cookieParser());
 
 // NOTE: CSRF double-submit middleware was removed. This app uses Bearer tokens
 // from localStorage for auth (not session cookies), so CSRF is not applicable.
